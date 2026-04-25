@@ -5,6 +5,15 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 const DATA_URL = `${import.meta.env.BASE_URL}data/risk.geojson`;
 
+function escapeHtml(value: unknown): string {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const RISK_COLOR: maplibregl.ExpressionSpecification = [
   'interpolate',
   ['linear'],
@@ -64,15 +73,15 @@ export function App() {
       map.on('click', 'risk-fill', (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties as Record<string, unknown>;
-        const name = p['name'] ? `<div><strong>${String(p['name'])}</strong></div>` : '';
+        const name = p['name'] ? `<div><strong>${escapeHtml(p['name'])}</strong></div>` : '';
         new maplibregl.Popup({ maxWidth: '240px' })
           .setLngLat(e.lngLat)
           .setHTML(
             `<div style="font-family:sans-serif;font-size:13px;line-height:1.6">
               ${name}
-              <div>Risk score: <strong>${String(p['risk_score'])}/10</strong></div>
-              <div>Violations nearby: ${String(p['violation_count'])}</div>
-              <div>Source: ${String(p['source'] ?? p['provider'] ?? 'Unknown')}</div>
+              <div>Risk score: <strong>${escapeHtml(p['risk_score'])}/10</strong></div>
+              <div>Violations nearby: ${escapeHtml(p['violation_count'])}</div>
+              <div>Source: ${escapeHtml(p['source'] ?? p['provider'] ?? 'Unknown')}</div>
             </div>`,
           )
           .addTo(map);
