@@ -4,7 +4,10 @@
   "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"—they need to know *safe* spots.",
   "main": "index.js",
   "scripts": {
-    "ingest": "ts-node src/ingest/pipeline.ts",
+    "ingest": "ts-node --project tsconfig.ingest.json src/ingest/pipeline.ts",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -22,5 +25,14 @@
     "p-limit": "^3.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "maplibre-gl": "^5.24.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "vite": "^8.0.10"
   }
 }
