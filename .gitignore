@@ -1,0 +1,8 @@
+node_modules
+.cache
+.env
+public/data/*.geojson
+public/data/*.json
+!public/data/meta.json
+dist
+*.log

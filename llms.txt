@@ -1,0 +1,22 @@
+# Parkkisakko: Helsinki Parking Trap Detector
+
+## Project Summary
+Parkkisakko is a spatial intelligence application designed to help drivers in Helsinki avoid parking fines ("traps") and find available parking. It aggregates real-time availability from Parkkiopas and historical fine data from Helsinki Region Infoshare to calculate a probabilistic "Risk Score" (1-10) for parking spots.
+
+## Key Architectural Decisions
+- **Serverless Spatial**: We use pre-computed Vector Tiles (PMTiles) instead of a live PostGIS database. This allows zero-cost hosting and infinite scalability.
+- **Split-Brain Data**: 
+    - **Risk Engine**: Runs at *build time* (CI/CD) using Turf.js to generate static risk layers.
+    - **Availability**: Fetched at *runtime* (Client) from Parkkiopas API.
+- **Frontend**: React + Vite with MapLibre GL.
+- **Design System**: "Night Captain" theme (Dark Mode + Neon Cyan/Red) for high contrast and modern aesthetics.
+
+## File Structure
+- `src/ingestors/`: Services for fetching WFS and REST data.
+- `src/db/`: Database schema, migrations, and spatial SQL logic (Risk Engine).
+- `src/api/`: backend REST API endpoints.
+- `src/frontend/`: React application and MapLibre components.
+
+## Contributing
+- **Stack**: Node.js, TypeScript, Docker (PostGIS), React.
+- **Setup**: Run `docker-compose up` to start the DB. Use `npm run ingest` to seed initial data.
