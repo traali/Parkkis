@@ -1,0 +1,32 @@
+name: Ingest Parking Data
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # Run at 04:00 every day
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm install
+        
+      - name: Run Ingestion Pipeline
+        run: npm run ingest
+        
+      - name: Commit and Push Data
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/data/risk.geojson public/data/meta.json
+          git commit -m "chore: automated data ingestion [$(date +'%Y-%m-%d')]" || echo "No changes to commit"
+          git push
