@@ -7,6 +7,9 @@ on:
     - cron: '0 0 * * *' # Run daily at midnight
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
