@@ -46,9 +46,11 @@ export async function loadParquet(name: string, url: string) {
     // Register file from URL
     await db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
     
-    // Test query
-    const result = await conn.query(`SELECT count(*) FROM '${name}'`);
-    console.log(`🦆 Loaded ${name}:`, result.toArray()[0]);
+    // MATERIALIZE as a table for high-performance identifier-based queries
+    await conn.query(`CREATE TABLE ${name} AS SELECT * FROM '${name}'`);
+    
+    const result = await conn.query(`SELECT count(*) FROM ${name}`);
+    console.log(`🦆 Materialized Table ${name}:`, result.toArray()[0]);
     
     await conn.close();
 }

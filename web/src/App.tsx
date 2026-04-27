@@ -24,8 +24,8 @@ export default function App() {
         
         setLoadingMsg('Loading High-Performance Spatial Assets...');
         await Promise.all([
-          loadParquet('slots', '/data/slots.parquet'),
-          loadParquet('violations', '/data/violations.parquet')
+          loadParquet('slots', 'data/slots.parquet'),
+          loadParquet('violations', 'data/violations.parquet')
         ]);
 
         setLoadingMsg('Calculating Live Risk Matrix...');
