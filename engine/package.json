@@ -1,0 +1,28 @@
+{
+  "name": "engine",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^25.6.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  },
+  "dependencies": {
+    "@turf/turf": "^7.3.5",
+    "axios": "^1.15.2",
+    "duckdb": "^1.4.4",
+    "fs-extra": "^11.3.4",
+    "p-limit": "^7.3.0",
+    "turf": "^3.0.14"
+  }
+}

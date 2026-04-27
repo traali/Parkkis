@@ -6,7 +6,7 @@ import pLimit from 'p-limit';
 
 // Constants
 const CACHE_DIR = path.join(process.cwd(), '.cache/raw');
-const OUTPUT_DIR = path.join(process.cwd(), 'public/data');
+const OUTPUT_DIR = path.join(process.cwd(), 'frontend/public/data');
 const CONCURRENCY_LIMIT = 5;
 const limit = pLimit(CONCURRENCY_LIMIT);
 
@@ -14,7 +14,8 @@ const limit = pLimit(CONCURRENCY_LIMIT);
 const SOURCES = {
     PARKKIHUBI_AREAS: 'https://pubapi.parkkiopas.fi/public/v1/parking_area/',
     FINTRAFFIC_PR: 'https://liippapi.fintraffic.fi/v1/parking-facilities', // Standard LIIPI endpoint
-    VIOLATIONS: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointivirheet&outputFormat=application/json'
+    VIOLATIONS: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointivirheet&outputFormat=application/json',
+    PARKKIPAIKAT_HEL: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json'
 };
 
 const WEIGHTS = {
@@ -113,17 +114,44 @@ async function fetchViolations() {
     return finalResult;
 }
 
+async function fetchParkingPlaces() {
+    console.log('[PIPELINE] Fetching Helsinki individual slots (Pysakointipaikat)...');
+    const pageSize = 5000;
+    let startIndex = 0;
+    let allFeatures: any[] = [];
+    let hasMore = true;
+
+    while (hasMore) {
+        console.log(`[FETCH] Slots: ${startIndex}...`);
+        const url = `${SOURCES.PARKKIPAIKAT_HEL}&count=${pageSize}&startIndex=${startIndex}`;
+        const response = await fetchWithRetry(url);
+        if (!response?.data) break;
+
+        const features = response.data.features || [];
+        allFeatures.push(...features);
+        
+        if (features.length < pageSize) {
+            hasMore = false;
+        } else {
+            startIndex += pageSize;
+        }
+    }
+
+    return turf.featureCollection(allFeatures);
+}
+
 async function main() {
     console.log('🚀 Starting Parkkisakko Ingestion Pipeline (Docker-Free)');
     await fs.ensureDir(OUTPUT_DIR);
 
-    const [helsinkiAreas, fintrafficSpots, violations] = await Promise.all([
+    const [helsinkiAreas, fintrafficSpots, violations, helsinkiSlots] = await Promise.all([
         fetchParkkihubi(),
         fetchFintraffic(),
-        fetchViolations()
+        fetchViolations(),
+        fetchParkingPlaces()
     ]);
 
-    console.log(`[PROCESS] Analyzing ${helsinkiAreas.features.length} Helsinki areas...`);
+    console.log(`[PROCESS] Analyzing ${helsinkiAreas.features.length} Helsinki areas and ${helsinkiSlots.features.length} slots...`);
 
     // Risk Calculation
     const processedHelsinki = helsinkiAreas.features.map((area: any) => {
@@ -143,12 +171,35 @@ async function main() {
         });
     });
 
-    // Merge with Fintraffic (P&R usually have low risk or unknown, we mark as 1 for now)
+    // Process Slots (Individual places)
+    const processedSlots = helsinkiSlots.features.map((slot: any) => {
+        const center = turf.centroid(slot);
+        const buffer = turf.circle(center, 0.05, { units: 'kilometers' }); // 50m radius for precision
+        const nearbyViolations = turf.pointsWithinPolygon(violations, buffer);
+        
+        let risk = WEIGHTS.BASE_RISK + (nearbyViolations.features.length * WEIGHTS.VIOLATION);
+        risk = Math.min(10, Math.ceil(risk));
+
+        return turf.feature(slot.geometry, {
+            ...slot.properties,
+            address: slot.properties.osoite || slot.properties.street_name,
+            max_duration: slot.properties.pysakointiaika || slot.properties.max_duration,
+            payment_types: slot.properties.maksullisuus || slot.properties.payment_types,
+            risk_score: risk,
+            violation_count: nearbyViolations.features.length,
+            city: 'Helsinki',
+            source: 'Helsinki_WFS',
+            type: 'slot'
+        });
+    });
+
+    // Merge everything
     const allSpots = [
-        ...processedHelsinki,
+        ...processedHelsinki.map(f => ({ ...f, properties: { ...f.properties, type: 'area' } })),
+        ...processedSlots,
         ...fintrafficSpots.features.map((f: any) => ({
             ...f,
-            properties: { ...f.properties, risk_score: 1, violation_count: 0 }
+            properties: { ...f.properties, risk_score: 1, violation_count: 0, type: 'p_and_r' }
         }))
     ];
 

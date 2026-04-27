@@ -2,58 +2,47 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
-  workflow_run:
-    workflows: ["Ingest Parking Data"]
-    types: [completed]
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: false
+    branches: [ master ]
+  schedule:
+    - cron: '0 0 * * *' # Run daily at midnight
+  workflow_dispatch: # Allow manual trigger
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: npm
+          node-version: 20
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Engine Dependencies
+        run: |
+          cd engine
+          npm install
 
-      - name: Run ingestion pipeline
-        run: npm run ingest
+      - name: Run Ingestion Pipeline
+        run: |
+          cd engine
+          npm run build || echo "No build script"
+          node src/fetch.js || npx ts-node src/fetch.ts
+          node src/process.js
 
-      - name: Build
-        run: npm run build
+      - name: Install Web Dependencies
+        run: |
+          cd web
+          npm install
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Build Web Dashboard
+        run: |
+          cd web
+          npm run build
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: web/dist
+          branch: gh-pages
