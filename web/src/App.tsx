@@ -17,15 +17,24 @@ export default function App() {
   const [loadingMsg, setLoadingMsg] = useState('Initializing Analytical Engine...');
 
   useEffect(() => {
-    async function initData() {
+    const initData = async () => {
+      console.log('🏗️ ParkkiS Build Info:', {
+        version: '2.0.1',
+        buildTime: new Date().toISOString(),
+        environment: import.meta.env.MODE,
+        base: import.meta.env.BASE_URL
+      });
+
       try {
-        setLoadingMsg('Spinning up DuckDB-Wasm...');
-        await getDuckDB();
-        
         setLoadingMsg('Loading High-Performance Spatial Assets...');
+        
+        // Resolve absolute URLs for DuckDB worker
+        const slotsUrl = new URL('data/slots.parquet', window.location.href).href;
+        const violationsUrl = new URL('data/violations.parquet', window.location.href).href;
+
         await Promise.all([
-          loadParquet('slots', 'data/slots.parquet'),
-          loadParquet('violations', 'data/violations.parquet')
+          loadParquet('slots', slotsUrl),
+          loadParquet('violations', violationsUrl)
         ]);
 
         setLoadingMsg('Calculating Live Risk Matrix...');

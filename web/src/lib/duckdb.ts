@@ -43,14 +43,17 @@ export async function loadParquet(name: string, url: string) {
     const db = await getDuckDB();
     const conn = await db.connect();
     
+    console.log(`🦆 DuckDB: Registering ${name} from ${url}`);
+    
     // Register file from URL
     await db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
     
-    // MATERIALIZE as a table for high-performance identifier-based queries
-    await conn.query(`CREATE TABLE ${name} AS SELECT * FROM '${name}'`);
+    // MATERIALIZE as a table using explicit read_parquet for maximum compatibility
+    // Using the URL directly in read_parquet ensures it bypasses name-resolution issues
+    await conn.query(`CREATE TABLE ${name} AS SELECT * FROM read_parquet('${url}')`);
     
     const result = await conn.query(`SELECT count(*) FROM ${name}`);
-    console.log(`🦆 Materialized Table ${name}:`, result.toArray()[0]);
+    console.log(`✅ Materialized ${name}:`, result.toArray()[0]);
     
     await conn.close();
 }
