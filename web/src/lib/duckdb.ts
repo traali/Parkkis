@@ -43,11 +43,15 @@ export async function loadParquet(name: string, url: string) {
     const db = await getDuckDB();
     const conn = await db.connect();
     
-    // Register file from URL
-    await db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
+    // Register file from URL using the .parquet filename so DuckDB detects the format
+    const filename = `${name}.parquet`;
+    await db.registerFileURL(filename, url, duckdb.DuckDBDataProtocol.HTTP, false);
+    
+    // Create a named view so the table can be queried by name (e.g. FROM slots)
+    await conn.query(`CREATE OR REPLACE VIEW "${name}" AS SELECT * FROM read_parquet('${filename}')`);
     
     // Test query
-    const result = await conn.query(`SELECT count(*) FROM '${name}'`);
+    const result = await conn.query(`SELECT count(*) FROM "${name}"`);
     console.log(`🦆 Loaded ${name}:`, result.toArray()[0]);
     
     await conn.close();
