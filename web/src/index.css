@@ -8,6 +8,9 @@
   --color-nc-neon-teal: #00f2ff;
   --color-nc-neon-red: #ff3e3e;
   --color-nc-gold: #ffcf4b;
+
+  /* Typography */
+  --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
   
   /* Fluid Typography Formulas (Rule 7) */
   --nv-text-xs: clamp(0.694rem, 0.65rem + 0.22vw, 0.8rem);
