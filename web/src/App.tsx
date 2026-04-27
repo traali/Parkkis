@@ -73,7 +73,7 @@ export default function App() {
             <Shield className="text-nc-neon-teal w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-nv-text-lg font-bold tracking-tighter">PARKKIS 2.0</h1>
+            <h1 className="text-nv-text-lg font-bold tracking-tighter">PARKKIS</h1>
             <p className="text-nv-text-xs text-white/50 uppercase tracking-widest">Helsinki Risk Engine</p>
           </div>
         </div>
