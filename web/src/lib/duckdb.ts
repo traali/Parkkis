@@ -43,17 +43,27 @@ export async function loadParquet(name: string, url: string) {
     const db = await getDuckDB();
     const conn = await db.connect();
     
-    console.log(`🦆 DuckDB: Registering ${name} from ${url}`);
+    console.log(`🦆 DuckDB: Fetching ${name} from ${url}...`);
     
-    // Register file from URL (absolute URL ensured by caller)
-    await db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
-    
-    // MATERIALIZE as a table using the REGISTERED NAME
-    // Passing the full URL here caused 'stoi' parsing errors
-    await conn.query(`CREATE TABLE ${name} AS SELECT * FROM read_parquet('${name}')`);
-    
-    const result = await conn.query(`SELECT count(*) FROM ${name}`);
-    console.log(`✅ Materialized ${name}:`, result.toArray()[0]);
-    
-    await conn.close();
+    try {
+        // Fetch as buffer to avoid DuckDB's internal HTTP-stoi parsing issues
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const buffer = new Uint8Array(await response.arrayBuffer());
+        
+        // Register as a LOCAL buffer
+        await db.registerFileBuffer(`${name}.parquet`, buffer);
+        
+        // MATERIALIZE as a table
+        await conn.query(`CREATE TABLE ${name} AS SELECT * FROM read_parquet('${name}.parquet')`);
+        
+        const result = await conn.query(`SELECT count(*) FROM ${name}`);
+        console.log(`✅ Materialized ${name}:`, result.toArray()[0]);
+    } catch (error) {
+        console.error(`❌ Failed to load ${name}:`, error);
+        throw error;
+    } finally {
+        await conn.close();
+    }
 }
