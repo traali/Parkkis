@@ -25,7 +25,12 @@
 
 @layer base {
   body {
-    @apply bg-nc-deep text-white font-inter antialiased overflow-hidden;
+    background-color: var(--color-nc-deep);
+    color: white;
+    font-family: var(--font-inter);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow: hidden;
     background-image: 
       radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.05) 0px, transparent 50%),
       radial-gradient(at 100% 100%, rgba(255, 62, 62, 0.05) 0px, transparent 50%);
@@ -35,7 +40,9 @@
 @layer components {
   /* Liquid Glassmorphism (Rule 7) */
   .nv-glass {
-    @apply backdrop-blur-xl border border-white/10 shadow-2xl;
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     background: linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.05) 0%,
@@ -44,11 +51,29 @@
   }
 
   .nv-bento-card {
-    @apply nv-glass rounded-3xl p-6 transition-all duration-500 hover:border-white/20 hover:scale-[1.01];
+    backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 100%
+    );
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .nv-bento-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: scale(1.01);
   }
   
   /* Map Overlays */
   .nv-hud {
-    @apply fixed z-50 pointer-events-none p-6;
+    position: fixed;
+    z-index: 50;
+    pointer-events: none;
+    padding: 1.5rem;
   }
 }
