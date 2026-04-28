@@ -135,11 +135,15 @@ export default function App() {
         const roadworks = await conn.query(`SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`);
         const roadworksGeoJSON = {
           type: 'FeatureCollection',
-          features: roadworks.toArray().map((row: any) => ({
-            type: 'Feature',
-            geometry: JSON.parse(row.geometry),
-            properties: row
-          }))
+          features: roadworks.toArray().map((row: any) => {
+            const props = { ...row };
+            delete props.geometry;
+            return {
+              type: 'Feature',
+              geometry: JSON.parse(row.geometry),
+              properties: props
+            };
+          })
         };
         setRoadworkData(roadworksGeoJSON);
 
