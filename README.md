@@ -1,4 +1,4 @@
-# 🅿️ ParkkiS: Helsinki Parking Trap Detector
+# 🅿️ ParkkiS v2.5.0: Helsinki Parking Trap Detector
 
 ## Problem
 Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and "trap" spots with confusing signage lead to avoidable fines. Drivers need more than just "free spots"—they need to know *safe* spots.
