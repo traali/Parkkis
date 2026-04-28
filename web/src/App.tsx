@@ -88,6 +88,7 @@ export default function App() {
   const [signData, setSignData] = useState<FeatureCollection | null>(null);
   const [roadworkData, setRoadworkData] = useState<FeatureCollection | null>(null);
   const [liipiData, setLiipiData] = useState<FeatureCollection | null>(null);
+  const [hubiData, setHubiData] = useState<FeatureCollection | null>(null);
   const [loadingMsg, setLoadingMsg] = useState(
     "Initializing Analytical Engine...",
   );
@@ -196,6 +197,7 @@ export default function App() {
         const signsUrl = new URL(`${baseUrl}data/signs.parquet`, window.location.origin).href;
         const roadworksUrl = new URL(`${baseUrl}data/roadworks.parquet`, window.location.origin).href;
         const liipiUrl = new URL(`${baseUrl}data/liipi.parquet`, window.location.origin).href;
+        const hubiUrl = new URL(`${baseUrl}data/hubi.parquet`, window.location.origin).href;
 
         await Promise.all([
           loadParquet("slots", slotsUrl),
@@ -203,6 +205,7 @@ export default function App() {
           loadParquet("signs", signsUrl),
           loadParquet("roadworks", roadworksUrl),
           loadParquet("liipi", liipiUrl),
+          loadParquet("hubi", hubiUrl),
         ]);
 
         setLoadingMsg("Calculating Live Risk Matrix...");
@@ -286,8 +289,8 @@ export default function App() {
         const roadworksResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(COLUMNS(* EXCLUDE geom)) as properties 
-          FROM roadworks r
+            to_json(sub) as properties 
+          FROM (SELECT * EXCLUDE geom FROM roadworks) sub
         `);
         const roadworksGeoJSON = {
           type: "FeatureCollection" as const,
@@ -304,8 +307,8 @@ export default function App() {
         const liipiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(COLUMNS(* EXCLUDE geom)) as properties 
-          FROM liipi l
+            to_json(sub) as properties 
+          FROM (SELECT * EXCLUDE geom FROM liipi) sub
         `);
         const liipiGeoJSON = {
           type: "FeatureCollection" as const,
@@ -316,6 +319,24 @@ export default function App() {
           })),
         };
         setLiipiData(safeGeoJSON(liipiGeoJSON));
+
+        // 6. Load Parkkihubi
+        setLoadingMsg("Scanning Parkkihubi...");
+        const hubiResult = await conn.query(`
+          SELECT 
+            ST_AsGeoJSON(geom) as geometry, 
+            to_json(sub) as properties 
+          FROM (SELECT * EXCLUDE geom FROM hubi) sub
+        `);
+        const hubiGeoJSON = {
+          type: "FeatureCollection" as const,
+          features: (hubiResult.toArray() as unknown as { geometry: string; properties: string }[]).map((row) => ({
+            type: "Feature" as const,
+            geometry: JSON.parse(row.geometry),
+            properties: JSON.parse(row.properties),
+          })),
+        };
+        setHubiData(safeGeoJSON(hubiGeoJSON));
 
         setDbReady(true);
         await conn.close();
@@ -539,6 +560,7 @@ export default function App() {
         mapStyle="https://tiles.openfreemap.org/styles/dark"
         interactiveLayerIds={[
           "parking-lines",
+          "hubi-lines",
           "sign-points",
           "roadwork-fill",
           "liipi-points",
@@ -614,6 +636,29 @@ export default function App() {
                 ],
                 "line-blur": 5,
                 "line-opacity": 0.5,
+              }}
+            />
+          </Source>
+        )}
+
+        {hubiData && (
+          <Source id="hubi-data" type="geojson" data={hubiData}>
+            <Layer
+              id="hubi-lines"
+              type="line"
+              paint={{
+                "line-color": "#00f2ff", // Neon teal for hubi zones
+                "line-width": [
+                  "interpolate",
+                  ["linear"],
+                  ["zoom"],
+                  10,
+                  2,
+                  18,
+                  6,
+                ],
+                "line-opacity": 0.8,
+                "line-dasharray": [2, 2], // Dashed to differentiate from WFS
               }}
             />
           </Source>
