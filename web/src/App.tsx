@@ -286,7 +286,7 @@ export default function App() {
         const roadworksResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(r.* EXCLUDE geom) as properties 
+            to_json(COLUMNS(* EXCLUDE geom)) as properties 
           FROM roadworks r
         `);
         const roadworksGeoJSON = {
@@ -304,7 +304,7 @@ export default function App() {
         const liipiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(l.* EXCLUDE geom) as properties 
+            to_json(COLUMNS(* EXCLUDE geom)) as properties 
           FROM liipi l
         `);
         const liipiGeoJSON = {
