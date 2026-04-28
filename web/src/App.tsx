@@ -42,6 +42,7 @@ interface HoverInfo {
   latitude: number;
   properties: Record<string, any>;
   isRoadworkConflict: boolean;
+  stackedSigns?: any[];
 }
 
 interface ParkingSlotRow {
@@ -236,7 +237,11 @@ export default function App() {
               'kilpi_txt1': kilpi_txt1
             }) as properties
           FROM signs
-          WHERE is_new = true OR tyyppi IN ('C37', 'C38', 'C39')
+          WHERE is_new = true OR tyyppi IN (
+            'C37', 'C38', 'C39', 'C44.1', 'C44.2', 
+            'E2', 'E3.1', 'E3.2', 'E3.3', 'E3.4', 'E3.5',
+            'E24', 'E26', 'E28'
+          )
         `);
 
         const signFeatures = (signResult.toArray() as unknown as SignRow[]).map((row) => ({
@@ -298,6 +303,11 @@ export default function App() {
     const hoveredFeature = features?.[0];
 
     if (hoveredFeature) {
+      // Aggregate all signs at this location
+      const signs = features
+        .filter((f) => f.layer.id === "sign-points")
+        .map((f) => f.properties);
+
       // Find if we have roadwork in the stack
       const roadwork = features.find(
         (f) => f.layer.id === "roadwork-fill",
@@ -309,6 +319,7 @@ export default function App() {
         properties: hoveredFeature.properties,
         isRoadworkConflict:
           !!roadwork && hoveredFeature.layer.id !== "roadwork-fill",
+        stackedSigns: signs.length > 0 ? signs : undefined,
       });
     } else {
       setHoverInfo(null);
@@ -755,8 +766,32 @@ export default function App() {
                 </div>
               )}
 
-              {/* Roadwork Specific Info */}
-              {hoverInfo.properties.licence_identifier ? (
+              {/* Traffic Sign Data (Support for Stacking) */}
+              {hoverInfo.stackedSigns ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1">
+                    Sign Pole Stack ({hoverInfo.stackedSigns.length})
+                  </p>
+                  {hoverInfo.stackedSigns.map((sign, idx) => (
+                    <div key={`${sign.id}-${idx}`} className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-nc-neon-teal" />
+                        <span className="text-xs text-white font-bold">
+                          {sign.tyyppi}
+                        </span>
+                        <span className="text-[10px] text-white/40 italic">
+                          {sign.muokkauspv}
+                        </span>
+                      </div>
+                      {sign.kilpi_txt1 && (
+                        <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold italic">
+                          "{sign.kilpi_txt1}"
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : hoverInfo.properties.licence_identifier ? (
                 <div className="space-y-2">
                   <p className="text-sm text-nc-gold font-bold uppercase tracking-wider">
                     Street Work Permit
@@ -776,20 +811,6 @@ export default function App() {
                   <div className="text-[10px] text-white/40 mt-2">
                     ID: {hoverInfo.properties.licence_identifier}
                   </div>
-                </div>
-              ) : hoverInfo.properties.id?.toString().startsWith("175") ? (
-                <div className="space-y-2">
-                  <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider">
-                    Traffic Sign Data
-                  </p>
-                  <p className="text-xs text-white/70">
-                    Modified: {hoverInfo.properties.muokkauspv}
-                  </p>
-                  {hoverInfo.properties.kilpi_txt1 && (
-                    <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold italic">
-                      "{hoverInfo.properties.kilpi_txt1}"
-                    </div>
-                  )}
                 </div>
               ) : (
                 <>
