@@ -76,4 +76,19 @@
     pointer-events: none;
     padding: 1.5rem;
   }
+  
+  /* Popup Overrides */
+  .nv-popup .maplibregl-popup-content {
+    background: var(--color-nc-void);
+    border: 1px solid rgba(0, 242, 255, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0;
+  }
+  
+  .nv-popup .maplibregl-popup-tip {
+    border-top-color: var(--color-nc-void);
+    border-bottom-color: var(--color-nc-void);
+  }
 }
