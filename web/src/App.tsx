@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl, GeolocateControl, Popup } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getDuckDB, loadParquet } from './lib/duckdb';
@@ -25,11 +25,14 @@ export default function App() {
   const [loadingMsg, setLoadingMsg] = useState('Initializing Analytical Engine...');
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState('all');
+  
+  const geoControlRef = useRef<any>(null);
+  const mapRef = useRef<any>(null);
 
   useEffect(() => {
     const initData = async () => {
       console.log('🏗️ ParkkiS Build Info:', {
-        version: '2.1.0',
+        version: '2.1.1',
         buildTime: new Date().toISOString(),
         environment: import.meta.env.MODE,
         base: import.meta.env.BASE_URL
@@ -38,7 +41,6 @@ export default function App() {
       try {
         setLoadingMsg('Loading High-Performance Spatial Assets...');
         
-        // Resolve absolute URLs for DuckDB worker
         const slotsUrl = new URL('data/slots.parquet', window.location.href).href;
         const violationsUrl = new URL('data/violations.parquet', window.location.href).href;
 
@@ -51,7 +53,6 @@ export default function App() {
         const db = await getDuckDB();
         const conn = await db.connect();
         
-        // 2026 Analytical Join: Calculate risk on-the-fly in the browser!
         const result = await conn.query(`
           SELECT 
             ST_AsGeoJSON(s.geom) as geometry, 
@@ -60,6 +61,9 @@ export default function App() {
               'luokka_nimi': s.luokka_nimi, 
               'tyyppi': s.tyyppi, 
               'paikat_ala': s.paikat_ala,
+              'kesto': s.kesto,
+              'voimassaolo': s.voimassaolo,
+              'asukaspysakointitunnus': s.asukaspysakointitunnus,
               'category': CASE 
                 WHEN s.luokka_nimi ILIKE '%asukas%' THEN 'residential'
                 WHEN s.luokka_nimi ILIKE '%maksullinen%' THEN 'paid'
@@ -68,17 +72,18 @@ export default function App() {
                 ELSE 'other'
               END
             }) as properties,
-            (SELECT count(*) FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom)) as fine_count
+            (SELECT count(*) FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom)) as fine_count,
+            (SELECT v.virheen_paasyy_ja_paaluokka FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom) GROUP BY v.virheen_paasyy_ja_paaluokka ORDER BY count(*) DESC LIMIT 1) as top_violation_reason
           FROM slots s
         `);
         
-        // Convert DuckDB result to GeoJSON for MapLibre
         const features = result.toArray().map((row: any) => ({
           type: 'Feature',
           geometry: JSON.parse(row.geometry),
           properties: {
             ...JSON.parse(row.properties),
             fine_count: Number(row.fine_count),
+            top_violation_reason: row.top_violation_reason,
             risk_score: Math.min(10, Math.ceil(1 + Number(row.fine_count) * 0.5))
           }
         }));
@@ -109,11 +114,17 @@ export default function App() {
     }
   }, []);
 
+  const onMapLoad = useCallback(() => {
+    if (geoControlRef.current) {
+        geoControlRef.current.trigger();
+    }
+  }, []);
+
   const mapFilter = activeFilter === 'all' ? ['has', 'category'] : ['==', ['get', 'category'], activeFilter];
 
   return (
     <div className="relative w-full h-screen bg-nc-deep">
-      {/* Nova HUD: Intelligence Layer */}
+      {/* Nova HUD */}
       <div className="nv-hud top-0 left-0 w-full flex flex-col gap-4">
         <div className="flex justify-between items-start w-full">
           <div className="nv-glass rounded-3xl p-4 flex items-center gap-4 pointer-events-auto">
@@ -134,7 +145,6 @@ export default function App() {
           )}
         </div>
 
-        {/* Intelligence Filter: Dynamic Categories */}
         {dbReady && (
           <div className="nv-glass rounded-3xl p-2 flex items-center gap-2 pointer-events-auto overflow-x-auto no-scrollbar max-w-fit self-start">
             <div className="px-3 py-2 border-r border-white/10 mr-1">
@@ -157,17 +167,23 @@ export default function App() {
         )}
       </div>
 
-      {/* Main Map Visualization */}
       <Map
+        ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         style={{ width: '100%', height: '100%' }}
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         interactiveLayerIds={['parking-lines']}
         onMouseMove={onMouseMove}
         onMouseLeave={() => setHoverInfo(null)}
+        onLoad={onMapLoad}
       >
         <NavigationControl position="bottom-right" />
-        <GeolocateControl position="bottom-right" trackUserLocation={true} showAccuracyCircle={false} />
+        <GeolocateControl 
+            ref={geoControlRef}
+            position="bottom-right" 
+            trackUserLocation={true} 
+            showAccuracyCircle={false} 
+        />
         
         {riskData && (
           <Source id="risk-data" type="geojson" data={riskData}>
@@ -177,12 +193,13 @@ export default function App() {
               filter={mapFilter as any}
               paint={{
                 'line-color': [
-                  'interpolate',
-                  ['linear'],
-                  ['get', 'risk_score'],
-                  1, '#00f2ff',
-                  5, '#ffcf4b',
-                  10, '#ff3e3e'
+                  'match',
+                  ['get', 'category'],
+                  'paid', '#3b82f6',
+                  'residential', '#ffb800',
+                  'free', '#22c55e',
+                  'special', '#a855f7',
+                  '#888888'
                 ],
                 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 2, 18, 8],
                 'line-opacity': 0.8
@@ -203,7 +220,7 @@ export default function App() {
                 ],
                 'line-width': ['interpolate', ['linear'], ['zoom'], 10, 4, 18, 15],
                 'line-blur': 5,
-                'line-opacity': 0.3
+                'line-opacity': 0.5
               }}
             />
           </Source>
@@ -214,31 +231,50 @@ export default function App() {
             longitude={hoverInfo.longitude}
             latitude={hoverInfo.latitude}
             closeButton={false}
-            className="nv-popup"
-            maxWidth="300px"
+            maxWidth="320px"
           >
-            <div className="p-3">
-              <h3 className="font-bold text-white mb-1 border-b border-white/10 pb-2">
-                {hoverInfo.properties.tyyppi || 'Parking Area'}
-              </h3>
+            <div className="p-3 bg-[#0a0f14] text-white rounded-lg border border-[#00f2ff]/20 shadow-xl">
+              <div className="flex justify-between items-start mb-2 border-b border-white/10 pb-2">
+                <h3 className="font-bold text-white leading-tight">
+                  {hoverInfo.properties.tyyppi || 'Parking Area'}
+                </h3>
+                {hoverInfo.properties.asukaspysakointitunnus && (
+                  <span className="bg-[#ffcf4b] text-[#05080a] font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0">
+                    Zone {hoverInfo.properties.asukaspysakointitunnus}
+                  </span>
+                )}
+              </div>
+              
               <p className="text-sm text-white/70 mb-3 leading-tight">{hoverInfo.properties.luokka_nimi || 'No restriction data'}</p>
               
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <div className="bg-white/5 rounded p-2">
-                  <span className="block text-xs text-white/50 uppercase">Capacity</span>
-                  <span className="font-bold text-white">{hoverInfo.properties.paikat_ala || '?'} slots</span>
-                </div>
-                <div className="bg-white/5 rounded p-2">
-                  <span className="block text-xs text-white/50 uppercase">Risk Level</span>
-                  <span className="font-bold" style={{ color: hoverInfo.properties.risk_score >= 5 ? '#ff3e3e' : '#00f2ff' }}>
-                    {hoverInfo.properties.risk_score} / 10
+                  <span className="block text-xs text-white/50 uppercase">Time Rules</span>
+                  <span className="font-bold text-white text-sm">
+                    {hoverInfo.properties.voimassaolo || '-'}
+                    {hoverInfo.properties.kesto ? ` (${hoverInfo.properties.kesto})` : ''}
                   </span>
                 </div>
+                <div className="bg-white/5 rounded p-2">
+                  <span className="block text-xs text-white/50 uppercase">Capacity</span>
+                  <span className="font-bold text-white text-sm">{hoverInfo.properties.paikat_ala || '?'} slots</span>
+                </div>
               </div>
-              <div className="bg-white/5 rounded p-2 mt-2 text-center border border-white/5">
-                  <span className="block text-xs text-white/50 uppercase mb-1">Total Violations Recorded</span>
-                  <span className="font-bold text-lg" style={{ color: hoverInfo.properties.risk_score >= 5 ? '#ff3e3e' : '#00f2ff' }}>{hoverInfo.properties.fine_count}</span>
-              </div>
+
+              {hoverInfo.properties.risk_score >= 3 && hoverInfo.properties.top_violation_reason && (
+                <div className="bg-red-500/10 border border-red-500/30 rounded p-2 mt-2">
+                    <span className="block text-xs text-red-400 uppercase mb-1 font-bold">⚠️ Top Danger (Risk {hoverInfo.properties.risk_score}/10)</span>
+                    <span className="text-xs text-white/80 leading-tight block">
+                      {hoverInfo.properties.top_violation_reason.replace(/^\d+\s+/, '')}
+                    </span>
+                </div>
+              )}
+              
+              {hoverInfo.properties.risk_score < 3 && (
+                <div className="bg-[#00f2ff]/10 border border-[#00f2ff]/30 rounded p-2 mt-2 text-center">
+                    <span className="block text-xs text-[#00f2ff] uppercase font-bold">✅ Safe Zone (Risk {hoverInfo.properties.risk_score}/10)</span>
+                </div>
+              )}
             </div>
           </Popup>
         )}
