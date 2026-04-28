@@ -158,10 +158,14 @@ export default function App() {
     const hoveredFeature = features && features[0];
     
     if (hoveredFeature) {
+      // Find if we have roadwork in the stack
+      const roadwork = features.find((f: any) => f.layer.id === 'roadwork-fill');
+      
       setHoverInfo({
         longitude: event.lngLat.lng,
         latitude: event.lngLat.lat,
-        properties: hoveredFeature.properties
+        properties: hoveredFeature.properties,
+        isRoadworkConflict: !!roadwork && hoveredFeature.layer.id !== 'roadwork-fill'
       });
     } else {
       setHoverInfo(null);
@@ -200,7 +204,7 @@ export default function App() {
         </div>
 
         {dbReady && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <div className="nv-glass rounded-3xl p-2 flex items-center gap-2 pointer-events-auto overflow-x-auto no-scrollbar max-w-fit">
               <div className="px-3 py-2 border-r border-white/10 mr-1">
                 <Filter className="w-4 h-4 text-white/40" />
@@ -220,28 +224,31 @@ export default function App() {
               ))}
             </div>
 
-            <button
-              onClick={() => setShowNewTraps(!showNewTraps)}
-              className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                showNewTraps 
-                  ? 'border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10' 
-                  : 'border-white/10 text-white/40 hover:bg-white/5'
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full ${showNewTraps ? 'bg-nc-neon-teal animate-pulse' : 'bg-white/20'}`} />
-              NEW TRAPS
-            </button>
-            <button 
-              onClick={() => setShowRoadworks(!showRoadworks)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black border transition-all duration-300 ${
-                showRoadworks 
-                  ? 'border-nc-gold text-nc-gold bg-nc-gold/10' 
-                  : 'border-white/10 text-white/40 hover:bg-white/5'
-              }`}
-            >
-              <div className={`w-2 h-2 rounded-full ${showRoadworks ? 'bg-nc-gold animate-pulse' : 'bg-white/20'}`} />
-              ROADWORKS
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowNewTraps(!showNewTraps)}
+                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                  showNewTraps 
+                    ? 'border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10 shadow-[0_0_15px_rgba(0,242,255,0.2)]' 
+                    : 'border-white/10 text-white/40 hover:bg-white/5'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${showNewTraps ? 'bg-nc-neon-teal animate-pulse' : 'bg-white/20'}`} />
+                NEW TRAPS
+              </button>
+              
+              <button 
+                onClick={() => setShowRoadworks(!showRoadworks)}
+                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                  showRoadworks 
+                    ? 'border-nc-gold text-nc-gold bg-nc-gold/10 shadow-[0_0_15px_rgba(255,207,75,0.2)]' 
+                    : 'border-white/10 text-white/40 hover:bg-white/5'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${showRoadworks ? 'bg-nc-gold animate-pulse' : 'bg-white/20'}`} />
+                ROADWORKS
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -385,11 +392,45 @@ export default function App() {
                   </span>
                 )}
                 {hoverInfo.properties.asukaspysakointitunnus && (
-                  <span className="bg-[#ffcf4b] text-[#05080a] font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0">
+                  <span className="bg-nc-purple text-white font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.5)]">
                     Zone {hoverInfo.properties.asukaspysakointitunnus}
                   </span>
                 )}
               </div>
+
+              {/* Synthetic Confidence Score */}
+              <div className="flex items-center justify-between mb-4 bg-white/5 rounded-xl p-3 border border-white/10">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-white/40 uppercase font-black tracking-wider">Confidence Score</span>
+                  <span className={`text-xl font-black ${
+                    hoverInfo.isRoadworkConflict || hoverInfo.properties.risk_score > 7 ? 'text-nc-danger' : 
+                    hoverInfo.properties.risk_score > 3 ? 'text-nc-gold' : 'text-nc-neon-teal'
+                  }`}>
+                    {hoverInfo.isRoadworkConflict ? '0' : Math.max(0, 10 - (hoverInfo.properties.risk_score || 0))}/10
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-white/40 uppercase font-black block">Status</span>
+                  <span className={`text-[10px] font-black uppercase ${
+                    hoverInfo.isRoadworkConflict ? 'text-nc-danger' : 
+                    hoverInfo.properties.risk_score > 7 ? 'text-nc-danger' : 
+                    hoverInfo.properties.risk_score > 3 ? 'text-nc-gold' : 'text-nc-neon-teal'
+                  }`}>
+                    {hoverInfo.isRoadworkConflict ? 'Restricted' : 
+                     hoverInfo.properties.risk_score > 7 ? 'High Risk' : 
+                     hoverInfo.properties.risk_score > 3 ? 'Caution' : 'Safe to Park'}
+                  </span>
+                </div>
+              </div>
+
+              {hoverInfo.isRoadworkConflict && (
+                <div className="bg-nc-danger/20 border border-nc-danger/50 rounded p-2 mb-3 animate-pulse">
+                  <span className="block text-xs text-nc-danger font-black uppercase mb-1">⚠️ ROADWORK CONFLICT</span>
+                  <p className="text-[10px] text-white/80 leading-tight">
+                    This spot is currently restricted due to active street works.
+                  </p>
+                </div>
+              )}
               
               {/* Roadwork Specific Info */}
               {hoverInfo.properties.licence_identifier ? (
@@ -418,6 +459,15 @@ export default function App() {
                 <>
                   <p className="text-sm text-white/70 mb-3 leading-tight">{hoverInfo.properties.luokka_nimi || 'No restriction data'}</p>
                   
+                  {hoverInfo.properties.asukaspysakointitunnus && (
+                    <div className="bg-nc-purple/10 border border-nc-purple/30 rounded p-2 mb-3">
+                      <p className="text-[10px] text-nc-purple font-bold uppercase mb-1">Resident Privilege</p>
+                      <p className="text-[10px] text-white/80 leading-tight">
+                        Requires permit for Zone {hoverInfo.properties.asukaspysakointitunnus}. Others must follow time rules below.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <div className="bg-white/5 rounded p-2">
                       <span className="block text-xs text-white/50 uppercase">Time Rules</span>
@@ -438,12 +488,6 @@ export default function App() {
                         <span className="text-xs text-white/80 leading-tight block">
                           {hoverInfo.properties.top_violation_reason.replace(/^\d+\s+/, '')}
                         </span>
-                    </div>
-                  )}
-                  
-                  {hoverInfo.properties.risk_score < 3 && (
-                    <div className="bg-[#00f2ff]/10 border border-[#00f2ff]/30 rounded p-2 mt-2 text-center">
-                        <span className="block text-xs text-[#00f2ff] uppercase font-bold">✅ Safe Zone (Risk {hoverInfo.properties.risk_score}/10)</span>
                     </div>
                   )}
                 </>
