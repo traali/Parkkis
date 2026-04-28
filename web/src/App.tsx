@@ -29,7 +29,7 @@ export default function App() {
   useEffect(() => {
     const initData = async () => {
       console.log('🏗️ ParkkiS Build Info:', {
-        version: '2.0.8',
+        version: '2.0.9',
         buildTime: new Date().toISOString(),
         environment: import.meta.env.MODE,
         base: import.meta.env.BASE_URL
@@ -109,7 +109,7 @@ export default function App() {
     }
   }, []);
 
-  const mapFilter = activeFilter === 'all' ? null : ['==', ['get', 'category'], activeFilter];
+  const mapFilter = activeFilter === 'all' ? undefined : ['==', ['get', 'category'], activeFilter];
 
   return (
     <div className="relative w-full h-screen bg-nc-deep">
