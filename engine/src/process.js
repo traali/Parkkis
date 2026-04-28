@@ -29,7 +29,8 @@ async function main() {
             { name: 'slots', path: path.join(CACHE_DIR, 'slots.json') },
             { name: 'violations', path: path.join(CACHE_DIR, 'violations.json') },
             { name: 'hubi', path: path.join(CACHE_DIR, 'hubi.json') },
-            { name: 'signs', path: path.join(CACHE_DIR, 'signs.json') }
+            { name: 'signs', path: path.join(CACHE_DIR, 'signs.json') },
+            { name: 'roadworks', path: path.join(CACHE_DIR, 'roadworks.json') }
         ];
 
         for (const file of files) {

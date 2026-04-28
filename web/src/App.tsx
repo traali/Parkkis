@@ -23,10 +23,12 @@ export default function App() {
   const [dbReady, setDbReady] = useState(false);
   const [riskData, setRiskData] = useState<any>(null);
   const [signData, setSignData] = useState<any>(null);
+  const [roadworkData, setRoadworkData] = useState<any>(null);
   const [loadingMsg, setLoadingMsg] = useState('Initializing Analytical Engine...');
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [showNewTraps, setShowNewTraps] = useState(true);
+  const [showRoadworks, setShowRoadworks] = useState(true);
   
   const geoControlRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
@@ -126,6 +128,20 @@ export default function App() {
 
         setSignData({ type: 'FeatureCollection', features: signFeatures });
 
+        // 4. Load Roadworks
+        setLoadingMsg('Scanning for street disruptions...');
+        await conn.query(`CREATE TABLE roadworks AS SELECT * FROM read_parquet('data/roadworks.parquet')`);
+        const roadworks = await conn.query(`SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`);
+        const roadworksGeoJSON = {
+          type: 'FeatureCollection',
+          features: roadworks.toArray().map((row: any) => ({
+            type: 'Feature',
+            geometry: JSON.parse(row.geometry),
+            properties: row
+          }))
+        };
+        setRoadworkData(roadworksGeoJSON);
+
         setDbReady(true);
         await conn.close();
       } catch (e) {
@@ -214,6 +230,17 @@ export default function App() {
               <div className={`w-2 h-2 rounded-full ${showNewTraps ? 'bg-nc-neon-teal animate-pulse' : 'bg-white/20'}`} />
               NEW TRAPS
             </button>
+            <button 
+              onClick={() => setShowRoadworks(!showRoadworks)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-black border transition-all duration-300 ${
+                showRoadworks 
+                  ? 'border-nc-gold text-nc-gold bg-nc-gold/10' 
+                  : 'border-white/10 text-white/40 hover:bg-white/5'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${showRoadworks ? 'bg-nc-gold animate-pulse' : 'bg-white/20'}`} />
+              ROADWORKS
+            </button>
           </div>
         )}
       </div>
@@ -223,7 +250,7 @@ export default function App() {
         initialViewState={INITIAL_VIEW_STATE}
         style={{ width: '100%', height: '100%' }}
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        interactiveLayerIds={['parking-lines', 'sign-points']}
+        interactiveLayerIds={['parking-lines', 'sign-points', 'roadwork-fill']}
         onMouseMove={onMouseMove}
         onMouseLeave={() => setHoverInfo(null)}
         onLoad={onMapLoad}
@@ -315,6 +342,30 @@ export default function App() {
           </Source>
         )}
 
+        {roadworkData && (
+          <Source id="roadwork-data" type="geojson" data={roadworkData}>
+            <Layer
+              id="roadwork-fill"
+              type="fill"
+              layout={{ visibility: showRoadworks ? 'visible' : 'none' }}
+              paint={{
+                'fill-color': '#ffcf4b',
+                'fill-opacity': 0.3
+              }}
+            />
+            <Layer
+              id="roadwork-outline"
+              type="line"
+              layout={{ visibility: showRoadworks ? 'visible' : 'none' }}
+              paint={{
+                'line-color': '#ffcf4b',
+                'line-width': 2,
+                'line-dasharray': [2, 1]
+              }}
+            />
+          </Source>
+        )}
+
         {hoverInfo && (
           <Popup
             longitude={hoverInfo.longitude}
@@ -339,8 +390,20 @@ export default function App() {
                 )}
               </div>
               
-              {/* Traffic Sign Specific Info */}
-              {hoverInfo.properties.id && hoverInfo.properties.id.toString().startsWith('175') ? (
+              {/* Roadwork Specific Info */}
+              {hoverInfo.properties.licence_identifier ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-nc-gold font-bold uppercase tracking-wider">Street Work Permit</p>
+                  <p className="text-xs text-white/70">Type: {hoverInfo.properties.licence_type}</p>
+                  <p className="text-xs text-white/70">Validity: {hoverInfo.properties.event_startdate_txt} - {hoverInfo.properties.event_endtdate_txt || 'Open'}</p>
+                  {hoverInfo.properties.event_description && (
+                    <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold italic">
+                      "{hoverInfo.properties.event_description}"
+                    </div>
+                  )}
+                  <div className="text-[10px] text-white/40 mt-2">ID: {hoverInfo.properties.licence_identifier}</div>
+                </div>
+              ) : hoverInfo.properties.id && hoverInfo.properties.id.toString().startsWith('175') ? (
                 <div className="space-y-2">
                   <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider">Traffic Sign Data</p>
                   <p className="text-xs text-white/70">Modified: {hoverInfo.properties.muokkauspv}</p>
