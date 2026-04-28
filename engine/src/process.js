@@ -28,7 +28,8 @@ async function main() {
         const files = [
             { name: 'slots', path: path.join(CACHE_DIR, 'slots.json') },
             { name: 'violations', path: path.join(CACHE_DIR, 'violations.json') },
-            { name: 'hubi', path: path.join(CACHE_DIR, 'hubi.json') }
+            { name: 'hubi', path: path.join(CACHE_DIR, 'hubi.json') },
+            { name: 'signs', path: path.join(CACHE_DIR, 'signs.json') }
         ];
 
         for (const file of files) {
@@ -46,10 +47,22 @@ async function main() {
             // Clean up old file
             if (await fs.pathExists(parquetPath)) await fs.remove(parquetPath);
 
+            let query = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, '/')}')`;
+
+            if (file.name === 'signs') {
+                // Parse muokkauspv (DD.MM.YYYY HH:MM:SS) to TIMESTAMP and check age
+                // Note: DuckDB's strptime is perfect for this.
+                query = `
+                    SELECT 
+                        *,
+                        strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
+                        (current_date - strptime(muokkauspv, '%d.%m.%Y %H:%M:%S')::DATE) <= 60 as is_new
+                    FROM ST_Read('${file.path.replace(/\\/g, '/')}')
+                `;
+            }
+
             await runQuery(`
-                COPY (
-                    SELECT * FROM ST_Read('${file.path.replace(/\\/g, '/')}')
-                ) TO '${parquetPath.replace(/\\/g, '/')}' (FORMAT 'PARQUET');
+                COPY (${query}) TO '${parquetPath.replace(/\\/g, '/')}' (FORMAT 'PARQUET');
             `);
             
             const stats = await fs.stat(parquetPath);

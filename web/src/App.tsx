@@ -22,12 +22,23 @@ const CATEGORIES = [
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
   const [riskData, setRiskData] = useState<any>(null);
+  const [signData, setSignData] = useState<any>(null);
   const [loadingMsg, setLoadingMsg] = useState('Initializing Analytical Engine...');
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState('all');
+  const [showNewTraps, setShowNewTraps] = useState(true);
   
   const geoControlRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
+  const [pulseOpacity, setPulseOpacity] = useState(0.8);
+
+  // Pulse animation for new traps
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPulseOpacity(prev => prev === 0.8 ? 0.2 : 0.8);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     const initData = async () => {
@@ -43,17 +54,19 @@ export default function App() {
         
         const slotsUrl = new URL('data/slots.parquet', window.location.href).href;
         const violationsUrl = new URL('data/violations.parquet', window.location.href).href;
+        const signsUrl = new URL('data/signs.parquet', window.location.href).href;
 
         await Promise.all([
           loadParquet('slots', slotsUrl),
-          loadParquet('violations', violationsUrl)
+          loadParquet('violations', violationsUrl),
+          loadParquet('signs', signsUrl)
         ]);
 
         setLoadingMsg('Calculating Live Risk Matrix...');
         const db = await getDuckDB();
         const conn = await db.connect();
         
-        const result = await conn.query(`
+        const slotResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(s.geom) as geometry, 
             to_json({
@@ -77,7 +90,7 @@ export default function App() {
           FROM slots s
         `);
         
-        const features = result.toArray().map((row: any) => ({
+        const slotFeatures = slotResult.toArray().map((row: any) => ({
           type: 'Feature',
           geometry: JSON.parse(row.geometry),
           properties: {
@@ -88,7 +101,31 @@ export default function App() {
           }
         }));
 
-        setRiskData({ type: 'FeatureCollection', features });
+        setRiskData({ type: 'FeatureCollection', features: slotFeatures });
+
+        setLoadingMsg('Indexing Temporal Signage...');
+        const signResult = await conn.query(`
+          SELECT 
+            ST_AsGeoJSON(geom) as geometry,
+            to_json({
+              'id': id,
+              'tyyppi': tyyppi,
+              'muokkauspv': muokkauspv,
+              'is_new': is_new,
+              'kilpi_txt1': kilpi_txt1
+            }) as properties
+          FROM signs
+          WHERE is_new = true OR tyyppi IN ('C37', 'C38', 'C39')
+        `);
+
+        const signFeatures = signResult.toArray().map((row: any) => ({
+          type: 'Feature',
+          geometry: JSON.parse(row.geometry),
+          properties: JSON.parse(row.properties)
+        }));
+
+        setSignData({ type: 'FeatureCollection', features: signFeatures });
+
         setDbReady(true);
         await conn.close();
       } catch (e) {
@@ -132,7 +169,7 @@ export default function App() {
               <Shield className="text-nc-neon-teal w-6 h-6" />
             </div>
             <div>
-              <h1 className="text-nv-text-lg font-bold tracking-tighter">PARKKIS</h1>
+              <h1 className="text-nv-text-lg font-bold tracking-tighter text-white">PARKKIS</h1>
               <p className="text-nv-text-xs text-white/50 uppercase tracking-widest">Helsinki Risk Engine</p>
             </div>
           </div>
@@ -140,39 +177,54 @@ export default function App() {
           {!dbReady && (
             <div className="nv-glass rounded-3xl px-6 py-3 flex items-center gap-3 animate-pulse">
               <div className="w-2 h-2 rounded-full bg-nc-neon-teal shadow-[0_0_10px_#00f2ff]" />
-              <span className="text-nv-text-sm font-medium">{loadingMsg}</span>
+              <span className="text-nv-text-sm font-medium text-white">{loadingMsg}</span>
             </div>
           )}
         </div>
 
         {dbReady && (
-          <div className="nv-glass rounded-3xl p-2 flex items-center gap-2 pointer-events-auto overflow-x-auto no-scrollbar max-w-fit self-start">
-            <div className="px-3 py-2 border-r border-white/10 mr-1">
-              <Filter className="w-4 h-4 text-white/40" />
+          <div className="flex gap-2">
+            <div className="nv-glass rounded-3xl p-2 flex items-center gap-2 pointer-events-auto overflow-x-auto no-scrollbar max-w-fit">
+              <div className="px-3 py-2 border-r border-white/10 mr-1">
+                <Filter className="w-4 h-4 text-white/40" />
+              </div>
+              {CATEGORIES.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveFilter(cat.id)}
+                  className={`px-4 py-2 rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
+                    activeFilter === cat.id 
+                      ? 'bg-nc-neon-teal text-nc-deep shadow-[0_0_15px_rgba(0,242,255,0.4)]' 
+                      : 'text-white/40 hover:bg-white/5'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
-            {CATEGORIES.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveFilter(cat.id)}
-                className={`px-4 py-2 rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
-                  activeFilter === cat.id 
-                    ? 'bg-nc-neon-teal text-nc-deep shadow-[0_0_15px_rgba(0,242,255,0.4)]' 
-                    : 'text-white/40 hover:bg-white/5'
-                }`}
-              >
-                {cat.label}
-              </button>
-            ))}
+
+            <button
+              onClick={() => setShowNewTraps(!showNewTraps)}
+              className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                showNewTraps 
+                  ? 'border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10' 
+                  : 'border-white/10 text-white/40 hover:bg-white/5'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full ${showNewTraps ? 'bg-nc-neon-teal animate-pulse' : 'bg-white/20'}`} />
+              NEW TRAPS
+            </button>
           </div>
         )}
       </div>
+div>
 
       <Map
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         style={{ width: '100%', height: '100%' }}
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        interactiveLayerIds={['parking-lines']}
+        interactiveLayerIds={['parking-lines', 'sign-points']}
         onMouseMove={onMouseMove}
         onMouseLeave={() => setHoverInfo(null)}
         onLoad={onMapLoad}
@@ -226,6 +278,42 @@ export default function App() {
           </Source>
         )}
 
+        {signData && (
+          <Source id="sign-data" type="geojson" data={signData}>
+            <Layer
+              id="sign-points"
+              type="circle"
+              layout={{ visibility: showNewTraps ? 'visible' : 'none' }}
+              paint={{
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 18, 10],
+                'circle-color': [
+                  'match',
+                  ['get', 'tyyppi'],
+                  ['C37', 'C38', 'C39', 'C44.1', 'C44.2'], '#ff3e3e',
+                  ['E2', 'E3.1', 'E3.2', 'E3.3', 'E3.4', 'E3.5'], '#3b82f6',
+                  ['E24', 'E26', 'E28'], '#ffcf4b',
+                  '#ffffff'
+                ],
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#0a0f14',
+                'circle-opacity': 0.8
+              }}
+            />
+            <Layer
+              id="sign-pulse"
+              type="circle"
+              filter={['==', ['get', 'is_new'], true]}
+              layout={{ visibility: showNewTraps ? 'visible' : 'none' }}
+              paint={{
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 8, 18, 25],
+                'circle-color': '#00f2ff',
+                'circle-opacity': pulseOpacity,
+                'circle-blur': 1
+              }}
+            />
+          </Source>
+        )}
+
         {hoverInfo && (
           <Popup
             longitude={hoverInfo.longitude}
@@ -233,11 +321,16 @@ export default function App() {
             closeButton={false}
             maxWidth="320px"
           >
-            <div className="p-3 bg-[#0a0f14] text-white rounded-lg border border-[#00f2ff]/20 shadow-xl">
+            <div className="p-3 bg-[#0a0f14] text-white rounded-lg border border-[#00f2ff]/20 shadow-xl min-w-[240px]">
               <div className="flex justify-between items-start mb-2 border-b border-white/10 pb-2">
                 <h3 className="font-bold text-white leading-tight">
                   {hoverInfo.properties.tyyppi || 'Parking Area'}
                 </h3>
+                {hoverInfo.properties.is_new && (
+                  <span className="bg-[#00f2ff] text-[#05080a] font-black px-2 py-0.5 rounded text-[10px] ml-2 animate-pulse">
+                    NEW RULE
+                  </span>
+                )}
                 {hoverInfo.properties.asukaspysakointitunnus && (
                   <span className="bg-[#ffcf4b] text-[#05080a] font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0">
                     Zone {hoverInfo.properties.asukaspysakointitunnus}
@@ -245,35 +338,50 @@ export default function App() {
                 )}
               </div>
               
-              <p className="text-sm text-white/70 mb-3 leading-tight">{hoverInfo.properties.luokka_nimi || 'No restriction data'}</p>
-              
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <div className="bg-white/5 rounded p-2">
-                  <span className="block text-xs text-white/50 uppercase">Time Rules</span>
-                  <span className="font-bold text-white text-sm">
-                    {hoverInfo.properties.voimassaolo || '-'}
-                    {hoverInfo.properties.kesto ? ` (${hoverInfo.properties.kesto})` : ''}
-                  </span>
+              {/* Traffic Sign Specific Info */}
+              {hoverInfo.properties.id && hoverInfo.properties.id.toString().startsWith('175') ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider">Traffic Sign Data</p>
+                  <p className="text-xs text-white/70">Modified: {hoverInfo.properties.muokkauspv}</p>
+                  {hoverInfo.properties.kilpi_txt1 && (
+                    <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold italic">
+                      "{hoverInfo.properties.kilpi_txt1}"
+                    </div>
+                  )}
                 </div>
-                <div className="bg-white/5 rounded p-2">
-                  <span className="block text-xs text-white/50 uppercase">Capacity</span>
-                  <span className="font-bold text-white text-sm">{hoverInfo.properties.paikat_ala || '?'} slots</span>
-                </div>
-              </div>
+              ) : (
+                <>
+                  <p className="text-sm text-white/70 mb-3 leading-tight">{hoverInfo.properties.luokka_nimi || 'No restriction data'}</p>
+                  
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    <div className="bg-white/5 rounded p-2">
+                      <span className="block text-xs text-white/50 uppercase">Time Rules</span>
+                      <span className="font-bold text-white text-sm">
+                        {hoverInfo.properties.voimassaolo || '-'}
+                        {hoverInfo.properties.kesto ? ` (${hoverInfo.properties.kesto})` : ''}
+                      </span>
+                    </div>
+                    <div className="bg-white/5 rounded p-2">
+                      <span className="block text-xs text-white/50 uppercase">Capacity</span>
+                      <span className="font-bold text-white text-sm">{hoverInfo.properties.paikat_ala || '?'} slots</span>
+                    </div>
+                  </div>
 
-              {hoverInfo.properties.risk_score >= 3 && hoverInfo.properties.top_violation_reason && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded p-2 mt-2">
-                    <span className="block text-xs text-red-400 uppercase mb-1 font-bold">⚠️ Top Danger (Risk {hoverInfo.properties.risk_score}/10)</span>
-                    <span className="text-xs text-white/80 leading-tight block">
-                      {hoverInfo.properties.top_violation_reason.replace(/^\d+\s+/, '')}
-                    </span>
-                </div>
-              )}
-              
-              {hoverInfo.properties.risk_score < 3 && (
-                <div className="bg-[#00f2ff]/10 border border-[#00f2ff]/30 rounded p-2 mt-2 text-center">
-                    <span className="block text-xs text-[#00f2ff] uppercase font-bold">✅ Safe Zone (Risk {hoverInfo.properties.risk_score}/10)</span>
-                </div>
+                  {hoverInfo.properties.risk_score >= 3 && hoverInfo.properties.top_violation_reason && (
+                    <div className="bg-red-500/10 border border-red-500/30 rounded p-2 mt-2">
+                        <span className="block text-xs text-red-400 uppercase mb-1 font-bold">⚠️ Top Danger (Risk {hoverInfo.properties.risk_score}/10)</span>
+                        <span className="text-xs text-white/80 leading-tight block">
+                          {hoverInfo.properties.top_violation_reason.replace(/^\d+\s+/, '')}
+                        </span>
+                    </div>
+                  )}
+                  
+                  {hoverInfo.properties.risk_score < 3 && (
+                    <div className="bg-[#00f2ff]/10 border border-[#00f2ff]/30 rounded p-2 mt-2 text-center">
+                        <span className="block text-xs text-[#00f2ff] uppercase font-bold">✅ Safe Zone (Risk {hoverInfo.properties.risk_score}/10)</span>
+                    </div>
+                  )}
+                </>
               )}
             </div>
           </Popup>
