@@ -13,7 +13,7 @@
 
   /* Typography */
   --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  
+
   /* Fluid Typography Formulas (Rule 7) */
   --nv-text-xs: clamp(0.694rem, 0.65rem + 0.22vw, 0.8rem);
   --nv-text-sm: clamp(0.833rem, 0.78rem + 0.27vw, 0.96rem);
@@ -33,9 +33,13 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
-    background-image: 
+    background-image:
       radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.05) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, rgba(255, 62, 62, 0.05) 0px, transparent 50%);
+      radial-gradient(
+        at 100% 100%,
+        rgba(255, 62, 62, 0.05) 0px,
+        transparent 50%
+      );
   }
 }
 
@@ -70,7 +74,7 @@
     border-color: rgba(255, 255, 255, 0.2);
     transform: scale(1.01);
   }
-  
+
   /* Map Overlays */
   .nv-hud {
     position: fixed;
@@ -78,7 +82,7 @@
     pointer-events: none;
     padding: 1.5rem;
   }
-  
+
   /* Popup Overrides */
   .nv-popup .maplibregl-popup-content {
     background: var(--color-nc-void);
@@ -88,7 +92,7 @@
     color: white;
     padding: 0;
   }
-  
+
   .nv-popup .maplibregl-popup-tip {
     border-top-color: var(--color-nc-void);
     border-bottom-color: var(--color-nc-void);

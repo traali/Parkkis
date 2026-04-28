@@ -8,7 +8,9 @@
     "process": "cd engine && node src/process.js",
     "ingest": "npm run fetch && npm run process",
     "dev": "cd web && npm run dev",
-    "build": "cd web && npm run build"
+    "build": "cd web && npm run build",
+    "lint": "npx @biomejs/biome lint .",
+    "check": "npx @biomejs/biome check --write ."
   },
   "keywords": [],
   "author": "",
