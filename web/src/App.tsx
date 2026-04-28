@@ -57,11 +57,13 @@ export default function App() {
         const slotsUrl = new URL('data/slots.parquet', window.location.href).href;
         const violationsUrl = new URL('data/violations.parquet', window.location.href).href;
         const signsUrl = new URL('data/signs.parquet', window.location.href).href;
+        const roadworksUrl = new URL('data/roadworks.parquet', window.location.href).href;
 
         await Promise.all([
           loadParquet('slots', slotsUrl),
           loadParquet('violations', violationsUrl),
-          loadParquet('signs', signsUrl)
+          loadParquet('signs', signsUrl),
+          loadParquet('roadworks', roadworksUrl)
         ]);
 
         setLoadingMsg('Calculating Live Risk Matrix...');
@@ -130,7 +132,6 @@ export default function App() {
 
         // 4. Load Roadworks
         setLoadingMsg('Scanning for street disruptions...');
-        await conn.query(`CREATE TABLE roadworks AS SELECT * FROM read_parquet('data/roadworks.parquet')`);
         const roadworks = await conn.query(`SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`);
         const roadworksGeoJSON = {
           type: 'FeatureCollection',
