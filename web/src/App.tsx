@@ -75,6 +75,13 @@ const CATEGORIES = [
   { id: "special", label: "Special (EV/Inva)", color: "bg-purple-500" },
 ];
 
+// Safe serialization helper for MapLibre/DuckDB
+const safeGeoJSON = (data: unknown) => {
+  return JSON.parse(
+    JSON.stringify(data, (_, v) => (typeof v === "bigint" ? Number(v) : v)),
+  );
+};
+
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
   const [riskData, setRiskData] = useState<FeatureCollection | null>(null);
@@ -96,6 +103,8 @@ export default function App() {
   const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
   const mapRef = useRef<MapRef>(null);
   const [pulseOpacity, setPulseOpacity] = useState(0.8);
+  
+
 
   // Debounced Search Logic
   useEffect(() => {
@@ -238,7 +247,7 @@ export default function App() {
           },
         }));
  
-        setRiskData({ type: "FeatureCollection" as const, features: slotFeatures });
+        setRiskData(safeGeoJSON({ type: "FeatureCollection" as const, features: slotFeatures }));
 
         setLoadingMsg("Indexing Temporal Signage...");
         const signResult = await conn.query(`
@@ -270,7 +279,7 @@ export default function App() {
           properties: JSON.parse(row.properties),
         }));
 
-        setSignData({ type: "FeatureCollection" as const, features: signFeatures });
+        setSignData(safeGeoJSON({ type: "FeatureCollection" as const, features: signFeatures }));
 
         // 4. Load Roadworks
         setLoadingMsg("Scanning for street disruptions...");
@@ -288,7 +297,7 @@ export default function App() {
             properties: JSON.parse(row.properties),
           })),
         };
-        setRoadworkData(roadworksGeoJSON);
+        setRoadworkData(safeGeoJSON(roadworksGeoJSON));
  
         // 5. Load LiiPi (Park & Ride)
         setLoadingMsg("Connecting to Transit Hubs...");
@@ -306,7 +315,7 @@ export default function App() {
             properties: JSON.parse(row.properties),
           })),
         };
-        setLiipiData(liipiGeoJSON);
+        setLiipiData(safeGeoJSON(liipiGeoJSON));
 
         setDbReady(true);
         await conn.close();
