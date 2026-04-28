@@ -58,15 +58,7 @@ interface SignRow {
   properties: string;
 }
 
-interface RoadworkRow {
-  geometry: string;
-  [key: string]: unknown;
-}
 
-interface LiipiRow {
-  geometry: string;
-  [key: string]: unknown;
-}
 
 const INITIAL_VIEW_STATE = {
   longitude: 24.941,
@@ -282,37 +274,37 @@ export default function App() {
 
         // 4. Load Roadworks
         setLoadingMsg("Scanning for street disruptions...");
-        const roadworksResult = await conn.query(
-          `SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`,
-        );
+        const roadworksResult = await conn.query(`
+          SELECT 
+            ST_AsGeoJSON(geom) as geometry, 
+            to_json(r.* EXCLUDE geom) as properties 
+          FROM roadworks r
+        `);
         const roadworksGeoJSON = {
           type: "FeatureCollection" as const,
-          features: (roadworksResult.toArray() as unknown as RoadworkRow[]).map((row) => {
-            const { geometry, ...props } = row;
-            return {
-              type: "Feature" as const,
-              geometry: JSON.parse(geometry),
-              properties: props,
-            };
-          }),
+          features: (roadworksResult.toArray() as unknown as { geometry: string; properties: string }[]).map((row) => ({
+            type: "Feature" as const,
+            geometry: JSON.parse(row.geometry),
+            properties: JSON.parse(row.properties),
+          })),
         };
         setRoadworkData(roadworksGeoJSON);
  
         // 5. Load LiiPi (Park & Ride)
         setLoadingMsg("Connecting to Transit Hubs...");
-        const liipi = await conn.query(
-          `SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM liipi`,
-        );
+        const liipiResult = await conn.query(`
+          SELECT 
+            ST_AsGeoJSON(geom) as geometry, 
+            to_json(l.* EXCLUDE geom) as properties 
+          FROM liipi l
+        `);
         const liipiGeoJSON = {
           type: "FeatureCollection" as const,
-          features: (liipi.toArray() as unknown as LiipiRow[]).map((row) => {
-            const { geometry, ...props } = row;
-            return {
-              type: "Feature" as const,
-              geometry: JSON.parse(geometry),
-              properties: props,
-            };
-          }),
+          features: (liipiResult.toArray() as unknown as { geometry: string; properties: string }[]).map((row) => ({
+            type: "Feature" as const,
+            geometry: JSON.parse(row.geometry),
+            properties: JSON.parse(row.properties),
+          })),
         };
         setLiipiData(liipiGeoJSON);
 
