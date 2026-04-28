@@ -29,10 +29,14 @@ export async function getDuckDB() {
     // Load Spatial extension if possible (DuckDB-Wasm support varies)
     const conn = await db.connect();
     try {
+        // WORKAROUND for duckdb-wasm issue #2199 'stoi: no conversion' on GeoParquet:
+        // Force loading the default CRS by querying coordinate systems BEFORE loading spatial
+        await conn.query(`SELECT * FROM duckdb_coordinate_systems();`);
+        
         await conn.query(`INSTALL spatial; LOAD spatial;`);
         console.log('🦆 DuckDB-Wasm Spatial Loaded');
     } catch (e) {
-        console.warn('🦆 DuckDB-Wasm Spatial not supported in this bundle, falling back to basic analysis');
+        console.warn('🦆 DuckDB-Wasm Spatial not supported in this bundle, falling back to basic analysis', e);
     }
     await conn.close();
 
@@ -43,20 +47,13 @@ export async function loadParquet(name: string, url: string) {
     const db = await getDuckDB();
     const conn = await db.connect();
     
-    console.log(`🦆 DuckDB: Fetching ${name} from ${url}...`);
+    console.log(`🦆 DuckDB: Registering ${name} from ${url}...`);
     
     try {
-        // Fetch as buffer to avoid DuckDB's internal HTTP-stoi parsing issues
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
-        const buffer = new Uint8Array(await response.arrayBuffer());
-        
-        // Register as a LOCAL buffer
-        await db.registerFileBuffer(`${name}.parquet`, buffer);
+        await db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
         
         // MATERIALIZE as a table
-        await conn.query(`CREATE TABLE ${name} AS SELECT * FROM read_parquet('${name}.parquet')`);
+        await conn.query(`CREATE TABLE ${name} AS SELECT * FROM read_parquet('${name}')`);
         
         const result = await conn.query(`SELECT count(*) FROM ${name}`);
         console.log(`✅ Materialized ${name}:`, result.toArray()[0]);
