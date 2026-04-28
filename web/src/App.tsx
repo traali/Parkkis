@@ -19,7 +19,7 @@ export default function App() {
   useEffect(() => {
     const initData = async () => {
       console.log('🏗️ ParkkiS Build Info:', {
-        version: '2.0.4',
+        version: '2.0.5',
         buildTime: new Date().toISOString(),
         environment: import.meta.env.MODE,
         base: import.meta.env.BASE_URL
@@ -45,9 +45,9 @@ export default function App() {
         // We use a simple bounding box join for speed
         const result = await conn.query(`
           SELECT 
-            s.geometry, 
-            s.properties,
-            (SELECT count(*) FROM violations v WHERE ST_Intersects(s.geometry, v.geometry)) as fine_count
+            ST_AsGeoJSON(s.geom) as geometry, 
+            to_json({'id': s.id, 'luokka_nimi': s.luokka_nimi}) as properties,
+            (SELECT count(*) FROM violations v WHERE ST_Intersects(s.geom, v.geom)) as fine_count
           FROM slots s
         `);
         

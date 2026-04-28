@@ -10,8 +10,8 @@ const SOURCES = {
     PARKKIHUBI: 'https://pubapi.parkkiopas.fi/public/v1/parking_area/',
     FINTRAFFIC: 'https://liippapi.fintraffic.fi/v1/parking-facilities',
     SERVICEMAP: 'https://api.hel.fi/servicemap/v2/administrative_division/',
-    WFS_SLOTS: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json',
-    WFS_FINES: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointivirheet&outputFormat=application/json'
+    WFS_SLOTS: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointipaikat_alue&outputFormat=application/json&srsName=EPSG:4326',
+    WFS_FINES: 'https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeName=avoindata:Pysakointivirheet&outputFormat=application/json&srsName=EPSG:4326'
 };
 
 const HEADERS = {
