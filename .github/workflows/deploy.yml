@@ -21,15 +21,36 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            engine/package-lock.json
+            web/package-lock.json
 
       - name: Install Engine Dependencies
         run: |
           cd engine
           npm install
 
-      - name: Run Ingestion Pipeline
-        run: |
-          npm run ingest
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Cache fetched parking data
+        uses: actions/cache@v4
+        id: data-cache
+        with:
+          path: engine/.cache
+          key: parking-data-${{ steps.date.outputs.date }}
+          restore-keys: |
+            parking-data-
+
+      - name: Fetch external data
+        if: steps.data-cache.outputs.cache-hit != 'true'
+        run: npm run fetch
+
+      - name: Process fetched data
+        run: npm run process
 
       - name: Install Web Dependencies
         run: |
