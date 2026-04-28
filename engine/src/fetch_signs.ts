@@ -28,8 +28,8 @@ export class DigiroadClient {
         }
     }
 
-    async fetchHelsinkiSigns() {
-        console.log(`[SIGNS] Starting fetch for Helsinki parking signs...`);
+    async fetchCapitalRegionSigns() {
+        console.log(`[SIGNS] Starting fetch for Capital Region parking signs...`);
         // Expanded list based on parking regulations
         const signTypes = [
             'C37', 'C38', 'C39', 'C40', 'C44.1', 'C44.2', 
@@ -37,7 +37,8 @@ export class DigiroadClient {
             'E4.1', 'E4.2', 'E4.3', 
             'E24', 'E26', 'E28'
         ];
-        const cql = `kuntakoodi=91 AND tyyppi IN (${signTypes.map(t => `'${t}'`).join(',')})`;
+        // 91=Helsinki, 49=Espoo, 92=Vantaa, 235=Kauniainen
+        const cql = `kuntakoodi IN (91, 49, 92, 235) AND tyyppi IN (${signTypes.map(t => `'${t}'`).join(',')})`;
         const pageSize = 5000;
         let startIndex = 0;
         const allFeatures: any[] = [];
@@ -68,7 +69,7 @@ async function main() {
 
     try {
         console.log('🚀 Starting Digiroad Traffic Sign Harvest...');
-        const signs = await client.fetchHelsinkiSigns();
+        const signs = await client.fetchCapitalRegionSigns();
 
         console.log('[WRITE] Saving signs.json to cache...');
         await fs.writeJson(path.join(CACHE_DIR, 'signs.json'), signs);

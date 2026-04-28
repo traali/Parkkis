@@ -2,7 +2,8 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import Map, { Source, Layer, NavigationControl, GeolocateControl, Popup } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { getDuckDB, loadParquet } from './lib/duckdb';
-import { Shield, Info, Map as MapIcon, Sliders, Filter } from 'lucide-react';
+import * as turf from '@turf/turf';
+import { Shield, Info, Map as MapIcon, Sliders, Filter, Search, X, Navigation } from 'lucide-react';
 
 const INITIAL_VIEW_STATE = {
   longitude: 24.941,
@@ -24,15 +25,60 @@ export default function App() {
   const [riskData, setRiskData] = useState<any>(null);
   const [signData, setSignData] = useState<any>(null);
   const [roadworkData, setRoadworkData] = useState<any>(null);
+  const [liipiData, setLiipiData] = useState<any>(null);
   const [loadingMsg, setLoadingMsg] = useState('Initializing Analytical Engine...');
   const [hoverInfo, setHoverInfo] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [showNewTraps, setShowNewTraps] = useState(true);
   const [showRoadworks, setShowRoadworks] = useState(true);
+  const [showSigns, setShowSigns] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
   
   const geoControlRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
   const [pulseOpacity, setPulseOpacity] = useState(0.8);
+
+  // Debounced Search Logic
+  useEffect(() => {
+    if (searchQuery.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    const delayDebounceFn = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://api.hel.fi/servicemap/v2/search/?type=address&page_size=5&q=${encodeURIComponent(searchQuery)}&language=fi`);
+        const data = await response.json();
+        setSearchResults(data.results || []);
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
+
+  const onSelectAddress = (result: any) => {
+    const [lng, lat] = result.location.coordinates;
+    setSelectedAddress({
+      longitude: lng,
+      latitude: lat,
+      name: result.name.fi || result.name.sv
+    });
+    setSearchQuery('');
+    setSearchResults([]);
+    
+    if (mapRef.current) {
+      mapRef.current.flyTo({
+        center: [lng, lat],
+        zoom: 17,
+        pitch: 60,
+        duration: 2000
+      });
+    }
+  };
 
   // Pulse animation for new traps
   useEffect(() => {
@@ -58,12 +104,14 @@ export default function App() {
         const violationsUrl = new URL('data/violations.parquet', window.location.href).href;
         const signsUrl = new URL('data/signs.parquet', window.location.href).href;
         const roadworksUrl = new URL('data/roadworks.parquet', window.location.href).href;
+        const liipiUrl = new URL('data/liipi.parquet', window.location.href).href;
 
         await Promise.all([
           loadParquet('slots', slotsUrl),
           loadParquet('violations', violationsUrl),
           loadParquet('signs', signsUrl),
-          loadParquet('roadworks', roadworksUrl)
+          loadParquet('roadworks', roadworksUrl),
+          loadParquet('liipi', liipiUrl)
         ]);
 
         setLoadingMsg('Calculating Live Risk Matrix...');
@@ -132,10 +180,10 @@ export default function App() {
 
         // 4. Load Roadworks
         setLoadingMsg('Scanning for street disruptions...');
-        const roadworks = await conn.query(`SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`);
+        const roadworksResult = await conn.query(`SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`);
         const roadworksGeoJSON = {
           type: 'FeatureCollection',
-          features: roadworks.toArray().map((row: any) => {
+          features: roadworksResult.toArray().map((row: any) => {
             const props = { ...row };
             delete props.geometry;
             return {
@@ -146,6 +194,23 @@ export default function App() {
           })
         };
         setRoadworkData(roadworksGeoJSON);
+
+        // 5. Load LiiPi (Park & Ride)
+        setLoadingMsg('Connecting to Transit Hubs...');
+        const liipi = await conn.query(`SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM liipi`);
+        const liipiGeoJSON = {
+          type: 'FeatureCollection',
+          features: liipi.toArray().map((row: any) => {
+            const props = { ...row };
+            delete props.geometry;
+            return {
+              type: 'Feature',
+              geometry: JSON.parse(row.geometry),
+              properties: props
+            };
+          })
+        };
+        setLiipiData(liipiGeoJSON);
 
         setDbReady(true);
         await conn.close();
@@ -184,18 +249,72 @@ export default function App() {
 
   const mapFilter = activeFilter === 'all' ? ['has', 'category'] : ['==', ['get', 'category'], activeFilter];
 
+  const calculateDistance = () => {
+    if (!selectedAddress || !hoverInfo) return null;
+    const from = turf.point([selectedAddress.longitude, selectedAddress.latitude]);
+    const to = turf.point([hoverInfo.longitude, hoverInfo.latitude]);
+    const d = turf.distance(from, to, { units: 'kilometers' });
+    return (d * 1000).toFixed(0); // Meters
+  };
+
+  const walkTime = (meters: string) => {
+    return Math.ceil(parseInt(meters) / 80); // ~5km/h = 80m/min
+  };
+
+  const distance = calculateDistance();
+
   return (
     <div className="relative w-full h-screen bg-nc-deep">
       {/* Nova HUD */}
-      <div className="nv-hud top-0 left-0 w-full flex flex-col gap-4">
+      <div className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none">
         <div className="flex justify-between items-start w-full">
-          <div className="nv-glass rounded-3xl p-4 flex items-center gap-4 pointer-events-auto">
-            <div className="bg-nc-neon-teal/20 p-2 rounded-2xl">
-              <Shield className="text-nc-neon-teal w-6 h-6" />
+          <div className="flex flex-col gap-4 w-full max-w-md pointer-events-auto">
+            {/* Search Bar */}
+            <div className="nv-glass rounded-3xl p-1 flex items-center shadow-2xl border border-white/20">
+              <div className="pl-4 pr-2">
+                <Search className="w-5 h-5 text-nc-neon-teal" />
+              </div>
+              <input 
+                type="text"
+                placeholder="Search address (e.g. Mannerheimintie 1)"
+                className="bg-transparent border-none text-white text-sm w-full py-3 focus:outline-none placeholder:text-white/20"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="p-2 hover:bg-white/5 rounded-full mr-1">
+                  <X className="w-4 h-4 text-white/40" />
+                </button>
+              )}
             </div>
-            <div>
-              <h1 className="text-nv-text-lg font-bold tracking-tighter text-white">PARKKIS</h1>
-              <p className="text-nv-text-xs text-white/50 uppercase tracking-widest">Helsinki Risk Engine</p>
+
+            {/* Search Results */}
+            {searchResults.length > 0 && (
+              <div className="nv-glass rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+                {searchResults.map((result: any) => (
+                  <button
+                    key={result.id}
+                    onClick={() => onSelectAddress(result)}
+                    className="w-full text-left px-4 py-3 hover:bg-nc-neon-teal/10 transition-colors border-b border-white/5 last:border-0 group flex items-center gap-3"
+                  >
+                    <Navigation className="w-4 h-4 text-white/20 group-hover:text-nc-neon-teal transition-colors" />
+                    <div>
+                      <div className="text-sm font-bold text-white">{result.name.fi || result.name.sv}</div>
+                      <div className="text-[10px] text-white/40 uppercase tracking-wider">Helsinki Region</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="nv-glass rounded-3xl p-4 flex items-center gap-4">
+              <div className="bg-nc-neon-teal/20 p-2 rounded-2xl">
+                <Shield className="text-nc-neon-teal w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-nv-text-lg font-bold tracking-tighter text-white">PARKKIS</h1>
+                <p className="text-nv-text-xs text-white/50 uppercase tracking-widest">Capital Region Risk Engine</p>
+              </div>
             </div>
           </div>
 
@@ -242,6 +361,18 @@ export default function App() {
               </button>
               
               <button 
+                onClick={() => setShowSigns(!showSigns)}
+                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                  showSigns 
+                    ? 'border-white text-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]' 
+                    : 'border-white/10 text-white/40 hover:bg-white/5'
+                }`}
+              >
+                <div className={`w-2 h-2 rounded-full ${showSigns ? 'bg-white animate-pulse' : 'bg-white/20'}`} />
+                SIGNS
+              </button>
+
+              <button 
                 onClick={() => setShowRoadworks(!showRoadworks)}
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showRoadworks 
@@ -262,7 +393,7 @@ export default function App() {
         initialViewState={INITIAL_VIEW_STATE}
         style={{ width: '100%', height: '100%' }}
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        interactiveLayerIds={['parking-lines', 'sign-points', 'roadwork-fill']}
+        interactiveLayerIds={['parking-lines', 'sign-points', 'roadwork-fill', 'liipi-points']}
         onMouseMove={onMouseMove}
         onMouseLeave={() => setHoverInfo(null)}
         onLoad={onMapLoad}
@@ -321,10 +452,10 @@ export default function App() {
             <Layer
               id="sign-points"
               type="circle"
-              minzoom={15}
-              layout={{ visibility: showNewTraps ? 'visible' : 'none' }}
+              minzoom={13}
+              layout={{ visibility: showSigns ? 'visible' : 'none' }}
               paint={{
-                'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 18, 10],
+                'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 2, 18, 8],
                 'circle-color': [
                   'match',
                   ['get', 'tyyppi'],
@@ -333,15 +464,15 @@ export default function App() {
                   ['E24', 'E26', 'E28'], '#ffcf4b',
                   '#ffffff'
                 ],
-                'circle-stroke-width': 2,
+                'circle-stroke-width': 1.5,
                 'circle-stroke-color': '#0a0f14',
-                'circle-opacity': 0.8
+                'circle-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0.4, 15, 0.9]
               }}
             />
             <Layer
               id="sign-pulse"
               type="circle"
-              minzoom={15}
+              minzoom={14}
               filter={['==', ['get', 'is_new'], true]}
               layout={{ visibility: showNewTraps ? 'visible' : 'none' }}
               paint={{
@@ -496,8 +627,46 @@ export default function App() {
                   )}
                 </>
               )}
+
+              {distance && (
+                <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Navigation className="w-4 h-4 text-nc-neon-teal" />
+                    <div>
+                      <div className="text-[10px] text-white/40 uppercase font-black">Destination Synergy</div>
+                      <div className="text-xs text-white font-bold truncate max-w-[120px]">{selectedAddress?.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-nc-neon-teal font-black">{distance}m</div>
+                    <div className="text-[10px] text-white/40 uppercase">~{walkTime(distance)} min walk</div>
+                  </div>
+                </div>
+              )}
             </div>
           </Popup>
+        )}
+        {liipiData && (
+          <Source id="liipi-hubs" type="geojson" data={liipiData}>
+            <Layer
+              id="liipi-points"
+              type="symbol"
+              layout={{
+                'icon-image': 'rocket-15', // Temporary icon until we add a proper SVG
+                'icon-size': 1.5,
+                'text-field': ['get', 'name'],
+                'text-font': ['Open Sans Semibold'],
+                'text-offset': [0, 1.2],
+                'text-anchor': 'top',
+                'text-size': 10
+              }}
+              paint={{
+                'text-color': '#00f2ff',
+                'text-halo-color': 'rgba(5, 8, 10, 0.8)',
+                'text-halo-width': 2
+              }}
+            />
+          </Source>
         )}
       </Map>
 
@@ -509,9 +678,9 @@ export default function App() {
             <span className="text-nv-text-xs font-bold text-white/40 uppercase">Coverage</span>
           </div>
           <p className="text-nv-text-xl font-bold">
-            {riskData?.features.filter((f: any) => activeFilter === 'all' || f.properties.category === activeFilter).length || 0}
+            Regional Scope
           </p>
-          <p className="text-nv-text-xs text-white/30">Active Parking Slots</p>
+          <p className="text-nv-text-xs text-white/30">Helsinki • Espoo • Vantaa</p>
         </div>
 
         <div className="nv-bento-card pointer-events-auto">

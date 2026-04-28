@@ -1,10 +1,10 @@
 {
   "name": "parkkis",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"—they need to know *safe* spots.",
   "main": "index.js",
   "scripts": {
-    "fetch": "cd engine && npx ts-node src/fetch.ts && npx ts-node src/fetch_signs.ts && npx ts-node src/fetch_roadworks.ts",
+    "fetch": "cd engine && npx ts-node src/fetch.ts && npx ts-node src/fetch_signs.ts && npx ts-node src/fetch_roadworks.ts && npx ts-node src/fetch_liipi.ts",
     "process": "cd engine && node src/process.js",
     "ingest": "npm run fetch && npm run process",
     "dev": "cd web && npm run dev",
