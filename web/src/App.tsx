@@ -5,6 +5,8 @@ import ReactMap, {
   NavigationControl,
   Popup,
   Source,
+  type MapLayerMouseEvent,
+  type MapRef,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import * as turf from "@turf/turf";
@@ -27,11 +29,41 @@ interface Address {
   name: string;
 }
 
+interface SearchResult {
+  id: number;
+  name: { fi: string; sv: string };
+  location: {
+    coordinates: [number, number];
+  };
+}
+
 interface HoverInfo {
   longitude: number;
   latitude: number;
-  properties: any;
+  properties: Record<string, any>;
   isRoadworkConflict: boolean;
+}
+
+interface ParkingSlotRow {
+  geometry: string;
+  properties: string;
+  fine_count: number;
+  top_violation_reason: string;
+}
+
+interface SignRow {
+  geometry: string;
+  properties: string;
+}
+
+interface RoadworkRow {
+  geometry: string;
+  [key: string]: any;
+}
+
+interface LiipiRow {
+  geometry: string;
+  [key: string]: any;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -68,7 +100,7 @@ export default function App() {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
   const geoControlRef = useRef<any>(null);
-  const mapRef = useRef<any>(null);
+  const mapRef = useRef<MapRef>(null);
   const [pulseOpacity, setPulseOpacity] = useState(0.8);
 
   // Debounced Search Logic
@@ -93,7 +125,7 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
-  const onSelectAddress = (result: any) => {
+  const onSelectAddress = (result: SearchResult) => {
     const [lng, lat] = result.location.coordinates;
     setSelectedAddress({
       longitude: lng,
@@ -133,20 +165,12 @@ export default function App() {
       try {
         setLoadingMsg("Loading High-Performance Spatial Assets...");
 
-        const slotsUrl = new URL("data/slots.parquet", window.location.href)
-          .href;
-        const violationsUrl = new URL(
-          "data/violations.parquet",
-          window.location.href,
-        ).href;
-        const signsUrl = new URL("data/signs.parquet", window.location.href)
-          .href;
-        const roadworksUrl = new URL(
-          "data/roadworks.parquet",
-          window.location.href,
-        ).href;
-        const liipiUrl = new URL("data/liipi.parquet", window.location.href)
-          .href;
+        const baseUrl = import.meta.env.BASE_URL;
+        const slotsUrl = new URL(`${baseUrl}data/slots.parquet`, window.location.origin).href;
+        const violationsUrl = new URL(`${baseUrl}data/violations.parquet`, window.location.origin).href;
+        const signsUrl = new URL(`${baseUrl}data/signs.parquet`, window.location.origin).href;
+        const roadworksUrl = new URL(`${baseUrl}data/roadworks.parquet`, window.location.origin).href;
+        const liipiUrl = new URL(`${baseUrl}data/liipi.parquet`, window.location.origin).href;
 
         await Promise.all([
           loadParquet("slots", slotsUrl),
@@ -184,7 +208,7 @@ export default function App() {
           FROM slots s
         `);
 
-        const slotFeatures = slotResult.toArray().map((row: any) => ({
+        const slotFeatures = (slotResult.toArray() as unknown as ParkingSlotRow[]).map((row) => ({
           type: "Feature" as const,
           geometry: JSON.parse(row.geometry),
           properties: {
@@ -215,7 +239,7 @@ export default function App() {
           WHERE is_new = true OR tyyppi IN ('C37', 'C38', 'C39')
         `);
 
-        const signFeatures = signResult.toArray().map((row: any) => ({
+        const signFeatures = (signResult.toArray() as unknown as SignRow[]).map((row) => ({
           type: "Feature" as const,
           geometry: JSON.parse(row.geometry),
           properties: JSON.parse(row.properties),
@@ -230,12 +254,11 @@ export default function App() {
         );
         const roadworksGeoJSON = {
           type: "FeatureCollection" as const,
-          features: roadworksResult.toArray().map((row: any) => {
-            const props = { ...row };
-            delete props.geometry;
+          features: (roadworksResult.toArray() as unknown as RoadworkRow[]).map((row) => {
+            const { geometry, ...props } = row;
             return {
               type: "Feature" as const,
-              geometry: JSON.parse(row.geometry),
+              geometry: JSON.parse(geometry),
               properties: props,
             };
           }),
@@ -249,12 +272,11 @@ export default function App() {
         );
         const liipiGeoJSON = {
           type: "FeatureCollection" as const,
-          features: liipi.toArray().map((row: any) => {
-            const props = { ...row };
-            delete props.geometry;
+          features: (liipi.toArray() as unknown as LiipiRow[]).map((row) => {
+            const { geometry, ...props } = row;
             return {
               type: "Feature" as const,
-              geometry: JSON.parse(row.geometry),
+              geometry: JSON.parse(geometry),
               properties: props,
             };
           }),
@@ -271,14 +293,14 @@ export default function App() {
     initData();
   }, []);
 
-  const onMouseMove = useCallback((event: any) => {
+  const onMouseMove = useCallback((event: MapLayerMouseEvent) => {
     const { features } = event;
     const hoveredFeature = features?.[0];
 
     if (hoveredFeature) {
       // Find if we have roadwork in the stack
       const roadwork = features.find(
-        (f: any) => f.layer.id === "roadwork-fill",
+        (f) => f.layer.id === "roadwork-fill",
       );
 
       setHoverInfo({
@@ -299,7 +321,7 @@ export default function App() {
     }
   }, []);
 
-  const mapFilter =
+  const mapFilter: import("maplibre-gl").FilterSpecification =
     activeFilter === "all"
       ? ["has", "category"]
       : ["==", ["get", "category"], activeFilter];
@@ -353,7 +375,7 @@ export default function App() {
             {/* Search Results */}
             {searchResults.length > 0 && (
               <div className="nv-glass rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
-                {searchResults.map((result: any) => (
+                {searchResults.map((result: SearchResult) => (
                   <button
                     type="button"
                     key={result.id}
@@ -498,7 +520,7 @@ export default function App() {
             <Layer
               id="parking-lines"
               type="line"
-              filter={mapFilter as any}
+              filter={mapFilter}
               paint={{
                 "line-color": [
                   "match",
@@ -528,7 +550,7 @@ export default function App() {
             <Layer
               id="parking-glow"
               type="line"
-              filter={mapFilter as any}
+              filter={mapFilter}
               paint={{
                 "line-color": [
                   "interpolate",
