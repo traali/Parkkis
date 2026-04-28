@@ -21,7 +21,10 @@ export async function getDuckDB() {
   if (db) return db;
 
   const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
-  const worker = new Worker(bundle.mainWorker!);
+  if (!bundle.mainWorker) {
+    throw new Error("DuckDB bundle missing mainWorker");
+  }
+  const worker = new Worker(bundle.mainWorker);
   const logger = new duckdb.ConsoleLogger();
   db = new duckdb.AsyncDuckDB(logger, worker);
   await db.instantiate(bundle.mainModule, bundle.pthreadWorker);

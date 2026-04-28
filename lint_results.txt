@@ -1,0 +1,9 @@
+﻿
+> parkkis@2.4.1 lint
+> npx @biomejs/biome lint .
+
+The number of diagnostics exceeds the limit allowed. Use --max-diagnostics to increase it.
+Diagnostics not shown: 26.
+Checked 28 files in 20ms. No fixes applied.
+Found 7 errors.
+Found 39 warnings.

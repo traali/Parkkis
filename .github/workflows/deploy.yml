@@ -27,6 +27,9 @@ jobs:
             engine/package-lock.json
             web/package-lock.json
 
+      - name: Install Dependencies
+        run: npm install
+
       - name: Install Engine Dependencies
         run: |
           cd engine

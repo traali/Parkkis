@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import Map, {
+import ReactMap, {
   GeolocateControl,
   Layer,
   NavigationControl,
@@ -19,6 +19,20 @@ import {
   X,
 } from "lucide-react";
 import { getDuckDB, loadParquet } from "./lib/duckdb";
+import type { FeatureCollection } from "geojson";
+
+interface Address {
+  longitude: number;
+  latitude: number;
+  name: string;
+}
+
+interface HoverInfo {
+  longitude: number;
+  latitude: number;
+  properties: any;
+  isRoadworkConflict: boolean;
+}
 
 const INITIAL_VIEW_STATE = {
   longitude: 24.941,
@@ -37,21 +51,21 @@ const CATEGORIES = [
 
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
-  const [riskData, setRiskData] = useState<any>(null);
-  const [signData, setSignData] = useState<any>(null);
-  const [roadworkData, setRoadworkData] = useState<any>(null);
-  const [liipiData, setLiipiData] = useState<any>(null);
+  const [riskData, setRiskData] = useState<FeatureCollection | null>(null);
+  const [signData, setSignData] = useState<FeatureCollection | null>(null);
+  const [roadworkData, setRoadworkData] = useState<FeatureCollection | null>(null);
+  const [liipiData, setLiipiData] = useState<FeatureCollection | null>(null);
   const [loadingMsg, setLoadingMsg] = useState(
     "Initializing Analytical Engine...",
   );
-  const [hoverInfo, setHoverInfo] = useState<any>(null);
+  const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showNewTraps, setShowNewTraps] = useState(true);
   const [showRoadworks, setShowRoadworks] = useState(true);
   const [showSigns, setShowSigns] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<any>(null);
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
   const geoControlRef = useRef<any>(null);
   const mapRef = useRef<any>(null);
@@ -171,7 +185,7 @@ export default function App() {
         `);
 
         const slotFeatures = slotResult.toArray().map((row: any) => ({
-          type: "Feature",
+          type: "Feature" as const,
           geometry: JSON.parse(row.geometry),
           properties: {
             ...JSON.parse(row.properties),
@@ -183,8 +197,8 @@ export default function App() {
             ),
           },
         }));
-
-        setRiskData({ type: "FeatureCollection", features: slotFeatures });
+ 
+        setRiskData({ type: "FeatureCollection" as const, features: slotFeatures });
 
         setLoadingMsg("Indexing Temporal Signage...");
         const signResult = await conn.query(`
@@ -202,12 +216,12 @@ export default function App() {
         `);
 
         const signFeatures = signResult.toArray().map((row: any) => ({
-          type: "Feature",
+          type: "Feature" as const,
           geometry: JSON.parse(row.geometry),
           properties: JSON.parse(row.properties),
         }));
 
-        setSignData({ type: "FeatureCollection", features: signFeatures });
+        setSignData({ type: "FeatureCollection" as const, features: signFeatures });
 
         // 4. Load Roadworks
         setLoadingMsg("Scanning for street disruptions...");
@@ -215,31 +229,31 @@ export default function App() {
           `SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM roadworks`,
         );
         const roadworksGeoJSON = {
-          type: "FeatureCollection",
+          type: "FeatureCollection" as const,
           features: roadworksResult.toArray().map((row: any) => {
             const props = { ...row };
             delete props.geometry;
             return {
-              type: "Feature",
+              type: "Feature" as const,
               geometry: JSON.parse(row.geometry),
               properties: props,
             };
           }),
         };
         setRoadworkData(roadworksGeoJSON);
-
+ 
         // 5. Load LiiPi (Park & Ride)
         setLoadingMsg("Connecting to Transit Hubs...");
         const liipi = await conn.query(
           `SELECT CAST(ST_AsGeoJSON(geom) AS JSON) as geometry, * EXCLUDE geom FROM liipi`,
         );
         const liipiGeoJSON = {
-          type: "FeatureCollection",
+          type: "FeatureCollection" as const,
           features: liipi.toArray().map((row: any) => {
             const props = { ...row };
             delete props.geometry;
             return {
-              type: "Feature",
+              type: "Feature" as const,
               geometry: JSON.parse(row.geometry),
               properties: props,
             };
@@ -327,6 +341,7 @@ export default function App() {
               />
               {searchQuery && (
                 <button
+                  type="button"
                   onClick={() => setSearchQuery("")}
                   className="p-2 hover:bg-white/5 rounded-full mr-1"
                 >
@@ -340,6 +355,7 @@ export default function App() {
               <div className="nv-glass rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
                 {searchResults.map((result: any) => (
                   <button
+                    type="button"
                     key={result.id}
                     onClick={() => onSelectAddress(result)}
                     className="w-full text-left px-4 py-3 hover:bg-nc-neon-teal/10 transition-colors border-b border-white/5 last:border-0 group flex items-center gap-3"
@@ -391,6 +407,7 @@ export default function App() {
               </div>
               {CATEGORIES.map((cat) => (
                 <button
+                  type="button"
                   key={cat.id}
                   onClick={() => setActiveFilter(cat.id)}
                   className={`px-4 py-2 rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
@@ -406,6 +423,7 @@ export default function App() {
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setShowNewTraps(!showNewTraps)}
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showNewTraps
@@ -420,6 +438,7 @@ export default function App() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowSigns(!showSigns)}
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showSigns
@@ -434,6 +453,7 @@ export default function App() {
               </button>
 
               <button
+                type="button"
                 onClick={() => setShowRoadworks(!showRoadworks)}
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showRoadworks
@@ -450,12 +470,11 @@ export default function App() {
           </div>
         )}
       </div>
-
-      <Map
+      <ReactMap
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         style={{ width: "100%", height: "100%" }}
-        mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+        mapStyle="https://tiles.openfreemap.org/styles/dark"
         interactiveLayerIds={[
           "parking-lines",
           "sign-points",
@@ -857,7 +876,7 @@ export default function App() {
             />
           </Source>
         )}
-      </Map>
+      </ReactMap>
 
       {/* Bento Stats Footer */}
       <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 grid grid-cols-3 gap-4 pointer-events-none">
