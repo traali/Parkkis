@@ -45,7 +45,7 @@ export default function App() {
   useEffect(() => {
     const initData = async () => {
       console.log('🏗️ ParkkiS Build Info:', {
-        version: '2.1.1',
+        version: '2.3.0',
         buildTime: new Date().toISOString(),
         environment: import.meta.env.MODE,
         base: import.meta.env.BASE_URL
