@@ -9,6 +9,7 @@ import ReactMap, {
   type MapRef,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
+import type maplibregl from "maplibre-gl";
 import * as turf from "@turf/turf";
 import {
   Filter,
@@ -40,9 +41,9 @@ interface SearchResult {
 interface HoverInfo {
   longitude: number;
   latitude: number;
-  properties: Record<string, any>;
+  properties: Record<string, string | number | boolean | null>;
   isRoadworkConflict: boolean;
-  stackedSigns?: any[];
+  stackedSigns?: Record<string, string | number | boolean | null>[];
 }
 
 interface ParkingSlotRow {
@@ -59,12 +60,12 @@ interface SignRow {
 
 interface RoadworkRow {
   geometry: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface LiipiRow {
   geometry: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -97,10 +98,10 @@ export default function App() {
   const [showRoadworks, setShowRoadworks] = useState(true);
   const [showSigns, setShowSigns] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
-  const geoControlRef = useRef<any>(null);
+  const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
   const mapRef = useRef<MapRef>(null);
   const [pulseOpacity, setPulseOpacity] = useState(0.8);
 
@@ -801,8 +802,8 @@ export default function App() {
                     Sign Pole Stack ({hoverInfo.stackedSigns.length})
                   </p>
                   <div className="space-y-3">
-                    {hoverInfo.stackedSigns.map((sign, idx) => (
-                      <div key={`${sign.id}-${idx}`} className="space-y-1.5 p-2 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                    {hoverInfo.stackedSigns.map((sign) => (
+                      <div key={String(sign.id)} className="space-y-1.5 p-2 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
                         <div className="flex justify-between items-center">
                           <span className="text-xs text-nc-neon-teal font-black">
                             {sign.tyyppi}
