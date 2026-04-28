@@ -52,13 +52,20 @@ async function main() {
       let query = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
 
       if (file.name === "signs") {
-        // Parse muokkauspv (DD.MM.YYYY HH:MM:SS) to TIMESTAMP and check age
-        // Note: DuckDB's strptime is perfect for this.
         query = `
                     SELECT 
                         *,
                         strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
                         (current_date - strptime(muokkauspv, '%d.%m.%Y %H:%M:%S')::DATE) <= 60 as is_new
+                    FROM ST_Read('${file.path.replace(/\\/g, "/")}')
+                `;
+      } else if (file.name === "slots") {
+        query = `
+                    SELECT 
+                        *,
+                        COALESCE(luokka_nimi, 'Other') as luokka_nimi,
+                        COALESCE(asukaspysakointitunnus, '') as asukaspysakointitunnus,
+                        COALESCE(kesto, 'Unlimited') as kesto
                     FROM ST_Read('${file.path.replace(/\\/g, "/")}')
                 `;
       }

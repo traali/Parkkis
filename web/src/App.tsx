@@ -126,6 +126,25 @@ export default function App() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
 
+  const getSignLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      C37: "No Stopping",
+      C38: "No Parking",
+      C39: "No Parking Zone Starts",
+      C40: "No Parking Zone Ends",
+      C32: "Speed Limit",
+      C34: "Speed Limit Zone",
+      E2: "Parking Place",
+      E3: "Parking Place",
+      "E3.1": "Parking Place (Time Limit)",
+      "E4.1": "Taxi Stand",
+      H19: "Time Limit",
+      H24: "Except with Resident Permit",
+      H25: "For Maintenance Only",
+    };
+    return labels[type] || type;
+  };
+
   const onSelectAddress = (result: SearchResult) => {
     const [lng, lat] = result.location.coordinates;
     setSelectedAddress({
@@ -166,7 +185,10 @@ export default function App() {
       try {
         setLoadingMsg("Loading High-Performance Spatial Assets...");
 
-        const baseUrl = import.meta.env.BASE_URL;
+        const baseUrl = import.meta.env.BASE_URL.endsWith("/")
+          ? import.meta.env.BASE_URL
+          : `${import.meta.env.BASE_URL}/`;
+        
         const slotsUrl = new URL(`${baseUrl}data/slots.parquet`, window.location.origin).href;
         const violationsUrl = new URL(`${baseUrl}data/violations.parquet`, window.location.origin).href;
         const signsUrl = new URL(`${baseUrl}data/signs.parquet`, window.location.origin).href;
@@ -234,13 +256,18 @@ export default function App() {
               'tyyppi': tyyppi,
               'muokkauspv': muokkauspv,
               'is_new': is_new,
-              'kilpi_txt1': kilpi_txt1
+              'kilpi_txt1': kilpi_txt1,
+              'kilpi_txt2': kilpi_txt2,
+              'kilpi_txt3': kilpi_txt3,
+              'kilpi_txt4': kilpi_txt4,
+              'kilpi_txt5': kilpi_txt5
             }) as properties
           FROM signs
           WHERE is_new = true OR tyyppi IN (
-            'C37', 'C38', 'C39', 'C44.1', 'C44.2', 
+            'C37', 'C38', 'C39', 'C40', 'C44.1', 'C44.2', 
             'E2', 'E3.1', 'E3.2', 'E3.3', 'E3.4', 'E3.5',
-            'E24', 'E26', 'E28'
+            'E24', 'E26', 'E28', 'C32', 'C34',
+            'H12.1', 'H12.2', 'H17.1', 'H17.2', 'H17.3', 'H18', 'H19', 'H20', 'H21', 'H24', 'H25'
           )
         `);
 
@@ -769,27 +796,37 @@ export default function App() {
               {/* Traffic Sign Data (Support for Stacking) */}
               {hoverInfo.stackedSigns ? (
                 <div className="space-y-4">
-                  <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1">
+                  <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1 flex items-center gap-2">
+                    <Shield className="w-4 h-4" />
                     Sign Pole Stack ({hoverInfo.stackedSigns.length})
                   </p>
-                  {hoverInfo.stackedSigns.map((sign, idx) => (
-                    <div key={`${sign.id}-${idx}`} className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-nc-neon-teal" />
-                        <span className="text-xs text-white font-bold">
-                          {sign.tyyppi}
-                        </span>
-                        <span className="text-[10px] text-white/40 italic">
-                          {sign.muokkauspv}
-                        </span>
-                      </div>
-                      {sign.kilpi_txt1 && (
-                        <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold italic">
-                          "{sign.kilpi_txt1}"
+                  <div className="space-y-3">
+                    {hoverInfo.stackedSigns.map((sign, idx) => (
+                      <div key={`${sign.id}-${idx}`} className="space-y-1.5 p-2 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-nc-neon-teal font-black">
+                            {sign.tyyppi}
+                          </span>
+                          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
+                            {getSignLabel(sign.tyyppi)}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  ))}
+                        <div className="flex flex-wrap gap-1.5">
+                          {[1, 2, 3, 4, 5].map((n) => {
+                            const txt = sign[`kilpi_txt${n}`];
+                            return txt ? (
+                              <div
+                                key={n}
+                                className="text-[10px] bg-nc-gold/10 border border-nc-gold/20 rounded px-2 py-0.5 text-nc-gold font-medium italic"
+                              >
+                                "{txt}"
+                              </div>
+                            ) : null;
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ) : hoverInfo.properties.licence_identifier ? (
                 <div className="space-y-2">
