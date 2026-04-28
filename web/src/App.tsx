@@ -740,9 +740,9 @@ export default function App() {
                   <span
                     className={`text-xl font-black ${
                       hoverInfo.isRoadworkConflict ||
-                      hoverInfo.properties.risk_score > 7
+                      Number(hoverInfo.properties.risk_score ?? 0) > 7
                         ? "text-nc-danger"
-                        : hoverInfo.properties.risk_score > 3
+                        : Number(hoverInfo.properties.risk_score ?? 0) > 3
                           ? "text-nc-gold"
                           : "text-nc-neon-teal"
                     }`}
@@ -751,7 +751,7 @@ export default function App() {
                       ? "0"
                       : Math.max(
                           0,
-                          10 - (hoverInfo.properties.risk_score || 0),
+                          10 - Number(hoverInfo.properties.risk_score || 0),
                         )}
                     /10
                   </span>
@@ -764,18 +764,18 @@ export default function App() {
                     className={`text-[10px] font-black uppercase ${
                       hoverInfo.isRoadworkConflict
                         ? "text-nc-danger"
-                        : hoverInfo.properties.risk_score > 7
+                        : Number(hoverInfo.properties.risk_score ?? 0) > 7
                           ? "text-nc-danger"
-                          : hoverInfo.properties.risk_score > 3
+                          : Number(hoverInfo.properties.risk_score ?? 0) > 3
                             ? "text-nc-gold"
                             : "text-nc-neon-teal"
                     }`}
                   >
                     {hoverInfo.isRoadworkConflict
                       ? "Restricted"
-                      : hoverInfo.properties.risk_score > 7
+                      : Number(hoverInfo.properties.risk_score ?? 0) > 7
                         ? "High Risk"
-                        : hoverInfo.properties.risk_score > 3
+                        : Number(hoverInfo.properties.risk_score ?? 0) > 3
                           ? "Caution"
                           : "Safe to Park"}
                   </span>
@@ -809,7 +809,7 @@ export default function App() {
                             {sign.tyyppi}
                           </span>
                           <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
-                            {getSignLabel(sign.tyyppi)}
+                            {getSignLabel(String(sign.tyyppi))}
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-1.5">
@@ -891,7 +891,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {hoverInfo.properties.risk_score >= 3 &&
+                  {Number(hoverInfo.properties.risk_score ?? 0) >= 3 &&
                     hoverInfo.properties.top_violation_reason && (
                       <div className="bg-red-500/10 border border-red-500/30 rounded p-2 mt-2">
                         <span className="block text-xs text-red-400 uppercase mb-1 font-bold">
@@ -899,10 +899,8 @@ export default function App() {
                           /10)
                         </span>
                         <span className="text-xs text-white/80 leading-tight block">
-                          {hoverInfo.properties.top_violation_reason.replace(
-                            /^\d+\s+/,
-                            "",
-                          )}
+                          {String(hoverInfo.properties.top_violation_reason || "")
+                            .replace(/^\d+\s+/, "")}
                         </span>
                       </div>
                     )}
