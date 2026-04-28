@@ -4,7 +4,7 @@
   "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"—they need to know *safe* spots.",
   "main": "index.js",
   "scripts": {
-    "ingest": "cd engine && npx ts-node src/fetch.ts && node src/process.js",
+    "ingest": "cd engine && npx ts-node src/fetch.ts && npx ts-node src/fetch_signs.ts && node src/process.js",
     "dev": "cd web && npm run dev",
     "build": "cd web && npm run build"
   },

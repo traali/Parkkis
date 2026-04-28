@@ -29,10 +29,7 @@ jobs:
 
       - name: Run Ingestion Pipeline
         run: |
-          cd engine
-          npm run build || echo "No build script"
-          node src/fetch.js || npx ts-node src/fetch.ts
-          node src/process.js
+          npm run ingest
 
       - name: Install Web Dependencies
         run: |
