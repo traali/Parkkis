@@ -309,7 +309,7 @@ export default function App() {
             <Layer
               id="sign-points"
               type="circle"
-              minZoom={15}
+              minzoom={15}
               layout={{ visibility: showNewTraps ? 'visible' : 'none' }}
               paint={{
                 'circle-radius': ['interpolate', ['linear'], ['zoom'], 12, 3, 18, 10],
@@ -329,7 +329,7 @@ export default function App() {
             <Layer
               id="sign-pulse"
               type="circle"
-              minZoom={15}
+              minzoom={15}
               filter={['==', ['get', 'is_new'], true]}
               layout={{ visibility: showNewTraps ? 'visible' : 'none' }}
               paint={{
