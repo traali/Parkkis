@@ -169,7 +169,7 @@ export default function App() {
   useEffect(() => {
     const initData = async () => {
       console.log("🏗️ ParkkiS Build Info:", {
-        version: "2.5.0",
+        version: "2.6.0",
         buildTime: new Date().toISOString(),
         environment: import.meta.env.MODE,
         base: import.meta.env.BASE_URL,
