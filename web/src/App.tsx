@@ -215,7 +215,7 @@ export default function App() {
         const slotResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(s.geom) as geometry, 
-            to_json({
+            {
               'id': s.id, 
               'luokka_nimi': s.luokka_nimi, 
               'tyyppi': s.tyyppi, 
@@ -230,17 +230,17 @@ export default function App() {
                 WHEN s.tyyppi IS NOT NULL AND s.tyyppi != '' AND s.tyyppi != '0' AND s.tyyppi != '9' THEN 'special'
                 ELSE 'other'
               END
-            }) as properties,
+            } as properties,
             (SELECT count(*) FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom)) as fine_count,
             (SELECT v.virheen_paasyy_ja_paaluokka FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom) GROUP BY v.virheen_paasyy_ja_paaluokka ORDER BY count(*) DESC LIMIT 1) as top_violation_reason
           FROM slots s
         `);
 
-        const slotFeatures = (slotResult.toArray() as unknown as ParkingSlotRow[]).map((row) => ({
+        const slotFeatures = (slotResult.toArray() as unknown as any[]).map((row) => ({
           type: "Feature" as const,
           geometry: JSON.parse(row.geometry),
           properties: {
-            ...JSON.parse(row.properties),
+            ...row.properties,
             fine_count: Number(row.fine_count),
             top_violation_reason: row.top_violation_reason,
             risk_score: Math.min(
@@ -256,7 +256,7 @@ export default function App() {
         const signResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry,
-            to_json({
+            {
               'id': id,
               'tyyppi': tyyppi,
               'muokkauspv': muokkauspv,
@@ -266,7 +266,7 @@ export default function App() {
               'kilpi_txt3': kilpi_txt3,
               'kilpi_txt4': kilpi_txt4,
               'kilpi_txt5': kilpi_txt5
-            }) as properties
+            } as properties
           FROM signs
           WHERE is_new = true OR tyyppi IN (
             'C37', 'C38', 'C39', 'C40', 'C44.1', 'C44.2', 
@@ -276,10 +276,10 @@ export default function App() {
           )
         `);
 
-        const signFeatures = (signResult.toArray() as unknown as SignRow[]).map((row) => ({
+        const signFeatures = (signResult.toArray() as unknown as any[]).map((row) => ({
           type: "Feature" as const,
           geometry: JSON.parse(row.geometry),
-          properties: JSON.parse(row.properties),
+          properties: row.properties,
         }));
 
         setSignData(safeGeoJSON({ type: "FeatureCollection" as const, features: signFeatures }));
@@ -289,15 +289,15 @@ export default function App() {
         const roadworksResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(sub) as properties 
-          FROM (SELECT * EXCLUDE geom FROM roadworks) sub
+            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
+          FROM roadworks
         `);
         const roadworksGeoJSON = {
           type: "FeatureCollection" as const,
-          features: (roadworksResult.toArray() as unknown as { geometry: string; properties: string }[]).map((row) => ({
+          features: (roadworksResult.toArray() as unknown as any[]).map((row) => ({
             type: "Feature" as const,
             geometry: JSON.parse(row.geometry),
-            properties: JSON.parse(row.properties),
+            properties: row.properties,
           })),
         };
         setRoadworkData(safeGeoJSON(roadworksGeoJSON));
@@ -307,15 +307,15 @@ export default function App() {
         const liipiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(sub) as properties 
-          FROM (SELECT * EXCLUDE geom FROM liipi) sub
+            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
+          FROM liipi
         `);
         const liipiGeoJSON = {
           type: "FeatureCollection" as const,
-          features: (liipiResult.toArray() as unknown as { geometry: string; properties: string }[]).map((row) => ({
+          features: (liipiResult.toArray() as unknown as any[]).map((row) => ({
             type: "Feature" as const,
             geometry: JSON.parse(row.geometry),
-            properties: JSON.parse(row.properties),
+            properties: row.properties,
           })),
         };
         setLiipiData(safeGeoJSON(liipiGeoJSON));
@@ -325,15 +325,15 @@ export default function App() {
         const hubiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
-            to_json(sub) as properties 
-          FROM (SELECT * EXCLUDE geom FROM hubi) sub
+            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
+          FROM hubi
         `);
         const hubiGeoJSON = {
           type: "FeatureCollection" as const,
-          features: (hubiResult.toArray() as unknown as { geometry: string; properties: string }[]).map((row) => ({
+          features: (hubiResult.toArray() as unknown as any[]).map((row) => ({
             type: "Feature" as const,
             geometry: JSON.parse(row.geometry),
-            properties: JSON.parse(row.properties),
+            properties: row.properties,
           })),
         };
         setHubiData(safeGeoJSON(hubiGeoJSON));
