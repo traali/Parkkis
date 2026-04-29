@@ -996,7 +996,7 @@ export default function App() {
               id="liipi-labels"
               type="symbol"
               layout={{
-                "text-field": ["get", "name"],
+                "text-field": ["coalesce", ["get", "fi", ["get", "name"]], ["get", "name"]],
                 "text-font": ["Noto Sans Bold"],
                 "text-variable-anchor": ["top", "bottom", "left", "right"],
                 "text-radial-offset": 0.8,
