@@ -47,10 +47,10 @@ async function main() {
       // Clean up old file
       if (await fs.pathExists(parquetPath)) await fs.remove(parquetPath);
 
-      let sourceQuery = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
+      let query = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
 
       if (file.name === "signs") {
-        sourceQuery = `
+        query = `
           SELECT 
             *,
             strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
@@ -58,7 +58,7 @@ async function main() {
           FROM ST_Read('${file.path.replace(/\\/g, "/")}')
         `;
       } else if (file.name === "slots") {
-        sourceQuery = `
+        query = `
           SELECT 
             *,
             COALESCE(luokka_nimi, 'Other') as luokka_nimi,
@@ -68,16 +68,8 @@ async function main() {
         `;
       }
 
-      // Standardize geometry column name to 'geom' for ALL files
-      const finalQuery = `
-        SELECT 
-          COLUMNS(* EXCLUDE (geom, geometry)), 
-          COALESCE(geom, geometry) as geom 
-        FROM (${sourceQuery}) sub
-      `;
-
       await runQuery(`
-        COPY (${finalQuery}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
+        COPY (${query}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
       `);
 
       const stats = await fs.stat(parquetPath);
