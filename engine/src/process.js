@@ -42,37 +42,43 @@ async function main() {
 
       console.log(`[PROCESS] ${file.name} -> Parquet...`);
 
-      // 2026 Strategy: Read GeoJSON, extract properties and geometry as WKB
-      // This makes it compatible with most GeoParquet readers
       const parquetPath = path.join(OUTPUT_DIR, `${file.name}.parquet`);
 
       // Clean up old file
       if (await fs.pathExists(parquetPath)) await fs.remove(parquetPath);
 
-      let query = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
+      let sourceQuery = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
 
       if (file.name === "signs") {
-        query = `
-                    SELECT 
-                        *,
-                        strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
-                        (current_date - strptime(muokkauspv, '%d.%m.%Y %H:%M:%S')::DATE) <= 60 as is_new
-                    FROM ST_Read('${file.path.replace(/\\/g, "/")}')
-                `;
+        sourceQuery = `
+          SELECT 
+            *,
+            strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
+            (current_date - strptime(muokkauspv, '%d.%m.%Y %H:%M:%S')::DATE) <= 60 as is_new
+          FROM ST_Read('${file.path.replace(/\\/g, "/")}')
+        `;
       } else if (file.name === "slots") {
-        query = `
-                    SELECT 
-                        *,
-                        COALESCE(luokka_nimi, 'Other') as luokka_nimi,
-                        COALESCE(asukaspysakointitunnus, '') as asukaspysakointitunnus,
-                        COALESCE(kesto, 'Unlimited') as kesto
-                    FROM ST_Read('${file.path.replace(/\\/g, "/")}')
-                `;
+        sourceQuery = `
+          SELECT 
+            *,
+            COALESCE(luokka_nimi, 'Other') as luokka_nimi,
+            COALESCE(asukaspysakointitunnus, '') as asukaspysakointitunnus,
+            COALESCE(kesto, 'Unlimited') as kesto
+          FROM ST_Read('${file.path.replace(/\\/g, "/")}')
+        `;
       }
 
+      // Standardize geometry column name to 'geom' for ALL files
+      const finalQuery = `
+        SELECT 
+          COLUMNS(* EXCLUDE (geom, geometry)), 
+          COALESCE(geom, geometry) as geom 
+        FROM (${sourceQuery}) sub
+      `;
+
       await runQuery(`
-                COPY (${query}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
-            `);
+        COPY (${finalQuery}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
+      `);
 
       const stats = await fs.stat(parquetPath);
       console.log(
