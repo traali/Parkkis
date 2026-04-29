@@ -973,15 +973,33 @@ export default function App() {
         {liipiData && (
           <Source id="liipi-hubs" type="geojson" data={liipiData}>
             <Layer
+              id="liipi-glow"
+              type="circle"
+              paint={{
+                "circle-radius": 15,
+                "circle-color": "#00f2ff",
+                "circle-opacity": 0.2,
+                "circle-blur": 1,
+              }}
+            />
+            <Layer
               id="liipi-points"
+              type="circle"
+              paint={{
+                "circle-radius": 6,
+                "circle-color": "#00f2ff",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+              }}
+            />
+            <Layer
+              id="liipi-labels"
               type="symbol"
               layout={{
-                "icon-image": "rocket-15", // Temporary icon until we add a proper SVG
-                "icon-size": 1.5,
                 "text-field": ["get", "name"],
-                "text-font": ["Open Sans Semibold"],
-                "text-offset": [0, 1.2],
-                "text-anchor": "top",
+                "text-variable-anchor": ["top", "bottom", "left", "right"],
+                "text-radial-offset": 0.8,
+                "text-justify": "auto",
                 "text-size": 10,
               }}
               paint={{
