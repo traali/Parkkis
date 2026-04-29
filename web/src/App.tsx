@@ -204,7 +204,7 @@ export default function App() {
 
         const slotResult = await conn.query(`
           SELECT 
-            ST_AsGeoJSON(COALESCE(s.geom, s.geometry)) as geometry, 
+            ST_AsGeoJSON(s.geom) as geometry, 
             {
               'id': s.id, 
               'luokka_nimi': s.luokka_nimi, 
@@ -221,8 +221,8 @@ export default function App() {
                 ELSE 'other'
               END
             } as properties,
-            (SELECT count(*) FROM violations v WHERE ST_Intersects(ST_Buffer(COALESCE(s.geom, s.geometry), 0.0002), COALESCE(v.geom, v.geometry))) as fine_count,
-            (SELECT v.virheen_paasyy_ja_paaluokka FROM violations v WHERE ST_Intersects(ST_Buffer(COALESCE(s.geom, s.geometry), 0.0002), COALESCE(v.geom, v.geometry)) GROUP BY v.virheen_paasyy_ja_paaluokka ORDER BY count(*) DESC LIMIT 1) as top_violation_reason
+            (SELECT count(*) FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom)) as fine_count,
+            (SELECT v.virheen_paasyy_ja_paaluokka FROM violations v WHERE ST_Intersects(ST_Buffer(s.geom, 0.0002), v.geom) GROUP BY v.virheen_paasyy_ja_paaluokka ORDER BY count(*) DESC LIMIT 1) as top_violation_reason
           FROM slots s
         `);
 
@@ -245,7 +245,7 @@ export default function App() {
         setLoadingMsg("Indexing Temporal Signage...");
         const signResult = await conn.query(`
           SELECT 
-            ST_AsGeoJSON(COALESCE(geom, geometry)) as geometry,
+            ST_AsGeoJSON(geom) as geometry,
             {
               'id': id,
               'tyyppi': tyyppi,
@@ -278,8 +278,8 @@ export default function App() {
         setLoadingMsg("Scanning for street disruptions...");
         const roadworksResult = await conn.query(`
           SELECT 
-            ST_AsGeoJSON(COALESCE(geom, geometry)) as geometry, 
-            struct_pack(COLUMNS(* EXCLUDE (geom, geometry))) as properties 
+            ST_AsGeoJSON(geom) as geometry, 
+            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
           FROM roadworks
         `);
         const roadworksGeoJSON = {
@@ -296,8 +296,8 @@ export default function App() {
         setLoadingMsg("Connecting to Transit Hubs...");
         const liipiResult = await conn.query(`
           SELECT 
-            ST_AsGeoJSON(COALESCE(geom, geometry)) as geometry, 
-            struct_pack(COLUMNS(* EXCLUDE (geom, geometry))) as properties 
+            ST_AsGeoJSON(geom) as geometry, 
+            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
           FROM liipi
         `);
         const liipiGeoJSON = {
@@ -314,8 +314,8 @@ export default function App() {
         setLoadingMsg("Scanning Parkkihubi...");
         const hubiResult = await conn.query(`
           SELECT 
-            ST_AsGeoJSON(COALESCE(geom, geometry)) as geometry, 
-            struct_pack(COLUMNS(* EXCLUDE (geom, geometry))) as properties 
+            ST_AsGeoJSON(geom) as geometry, 
+            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
           FROM hubi
         `);
         const hubiGeoJSON = {

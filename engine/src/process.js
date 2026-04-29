@@ -17,6 +17,15 @@ async function runQuery(query) {
   });
 }
 
+async function getColumns(filePath) {
+  return new Promise((resolve, reject) => {
+    con.all(`DESCRIBE SELECT * FROM ST_Read('${filePath.replace(/\\/g, "/")}')`, (err, res) => {
+      if (err) reject(err);
+      else resolve(res.map(c => c.column_name));
+    });
+  });
+}
+
 async function main() {
   console.log("🦆 DuckDB: Converting GeoJSON to optimized Parquet...");
   await fs.ensureDir(OUTPUT_DIR);
@@ -47,10 +56,18 @@ async function main() {
       // Clean up old file
       if (await fs.pathExists(parquetPath)) await fs.remove(parquetPath);
 
-      let query = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
+      // Inspect schema to find geometry column
+      const cols = await getColumns(file.path);
+      const geomCol = cols.find(c => c === 'geom' || c === 'geometry');
+      
+      if (!geomCol) {
+        console.warn(`[WARN] No geometry column found in ${file.name}, skipping spatial optimization.`);
+      }
+
+      let sourceQuery = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
 
       if (file.name === "signs") {
-        query = `
+        sourceQuery = `
           SELECT 
             *,
             strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
@@ -58,7 +75,7 @@ async function main() {
           FROM ST_Read('${file.path.replace(/\\/g, "/")}')
         `;
       } else if (file.name === "slots") {
-        query = `
+        sourceQuery = `
           SELECT 
             *,
             COALESCE(luokka_nimi, 'Other') as luokka_nimi,
@@ -68,8 +85,13 @@ async function main() {
         `;
       }
 
+      // Final normalization: Force geometry column to be 'geom'
+      const finalQuery = geomCol 
+        ? `SELECT * EXCLUDE ${geomCol}, ${geomCol} as geom FROM (${sourceQuery}) sub`
+        : sourceQuery;
+
       await runQuery(`
-        COPY (${query}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
+        COPY (${finalQuery}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
       `);
 
       const stats = await fs.stat(parquetPath);
