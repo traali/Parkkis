@@ -997,6 +997,7 @@ export default function App() {
               type="symbol"
               layout={{
                 "text-field": ["get", "name"],
+                "text-font": ["Noto Sans Bold"],
                 "text-variable-anchor": ["top", "bottom", "left", "right"],
                 "text-radial-offset": 0.8,
                 "text-justify": "auto",
