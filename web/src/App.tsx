@@ -46,17 +46,7 @@ interface HoverInfo {
   stackedSigns?: Record<string, string | number | boolean | null>[];
 }
 
-interface ParkingSlotRow {
-  geometry: string;
-  properties: string;
-  fine_count: number;
-  top_violation_reason: string;
-}
 
-interface SignRow {
-  geometry: string;
-  properties: string;
-}
 
 
 
