@@ -21,6 +21,7 @@
     "@turf/turf": "^7.3.5",
     "axios": "^1.15.2",
     "duckdb": "^1.4.4",
+    "fast-xml-parser": "^5.7.2",
     "fs-extra": "^11.3.4",
     "p-limit": "^7.3.0",
     "turf": "^3.0.14"
