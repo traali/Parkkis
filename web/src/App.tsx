@@ -124,6 +124,7 @@ export default function App() {
   const [riskData, setRiskData] = useState<FeatureCollection | null>(null);
   const [signData, setSignData] = useState<FeatureCollection | null>(null);
   const [roadworkData, setRoadworkData] = useState<FeatureCollection | null>(null);
+  const [reservationData, setReservationData] = useState<FeatureCollection | null>(null);
   const [liipiData, setLiipiData] = useState<FeatureCollection | null>(null);
   const [hubiData, setHubiData] = useState<FeatureCollection | null>(null);
   const [loadingMsg, setLoadingMsg] = useState(
@@ -133,6 +134,7 @@ export default function App() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [showNewTraps, setShowNewTraps] = useState(true);
   const [showRoadworks, setShowRoadworks] = useState(true);
+  const [showReservations, setShowReservations] = useState(true);
   const [showSigns, setShowSigns] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -392,23 +394,37 @@ export default function App() {
 
         setSignData(safeGeoJSON({ type: "FeatureCollection" as const, features: signFeatures }));
 
-        // 4. Load Roadworks
-        setLoadingMsg("Scanning for active street construction...");
-        const roadworksResult = await conn.query(`
-          SELECT 
-            ST_AsGeoJSON(geom) as geometry, 
-            struct_pack(COLUMNS(* EXCLUDE geom)) as properties 
-          FROM roadworks
-        `);
-        const roadworksGeoJSON = {
-          type: "FeatureCollection" as const,
-          features: (roadworksResult.toArray() as unknown as any[]).map((row) => ({
-            type: "Feature" as const,
-            geometry: JSON.parse(row.geometry),
-            properties: row.properties,
-          })),
-        };
-        setRoadworkData(safeGeoJSON(roadworksGeoJSON));
+        // 4. Load Roadworks + Reservations live from WFS (always fresh, datasets are small)
+        setLoadingMsg("Scanning for active construction & reservations...");
+        const HEL_WFS = "https://kartta.hel.fi/ws/geoserver/avoindata/wfs";
+        const wfsParams = (typeName: string, filter: string) =>
+          `${HEL_WFS}?service=WFS&version=2.0.0&request=GetFeature&typeName=${typeName}&outputFormat=application/json&srsName=EPSG:4326&cql_filter=${encodeURIComponent(filter)}&count=2000`;
+
+        const [worksResp, rentsResp] = await Promise.allSettled([
+          fetch(wfsParams("avoindata:Winkki_works", "licence_status='ACTIVE'")),
+          fetch(wfsParams("avoindata:Winkki_rents_audiences", "licence_status='ACTIVE'")),
+        ]);
+
+        if (worksResp.status === "fulfilled" && worksResp.value.ok) {
+          const worksData = await worksResp.value.json();
+          setRoadworkData(safeGeoJSON(worksData as FeatureCollection));
+        } else {
+          // Fallback to parquet if live fetch fails
+          const roadworksResult = await conn.query(`
+            SELECT ST_AsGeoJSON(geom) as geometry, struct_pack(COLUMNS(* EXCLUDE geom)) as properties FROM roadworks
+          `);
+          setRoadworkData(safeGeoJSON({
+            type: "FeatureCollection" as const,
+            features: (roadworksResult.toArray() as unknown as any[]).map((row) => ({
+              type: "Feature" as const, geometry: JSON.parse(row.geometry), properties: row.properties,
+            })),
+          }));
+        }
+
+        if (rentsResp.status === "fulfilled" && rentsResp.value.ok) {
+          const rentsData = await rentsResp.value.json();
+          setReservationData(safeGeoJSON(rentsData as FeatureCollection));
+        }
  
         // 5. Load LiiPi (Park & Ride)
         setLoadingMsg("Loading Park & Ride connections...");
@@ -469,7 +485,7 @@ export default function App() {
 
       // Find if we have roadwork in the stack
       const roadwork = features.find(
-        (f) => f.layer.id === "roadwork-fill",
+        (f) => f.layer.id === "roadwork-fill" || f.layer.id === "reservation-fill",
       );
 
       setHoverInfo({
@@ -690,6 +706,21 @@ export default function App() {
                 />
                 CONSTRUCTION
               </button>
+
+              <button
+                type="button"
+                onClick={() => setShowReservations(!showReservations)}
+                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                  showReservations
+                    ? "border-orange-400 text-orange-400 bg-orange-400/10 shadow-[0_0_15px_rgba(251,146,60,0.2)]"
+                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${showReservations ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
+                />
+                RESERVATIONS
+              </button>
             </div>
           </div>
         )}
@@ -704,6 +735,7 @@ export default function App() {
           "hubi-lines",
           "sign-points",
           "roadwork-fill",
+          "reservation-fill",
           "liipi-points",
         ]}
         onMouseMove={onMouseMove}
@@ -916,7 +948,7 @@ export default function App() {
               layout={{ visibility: showRoadworks ? "visible" : "none" }}
               paint={{
                 "fill-color": "#ffcf4b",
-                "fill-opacity": 0.3,
+                "fill-opacity": 0.35,
               }}
             />
             <Layer
@@ -925,8 +957,73 @@ export default function App() {
               layout={{ visibility: showRoadworks ? "visible" : "none" }}
               paint={{
                 "line-color": "#ffcf4b",
-                "line-width": 2,
-                "line-dasharray": [2, 1],
+                "line-width": 2.5,
+                "line-dasharray": [3, 1],
+              }}
+            />
+            <Layer
+              id="roadwork-label"
+              type="symbol"
+              minzoom={14}
+              layout={{
+                visibility: showRoadworks ? "visible" : "none",
+                "text-field": "🚧",
+                "text-size": 16,
+                "symbol-placement": "point",
+              }}
+              paint={{
+                "text-halo-color": "rgba(5,8,10,0.9)",
+                "text-halo-width": 2,
+              }}
+            />
+          </Source>
+        )}
+
+        {reservationData && (
+          <Source id="reservation-data" type="geojson" data={reservationData}>
+            <Layer
+              id="reservation-fill"
+              type="fill"
+              layout={{ visibility: showReservations ? "visible" : "none" }}
+              paint={{
+                "fill-color": [
+                  "match",
+                  ["get", "rental_subject"],
+                  "Pysäköinti", "#f97316",
+                  ["Lisäpihat", "Lisäalue"], "#fb923c",
+                  "#f97316",
+                ],
+                "fill-opacity": 0.25,
+              }}
+            />
+            <Layer
+              id="reservation-outline"
+              type="line"
+              layout={{ visibility: showReservations ? "visible" : "none" }}
+              paint={{
+                "line-color": "#f97316",
+                "line-width": 1.5,
+                "line-dasharray": [4, 2],
+              }}
+            />
+            <Layer
+              id="reservation-label"
+              type="symbol"
+              minzoom={14}
+              layout={{
+                visibility: showReservations ? "visible" : "none",
+                "text-field": [
+                  "match",
+                  ["get", "rental_subject"],
+                  "Pysäköinti", "🅿️",
+                  "🔶",
+                ],
+                "text-size": 14,
+                "symbol-placement": "point",
+              }}
+              paint={{
+                "text-halo-color": "rgba(5,8,10,0.9)",
+                "text-halo-width": 2,
               }}
             />
           </Source>
@@ -1065,7 +1162,7 @@ export default function App() {
                                   key={n}
                                   className="text-[9px] bg-nc-text/5 border border-nc-border/30 rounded px-2 py-0.5 text-nc-text-muted font-medium italic leading-tight"
                                 >
-                                  "{txt}"
+                                  {txt}
                                 </div>
                               ) : null;
                             })}
@@ -1077,23 +1174,44 @@ export default function App() {
                 </div>
               ) : hoverInfo.properties.licence_identifier ? (
                 <div className="space-y-2">
-                  <p className="text-sm text-nc-gold font-bold uppercase tracking-wider">
-                    Street Work Permit
-                  </p>
-                  <p className="text-xs text-nc-text-muted">
-                    Type: {hoverInfo.properties.licence_type}
-                  </p>
-                  <p className="text-xs text-nc-text-muted">
-                    Validity: {hoverInfo.properties.event_startdate_txt} -{" "}
-                    {hoverInfo.properties.event_endtdate_txt || "Open"}
-                  </p>
+                  {/* Roadworks popup */}
+                  {hoverInfo.properties.rental_subject ? (
+                    <>
+                      <p className="text-sm text-orange-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
+                        🔶 Temporary Reservation
+                      </p>
+                      <div className="bg-orange-400/10 border border-orange-400/30 rounded p-2">
+                        <p className="text-xs text-orange-300 font-bold mb-1">{hoverInfo.properties.rental_subject}</p>
+                        {hoverInfo.properties.licence_description && hoverInfo.properties.licence_description !== "N/A" && (
+                          <p className="text-[10px] text-nc-text-muted italic">{hoverInfo.properties.licence_description}</p>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-nc-gold font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      🚧 Street Work
+                    </p>
+                  )}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="bg-nc-text/5 rounded p-2">
+                      <span className="block text-[9px] text-nc-text-dim uppercase font-bold">From</span>
+                      <span className="text-[11px] font-bold text-nc-text">{hoverInfo.properties.event_startdate_txt || hoverInfo.properties.lic_startdate_txt || "?"}</span>
+                    </div>
+                    <div className="bg-nc-text/5 rounded p-2">
+                      <span className="block text-[9px] text-nc-text-dim uppercase font-bold">Until</span>
+                      <span className="text-[11px] font-bold text-nc-text">{hoverInfo.properties.event_endtdate_txt || hoverInfo.properties.lic_enddate_txt || "Open"}</span>
+                    </div>
+                  </div>
                   {hoverInfo.properties.event_description && (
-                    <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold italic">
-                      "{hoverInfo.properties.event_description}"
+                    <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold">
+                      {hoverInfo.properties.event_description}
                     </div>
                   )}
-                  <div className="text-[10px] text-nc-text-dim mt-2">
-                    ID: {hoverInfo.properties.licence_identifier}
+                  {hoverInfo.properties.location_description && (
+                    <p className="text-[10px] text-nc-text-muted italic">{hoverInfo.properties.location_description}</p>
+                  )}
+                  <div className="text-[9px] text-nc-text-dim">
+                    Permit: {hoverInfo.properties.licence_identifier}
                   </div>
                 </div>
               ) : (
