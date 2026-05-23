@@ -160,34 +160,53 @@ export default function App() {
     return luokka || "Standard Parking";
   };
 
-  // Visual highlights, emojis, and styling classes for each traffic sign type
+  // Visual highlights, emojis, and styling classes for each traffic sign type (vayla.fi official classifications)
   const getSignVisuals = (type: string) => {
     const t = String(type).trim().toUpperCase();
+    
+    // Prohibitory and Restrictive Signs (C-sarja)
     if (/^C37/.test(t)) {
-      return { emoji: "🛑", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // No stopping (more severe)
+      return { emoji: "🛑", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // Stop prohibited (severe)
     }
     if (/^(C38|C39|C40|C44)/.test(t)) {
-      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // No parking
+      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // Parking prohibited
     }
     if (/^C/.test(t)) {
-      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // General prohibitory
+      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // Other prohibitions
     }
+    
+    // Regulatory Signs (E-sarja)
     if (/^(E2|E3)/.test(t)) {
-      return { emoji: "🅿️", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // Parking
+      return { emoji: "🅿️", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // Parking Place
     }
     if (/^E4/.test(t)) {
       return { emoji: "🚕", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" }; // Taxi stand
     }
-    if (/^H24/.test(t)) {
-      return { emoji: "🎫", colorClass: "border-l-4 border-nc-purple bg-nc-purple/10", textClass: "text-nc-purple" }; // Resident permit
+    
+    // Additional Panels (H-sarja - Lisäkilvet)
+    if (/^H12\.7/.test(t)) {
+      return { emoji: "♿", colorClass: "border-l-4 border-nc-purple bg-nc-purple/10", textClass: "text-nc-purple" }; // Disabled parking
     }
-    if (/^H25/.test(t)) {
-      return { emoji: "🛠️", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" }; // Maintenance only
+    if (/^H12\.9/.test(t)) {
+      return { emoji: "🔌", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // EV charging
+    }
+    if (/^H12/.test(t)) {
+      return { emoji: "🚗", colorClass: "border-l-4 border-nc-text/30 bg-nc-text/5", textClass: "text-nc-text" }; // Specific vehicle restriction
+    }
+    if (/^H(17|18)/.test(t)) {
+      return { emoji: "↔️", colorClass: "border-l-4 border-nc-text/30 bg-nc-text/5", textClass: "text-nc-text" }; // Directional arrows
     }
     if (/^H19/.test(t)) {
-      return { emoji: "🕒", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // Time limit
+      return { emoji: "🕒", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // Time limit / hours
     }
-    return { emoji: "ℹ️", colorClass: "border-l-4 border-nc-text/30 bg-nc-text/5", textClass: "text-nc-text" };
+    if (/^H24/.test(t)) {
+      return { emoji: "🎫", colorClass: "border-l-4 border-nc-purple bg-nc-purple/10", textClass: "text-nc-purple" }; // Resident permit privilege
+    }
+    if (/^H25/.test(t)) {
+      return { emoji: "🛠️", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" }; // Maintenance traffic allowed
+    }
+    
+    return { emoji: "ℹ️", colorClass: "border-l-4 border-nc-text/30 bg-nc-text/5", textClass: "text-nc-text" }; // Default panel info
   };
 
   const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
@@ -864,6 +883,10 @@ export default function App() {
                   "🅿️", // Parking Place
                   "E4.1",
                   "🚕", // Taxi
+                  "H12.7",
+                  "♿", // Disabled parking
+                  "H12.9",
+                  "🔌", // EV charging
                   "H24",
                   "🎫", // Resident Permit
                   "H25",
@@ -998,8 +1021,10 @@ export default function App() {
                         const typeA = String(a.tyyppi || "").toUpperCase();
                         const typeB = String(b.tyyppi || "").toUpperCase();
                         
-                        const isMainA = typeA.startsWith("C") || typeA.startsWith("E");
-                        const isMainB = typeB.startsWith("C") || typeB.startsWith("E");
+                        // All official additional panels in Finland belong to the H series.
+                        // Any sign not starting with H is a main primary sign (A, B, C, D, E, F, G series).
+                        const isMainA = !typeA.startsWith("H");
+                        const isMainB = !typeB.startsWith("H");
                         
                         if (isMainA && !isMainB) return -1; // Main sign A goes above additional panel B
                         if (!isMainA && isMainB) return 1;  // Main sign B goes above additional panel A
