@@ -20,6 +20,9 @@ import {
   Shield,
   Sliders,
   X,
+  Moon,
+  Sun,
+  TreePine,
 } from "lucide-react";
 import { getDuckDB, loadParquet } from "./lib/duckdb";
 import type { FeatureCollection } from "geojson";
@@ -58,12 +61,56 @@ const INITIAL_VIEW_STATE = {
 };
 
 const CATEGORIES = [
-  { id: "all", label: "All Slots", color: "bg-nc-neon-teal" },
-  { id: "residential", label: "Residential", color: "bg-nc-gold" },
-  { id: "paid", label: "Paid", color: "bg-blue-500" },
-  { id: "free", label: "Free", color: "bg-green-500" },
-  { id: "special", label: "Special (EV/Inva)", color: "bg-purple-500" },
+  { id: "all", label: "All Slots" },
+  { id: "residential", label: "Residential" },
+  { id: "paid", label: "Paid" },
+  { id: "free", label: "Free" },
+  { id: "special", label: "Special (EV/Inva)" },
 ];
+
+type ThemeType = "dark" | "light" | "forest";
+
+const THEME_CONFIGS = {
+  dark: {
+    mapStyle: "https://tiles.openfreemap.org/styles/dark",
+    colors: {
+      paid: "#3b82f6",
+      residential: "#ffb800",
+      free: "#22c55e",
+      special: "#a855f7",
+      other: "#888888",
+      glowLow: "#00f2ff",
+      glowMid: "#ffcf4b",
+      glowHigh: "#ff3e3e",
+    }
+  },
+  light: {
+    mapStyle: "https://tiles.openfreemap.org/styles/positron",
+    colors: {
+      paid: "#1d4ed8",
+      residential: "#d97706",
+      free: "#16a34a",
+      special: "#7c3aed",
+      other: "#4b5563",
+      glowLow: "#0891b2",
+      glowMid: "#d97706",
+      glowHigh: "#dc2626",
+    }
+  },
+  forest: {
+    mapStyle: "https://tiles.openfreemap.org/styles/dark",
+    colors: {
+      paid: "#10b981",
+      residential: "#f59e0b",
+      free: "#34d399",
+      special: "#8b5cf6",
+      other: "#4b5563",
+      glowLow: "#10b981",
+      glowMid: "#f59e0b",
+      glowHigh: "#ef4444",
+    }
+  }
+};
 
 // Safe serialization helper for MapLibre/DuckDB
 const safeGeoJSON = (data: unknown) => {
@@ -80,7 +127,7 @@ export default function App() {
   const [liipiData, setLiipiData] = useState<FeatureCollection | null>(null);
   const [hubiData, setHubiData] = useState<FeatureCollection | null>(null);
   const [loadingMsg, setLoadingMsg] = useState(
-    "Initializing Analytical Engine...",
+    "Initializing Helsinki Parking Safety Map...",
   );
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [activeFilter, setActiveFilter] = useState("all");
@@ -90,6 +137,46 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
+  const [theme, setTheme] = useState<ThemeType>("dark");
+  const [isFooterCollapsed, setIsFooterCollapsed] = useState(false);
+
+  // Apply theme class to document root
+  useEffect(() => {
+    const root = window.document.documentElement;
+    root.classList.remove("theme-light", "theme-forest");
+    if (theme === "light") {
+      root.classList.add("theme-light");
+    } else if (theme === "forest") {
+      root.classList.add("theme-forest");
+    }
+  }, [theme]);
+
+  // English-friendly parking category labels
+  const getCategoryLabel = (category: string, luokka: string) => {
+    if (category === "residential") return "Resident Permit Parking (Asukaspysäköinti)";
+    if (category === "paid") return "Paid Parking (Maksullinen)";
+    if (category === "free") return "Free Parking (Ilmainen)";
+    if (category === "special") return "Special Parking (EV/Disabled)";
+    return luokka || "Standard Parking";
+  };
+
+  // Visual highlights, emojis, and styling classes for each traffic sign type
+  const getSignVisuals = (type: string) => {
+    const t = String(type);
+    if (/^(C37|C38|C39|C40|C44)/.test(t)) {
+      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" };
+    }
+    if (/^(E2|E3)/.test(t)) {
+      return { emoji: "🅿️", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" };
+    }
+    if (/^(E24|E26|E28)/.test(t)) {
+      return { emoji: "🚕", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" };
+    }
+    if (/^(C32|C34)/.test(t)) {
+      return { emoji: "⚠️", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" };
+    }
+    return { emoji: "ℹ️", colorClass: "border-l-4 border-nc-text/30 bg-nc-text/5", textClass: "text-nc-text" };
+  };
 
   const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
   const mapRef = useRef<MapRef>(null);
@@ -176,7 +263,7 @@ export default function App() {
       });
 
       try {
-        setLoadingMsg("Loading High-Performance Spatial Assets...");
+        setLoadingMsg("Loading local parking spots...");
 
         const baseUrl = import.meta.env.BASE_URL.endsWith("/")
           ? import.meta.env.BASE_URL
@@ -198,7 +285,7 @@ export default function App() {
           loadParquet("hubi", hubiUrl),
         ]);
 
-        setLoadingMsg("Calculating Live Risk Matrix...");
+        setLoadingMsg("Calculating parking risk areas...");
         const db = await getDuckDB();
         const conn = await db.connect();
 
@@ -242,7 +329,7 @@ export default function App() {
  
         setRiskData(safeGeoJSON({ type: "FeatureCollection" as const, features: slotFeatures }));
 
-        setLoadingMsg("Indexing Temporal Signage...");
+        setLoadingMsg("Indexing street parking signs...");
         const signResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry,
@@ -275,7 +362,7 @@ export default function App() {
         setSignData(safeGeoJSON({ type: "FeatureCollection" as const, features: signFeatures }));
 
         // 4. Load Roadworks
-        setLoadingMsg("Scanning for street disruptions...");
+        setLoadingMsg("Scanning for active street construction...");
         const roadworksResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
@@ -293,7 +380,7 @@ export default function App() {
         setRoadworkData(safeGeoJSON(roadworksGeoJSON));
  
         // 5. Load LiiPi (Park & Ride)
-        setLoadingMsg("Connecting to Transit Hubs...");
+        setLoadingMsg("Loading Park & Ride connections...");
         const liipiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
@@ -311,7 +398,7 @@ export default function App() {
         setLiipiData(safeGeoJSON(liipiGeoJSON));
 
         // 6. Load Parkkihubi
-        setLoadingMsg("Scanning Parkkihubi...");
+        setLoadingMsg("Connecting to public parking database...");
         const hubiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
@@ -396,20 +483,52 @@ export default function App() {
   const distance = calculateDistance();
 
   return (
-    <div className="relative w-full h-screen bg-nc-deep">
+    <div className="relative w-full h-screen bg-nc-deep text-nc-text">
+      {/* Floating Theme Selector (Top-Right) */}
+      <div className="absolute top-6 right-6 z-50 pointer-events-auto flex items-center gap-2">
+        <div className="nv-glass rounded-full p-1.5 flex items-center gap-1 shadow-2xl">
+          {[
+            { id: "dark", label: "Night Captain", icon: Moon, activeColor: "text-nc-neon-teal" },
+            { id: "light", label: "Day Patrol", icon: Sun, activeColor: "text-nc-gold" },
+            { id: "forest", label: "Nordic Forest", icon: TreePine, activeColor: "text-emerald-400" },
+          ].map((themeOpt) => {
+            const Icon = themeOpt.icon;
+            const isActive = theme === themeOpt.id;
+            return (
+              <button
+                type="button"
+                key={themeOpt.id}
+                onClick={() => setTheme(themeOpt.id as ThemeType)}
+                className={`p-2 rounded-full transition-all duration-300 flex items-center justify-center relative group ${
+                  isActive
+                    ? "bg-nc-text/15 shadow-inner scale-110"
+                    : "hover:bg-nc-text/5 text-nc-text-dim hover:text-nc-text"
+                }`}
+                title={themeOpt.label}
+              >
+                <Icon className={`w-4 h-4 ${isActive ? themeOpt.activeColor : "text-current"}`} />
+                <span className="absolute right-full mr-2 bg-nc-void border border-nc-border text-nc-text text-[10px] font-bold px-2 py-1 rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-lg">
+                  {themeOpt.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Nova HUD */}
       <div className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none">
         <div className="flex justify-between items-start w-full">
           <div className="flex flex-col gap-4 w-full max-w-md pointer-events-auto">
             {/* Search Bar */}
-            <div className="nv-glass rounded-3xl p-1 flex items-center shadow-2xl border border-white/20">
+            <div className="nv-glass rounded-3xl p-1 flex items-center shadow-2xl border border-nc-border">
               <div className="pl-4 pr-2">
                 <Search className="w-5 h-5 text-nc-neon-teal" />
               </div>
               <input
                 type="text"
                 placeholder="Search address (e.g. Mannerheimintie 1)"
-                className="bg-transparent border-none text-white text-sm w-full py-3 focus:outline-none placeholder:text-white/20"
+                className="bg-transparent border-none text-nc-text text-sm w-full py-3 focus:outline-none placeholder:text-nc-text-dim"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -417,29 +536,29 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setSearchQuery("")}
-                  className="p-2 hover:bg-white/5 rounded-full mr-1"
+                  className="p-2 hover:bg-nc-text/5 rounded-full mr-1"
                 >
-                  <X className="w-4 h-4 text-white/40" />
+                  <X className="w-4 h-4 text-nc-text-dim" />
                 </button>
               )}
             </div>
 
             {/* Search Results */}
             {searchResults.length > 0 && (
-              <div className="nv-glass rounded-2xl overflow-hidden border border-white/10 shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="nv-glass rounded-2xl overflow-hidden border border-nc-border shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
                 {searchResults.map((result: SearchResult) => (
                   <button
                     type="button"
                     key={result.id}
                     onClick={() => onSelectAddress(result)}
-                    className="w-full text-left px-4 py-3 hover:bg-nc-neon-teal/10 transition-colors border-b border-white/5 last:border-0 group flex items-center gap-3"
+                    className="w-full text-left px-4 py-3 hover:bg-nc-neon-teal/10 transition-colors border-b border-nc-border/40 last:border-0 group flex items-center gap-3"
                   >
-                    <Navigation className="w-4 h-4 text-white/20 group-hover:text-nc-neon-teal transition-colors" />
+                    <Navigation className="w-4 h-4 text-nc-text-dim group-hover:text-nc-neon-teal transition-colors" />
                     <div>
-                      <div className="text-sm font-bold text-white">
+                      <div className="text-sm font-bold text-nc-text">
                         {result.name.fi || result.name.sv}
                       </div>
-                      <div className="text-[10px] text-white/40 uppercase tracking-wider">
+                      <div className="text-[10px] text-nc-text-dim uppercase tracking-wider">
                         Helsinki Region
                       </div>
                     </div>
@@ -453,11 +572,11 @@ export default function App() {
                 <Shield className="text-nc-neon-teal w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-nv-text-lg font-bold tracking-tighter text-white">
+                <h1 className="text-nv-text-lg font-bold tracking-tighter text-nc-text">
                   PARKKIS
                 </h1>
-                <p className="text-nv-text-xs text-white/50 uppercase tracking-widest">
-                  Capital Region Risk Engine
+                <p className="text-nv-text-xs text-nc-text-muted uppercase tracking-widest">
+                  Helsinki Parking Safety Map
                 </p>
               </div>
             </div>
@@ -466,7 +585,7 @@ export default function App() {
           {!dbReady && (
             <div className="nv-glass rounded-3xl px-6 py-3 flex items-center gap-3 animate-pulse">
               <div className="w-2 h-2 rounded-full bg-nc-neon-teal shadow-[0_0_10px_#00f2ff]" />
-              <span className="text-nv-text-sm font-medium text-white">
+              <span className="text-nv-text-sm font-medium text-nc-text">
                 {loadingMsg}
               </span>
             </div>
@@ -476,8 +595,8 @@ export default function App() {
         {dbReady && (
           <div className="flex flex-wrap gap-2">
             <div className="nv-glass rounded-3xl p-2 flex items-center gap-2 pointer-events-auto overflow-x-auto no-scrollbar max-w-fit">
-              <div className="px-3 py-2 border-r border-white/10 mr-1">
-                <Filter className="w-4 h-4 text-white/40" />
+              <div className="px-3 py-2 border-r border-nc-border mr-1">
+                <Filter className="w-4 h-4 text-nc-text-dim" />
               </div>
               {CATEGORIES.map((cat) => (
                 <button
@@ -487,7 +606,7 @@ export default function App() {
                   className={`px-4 py-2 rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
                     activeFilter === cat.id
                       ? "bg-nc-neon-teal text-nc-deep shadow-[0_0_15px_rgba(0,242,255,0.4)]"
-                      : "text-white/40 hover:bg-white/5"
+                      : "text-nc-text-dim hover:bg-nc-text/5"
                   }`}
                 >
                   {cat.label}
@@ -502,13 +621,13 @@ export default function App() {
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showNewTraps
                     ? "border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10 shadow-[0_0_15px_rgba(0,242,255,0.2)]"
-                    : "border-white/10 text-white/40 hover:bg-white/5"
+                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
                 }`}
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${showNewTraps ? "bg-nc-neon-teal animate-pulse" : "bg-white/20"}`}
+                  className={`w-2 h-2 rounded-full ${showNewTraps ? "bg-nc-neon-teal animate-pulse" : "bg-nc-text/20"}`}
                 />
-                NEW TRAPS
+                TICKET HOTSPOTS
               </button>
 
               <button
@@ -516,14 +635,14 @@ export default function App() {
                 onClick={() => setShowSigns(!showSigns)}
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showSigns
-                    ? "border-white text-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                    : "border-white/10 text-white/40 hover:bg-white/5"
+                    ? "border-nc-text text-nc-text bg-nc-text/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
                 }`}
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${showSigns ? "bg-white animate-pulse" : "bg-white/20"}`}
+                  className={`w-2 h-2 rounded-full ${showSigns ? "bg-nc-text animate-pulse" : "bg-nc-text/20"}`}
                 />
-                SIGNS
+                PARKING SIGNS
               </button>
 
               <button
@@ -532,13 +651,13 @@ export default function App() {
                 className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showRoadworks
                     ? "border-nc-gold text-nc-gold bg-nc-gold/10 shadow-[0_0_15px_rgba(255,207,75,0.2)]"
-                    : "border-white/10 text-white/40 hover:bg-white/5"
+                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
                 }`}
               >
                 <div
-                  className={`w-2 h-2 rounded-full ${showRoadworks ? "bg-nc-gold animate-pulse" : "bg-white/20"}`}
+                  className={`w-2 h-2 rounded-full ${showRoadworks ? "bg-nc-gold animate-pulse" : "bg-nc-text/20"}`}
                 />
-                ROADWORKS
+                CONSTRUCTION
               </button>
             </div>
           </div>
@@ -548,7 +667,7 @@ export default function App() {
         ref={mapRef}
         initialViewState={INITIAL_VIEW_STATE}
         style={{ width: "100%", height: "100%" }}
-        mapStyle="https://tiles.openfreemap.org/styles/dark"
+        mapStyle={THEME_CONFIGS[theme].mapStyle}
         interactiveLayerIds={[
           "parking-lines",
           "hubi-lines",
@@ -579,14 +698,14 @@ export default function App() {
                   "match",
                   ["get", "category"],
                   "paid",
-                  "#3b82f6",
+                  THEME_CONFIGS[theme].colors.paid,
                   "residential",
-                  "#ffb800",
+                  THEME_CONFIGS[theme].colors.residential,
                   "free",
-                  "#22c55e",
+                  THEME_CONFIGS[theme].colors.free,
                   "special",
-                  "#a855f7",
-                  "#888888",
+                  THEME_CONFIGS[theme].colors.special,
+                  THEME_CONFIGS[theme].colors.other,
                 ],
                 "line-width": [
                   "interpolate",
@@ -610,11 +729,11 @@ export default function App() {
                   ["linear"],
                   ["get", "risk_score"],
                   1,
-                  "#00f2ff",
+                  THEME_CONFIGS[theme].colors.glowLow,
                   5,
-                  "#ffcf4b",
+                  THEME_CONFIGS[theme].colors.glowMid,
                   10,
-                  "#ff3e3e",
+                  THEME_CONFIGS[theme].colors.glowHigh,
                 ],
                 "line-width": [
                   "interpolate",
@@ -638,7 +757,7 @@ export default function App() {
               id="hubi-lines"
               type="line"
               paint={{
-                "line-color": "#00f2ff", // Neon teal for hubi zones
+                "line-color": THEME_CONFIGS[theme].colors.glowLow,
                 "line-width": [
                   "interpolate",
                   ["linear"],
@@ -649,7 +768,7 @@ export default function App() {
                   6,
                 ],
                 "line-opacity": 0.8,
-                "line-dasharray": [2, 2], // Dashed to differentiate from WFS
+                "line-dasharray": [2, 2],
               }}
             />
           </Source>
@@ -676,11 +795,11 @@ export default function App() {
                   "match",
                   ["get", "tyyppi"],
                   ["C37", "C38", "C39", "C44.1", "C44.2"],
-                  "#ff3e3e",
+                  THEME_CONFIGS[theme].colors.glowHigh,
                   ["E2", "E3.1", "E3.2", "E3.3", "E3.4", "E3.5"],
-                  "#3b82f6",
+                  THEME_CONFIGS[theme].colors.paid,
                   ["E24", "E26", "E28"],
-                  "#ffcf4b",
+                  THEME_CONFIGS[theme].colors.glowMid,
                   "#ffffff",
                 ],
                 "circle-stroke-width": 1.5,
@@ -712,9 +831,37 @@ export default function App() {
                   18,
                   25,
                 ],
-                "circle-color": "#00f2ff",
+                "circle-color": THEME_CONFIGS[theme].colors.glowLow,
                 "circle-opacity": pulseOpacity,
                 "circle-blur": 1,
+              }}
+            />
+            <Layer
+              id="sign-labels"
+              type="symbol"
+              minzoom={15}
+              layout={{
+                "text-field": [
+                  "match",
+                  ["get", "tyyppi"],
+                  ["C37", "C38", "C39", "C40", "C44.1", "C44.2"],
+                  "🚫",
+                  ["E2", "E3.1", "E3.2", "E3.3", "E3.4", "E3.5"],
+                  "🅿️",
+                  ["E24", "E26", "E28"],
+                  "🚕",
+                  ["C32", "C34"],
+                  "⚠️",
+                  "ℹ️"
+                ],
+                "text-size": 13,
+                "text-offset": [0, -1.2],
+                "text-anchor": "bottom",
+                "visibility": showSigns ? "visible" : "none"
+              }}
+              paint={{
+                "text-halo-color": "rgba(5, 8, 10, 0.95)",
+                "text-halo-width": 2,
               }}
             />
           </Source>
@@ -750,29 +897,30 @@ export default function App() {
             latitude={hoverInfo.latitude}
             closeButton={false}
             maxWidth="320px"
+            className="nv-popup"
           >
-            <div className="p-3 bg-[#0a0f14] text-white rounded-lg border border-[#00f2ff]/20 shadow-xl min-w-[240px]">
-              <div className="flex justify-between items-start mb-2 border-b border-white/10 pb-2">
-                <h3 className="font-bold text-white leading-tight">
+            <div className="p-3 bg-nc-void text-nc-text rounded-lg border border-nc-border shadow-xl min-w-[240px]">
+              <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
+                <h3 className="font-bold text-nc-text leading-tight">
                   {hoverInfo.properties.tyyppi || "Parking Area"}
                 </h3>
                 {hoverInfo.properties.is_new && (
-                  <span className="bg-[#00f2ff] text-[#05080a] font-black px-2 py-0.5 rounded text-[10px] ml-2 animate-pulse">
+                  <span className="bg-nc-neon-teal text-nc-deep font-black px-2 py-0.5 rounded text-[10px] ml-2 animate-pulse">
                     NEW RULE
                   </span>
                 )}
                 {hoverInfo.properties.asukaspysakointitunnus && (
-                  <span className="bg-nc-purple text-white font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.5)]">
+                  <span className="bg-nc-purple text-nc-text font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.5)]">
                     Zone {hoverInfo.properties.asukaspysakointitunnus}
                   </span>
                 )}
               </div>
 
-              {/* Synthetic Confidence Score */}
-              <div className="flex items-center justify-between mb-4 bg-white/5 rounded-xl p-3 border border-white/10">
+              {/* Parking Risk & Violation count */}
+              <div className="flex items-center justify-between mb-4 bg-nc-text/5 rounded-xl p-3 border border-nc-border">
                 <div className="flex flex-col">
-                  <span className="text-[10px] text-white/40 uppercase font-black tracking-wider">
-                    Confidence Score
+                  <span className="text-[10px] text-nc-text-dim uppercase font-black tracking-wider">
+                    Parking Risk
                   </span>
                   <span
                     className={`text-xl font-black ${
@@ -785,36 +933,22 @@ export default function App() {
                     }`}
                   >
                     {hoverInfo.isRoadworkConflict
-                      ? "0"
-                      : Math.max(
-                          0,
-                          10 - Number(hoverInfo.properties.risk_score || 0),
-                        )}
-                    /10
-                  </span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-white/40 uppercase font-black block">
-                    Status
-                  </span>
-                  <span
-                    className={`text-[10px] font-black uppercase ${
-                      hoverInfo.isRoadworkConflict
-                        ? "text-nc-danger"
-                        : Number(hoverInfo.properties.risk_score ?? 0) > 7
-                          ? "text-nc-danger"
-                          : Number(hoverInfo.properties.risk_score ?? 0) > 3
-                            ? "text-nc-gold"
-                            : "text-nc-neon-teal"
-                    }`}
-                  >
-                    {hoverInfo.isRoadworkConflict
                       ? "Restricted"
                       : Number(hoverInfo.properties.risk_score ?? 0) > 7
                         ? "High Risk"
                         : Number(hoverInfo.properties.risk_score ?? 0) > 3
-                          ? "Caution"
-                          : "Safe to Park"}
+                          ? "Moderate Risk"
+                          : "Low Risk"}
+                  </span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-nc-text-dim uppercase font-black block">
+                    Tickets Mapped
+                  </span>
+                  <span className="text-sm font-bold text-nc-text">
+                    {hoverInfo.properties.fine_count !== undefined
+                      ? `${hoverInfo.properties.fine_count} fines`
+                      : "0 fines"}
                   </span>
                 </div>
               </div>
@@ -824,46 +958,65 @@ export default function App() {
                   <span className="block text-xs text-nc-danger font-black uppercase mb-1">
                     ⚠️ ROADWORK CONFLICT
                   </span>
-                  <p className="text-[10px] text-white/80 leading-tight">
+                  <p className="text-[10px] text-nc-text-muted leading-tight">
                     This spot is currently restricted due to active street
                     works.
                   </p>
                 </div>
               )}
 
-              {/* Traffic Sign Data (Support for Stacking) */}
+              {/* Traffic Sign Data (Visual vertical representation of a physical sign pole) */}
               {hoverInfo.stackedSigns ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-nc-neon-teal font-bold uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1 flex items-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    Sign Pole Stack ({hoverInfo.stackedSigns.length})
+                <div className="space-y-3">
+                  <p className="text-xs text-nc-neon-teal font-black uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1.5 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" />
+                    Sign Pole Stack ({hoverInfo.stackedSigns.length} Signs)
                   </p>
-                  <div className="space-y-3">
-                    {hoverInfo.stackedSigns.map((sign) => (
-                      <div key={String(sign.id)} className="space-y-1.5 p-2 bg-white/5 rounded-lg border border-white/5 hover:border-white/10 transition-colors">
-                        <div className="flex justify-between items-center">
-                          <span className="text-xs text-nc-neon-teal font-black">
-                            {sign.tyyppi}
-                          </span>
-                          <span className="text-[10px] text-white/40 font-bold uppercase tracking-widest">
-                            {getSignLabel(String(sign.tyyppi))}
-                          </span>
+                  
+                  {/* Vertical metal pole visualization line */}
+                  <div className="relative pl-4 space-y-3 before:content-[''] before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-[2px] before:bg-nc-text-dim/30">
+                    {hoverInfo.stackedSigns.map((sign) => {
+                      const visuals = getSignVisuals(String(sign.tyyppi));
+                      return (
+                        <div 
+                          key={String(sign.id)} 
+                          className={`relative space-y-1.5 p-2.5 rounded-lg border border-nc-border/40 hover:border-nc-border transition-all duration-200 shadow-md ${visuals.colorClass}`}
+                        >
+                          {/* Pole connection bullet indicator */}
+                          <div className={`absolute left-[-16px] top-4 w-2 h-2 rounded-full border border-nc-void ${
+                            visuals.textClass === "text-nc-neon-red" ? "bg-nc-neon-red" :
+                            visuals.textClass === "text-nc-neon-teal" ? "bg-nc-neon-teal" : "bg-nc-gold"
+                          }`} />
+                          
+                          <div className="flex justify-between items-center gap-1">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-sm select-none">{visuals.emoji}</span>
+                              <span className={`text-[11px] font-black uppercase tracking-wider ${visuals.textClass}`}>
+                                {sign.tyyppi}
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-nc-text font-black uppercase text-right leading-none truncate max-w-[120px]">
+                              {getSignLabel(String(sign.tyyppi))}
+                            </span>
+                          </div>
+
+                          {/* Subtexts / Additional plates */}
+                          <div className="flex flex-col gap-1">
+                            {[1, 2, 3, 4, 5].map((n) => {
+                              const txt = sign[`kilpi_txt${n}`];
+                              return txt ? (
+                                <div
+                                  key={n}
+                                  className="text-[9px] bg-nc-text/5 border border-nc-border/30 rounded px-2 py-0.5 text-nc-text-muted font-medium italic leading-tight"
+                                >
+                                  "{txt}"
+                                </div>
+                              ) : null;
+                            })}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
-                          {[1, 2, 3, 4, 5].map((n) => {
-                            const txt = sign[`kilpi_txt${n}`];
-                            return txt ? (
-                              <div
-                                key={n}
-                                className="text-[10px] bg-nc-gold/10 border border-nc-gold/20 rounded px-2 py-0.5 text-nc-gold font-medium italic"
-                              >
-                                "{txt}"
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : hoverInfo.properties.licence_identifier ? (
@@ -871,10 +1024,10 @@ export default function App() {
                   <p className="text-sm text-nc-gold font-bold uppercase tracking-wider">
                     Street Work Permit
                   </p>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-nc-text-muted">
                     Type: {hoverInfo.properties.licence_type}
                   </p>
-                  <p className="text-xs text-white/70">
+                  <p className="text-xs text-nc-text-muted">
                     Validity: {hoverInfo.properties.event_startdate_txt} -{" "}
                     {hoverInfo.properties.event_endtdate_txt || "Open"}
                   </p>
@@ -883,14 +1036,14 @@ export default function App() {
                       "{hoverInfo.properties.event_description}"
                     </div>
                   )}
-                  <div className="text-[10px] text-white/40 mt-2">
+                  <div className="text-[10px] text-nc-text-dim mt-2">
                     ID: {hoverInfo.properties.licence_identifier}
                   </div>
                 </div>
               ) : (
                 <>
-                  <p className="text-sm text-white/70 mb-3 leading-tight">
-                    {hoverInfo.properties.luokka_nimi || "No restriction data"}
+                  <p className="text-sm text-nc-text-muted mb-3 leading-tight font-bold">
+                    {getCategoryLabel(String(hoverInfo.properties.category || ""), String(hoverInfo.properties.luokka_nimi || ""))}
                   </p>
 
                   {hoverInfo.properties.asukaspysakointitunnus && (
@@ -898,7 +1051,7 @@ export default function App() {
                       <p className="text-[10px] text-nc-purple font-bold uppercase mb-1">
                         Resident Privilege
                       </p>
-                      <p className="text-[10px] text-white/80 leading-tight">
+                      <p className="text-[10px] text-nc-text-muted leading-tight">
                         Requires permit for Zone{" "}
                         {hoverInfo.properties.asukaspysakointitunnus}. Others
                         must follow time rules below.
@@ -907,22 +1060,22 @@ export default function App() {
                   )}
 
                   <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="bg-white/5 rounded p-2">
-                      <span className="block text-xs text-white/50 uppercase">
+                    <div className="bg-nc-text/5 rounded p-2">
+                      <span className="block text-xs text-nc-text-dim uppercase">
                         Time Rules
                       </span>
-                      <span className="font-bold text-white text-sm">
+                      <span className="font-bold text-nc-text text-sm">
                         {hoverInfo.properties.voimassaolo || "-"}
                         {hoverInfo.properties.kesto
                           ? ` (${hoverInfo.properties.kesto})`
                           : ""}
                       </span>
                     </div>
-                    <div className="bg-white/5 rounded p-2">
-                      <span className="block text-xs text-white/50 uppercase">
+                    <div className="bg-nc-text/5 rounded p-2">
+                      <span className="block text-xs text-nc-text-dim uppercase">
                         Capacity
                       </span>
-                      <span className="font-bold text-white text-sm">
+                      <span className="font-bold text-nc-text text-sm">
                         {hoverInfo.properties.paikat_ala || "?"} slots
                       </span>
                     </div>
@@ -930,12 +1083,11 @@ export default function App() {
 
                   {Number(hoverInfo.properties.risk_score ?? 0) >= 3 &&
                     hoverInfo.properties.top_violation_reason && (
-                      <div className="bg-red-500/10 border border-red-500/30 rounded p-2 mt-2">
-                        <span className="block text-xs text-red-400 uppercase mb-1 font-bold">
-                          ⚠️ Top Danger (Risk {hoverInfo.properties.risk_score}
-                          /10)
+                      <div className="bg-nc-danger/10 border border-nc-danger/30 rounded p-2 mt-2">
+                        <span className="block text-xs text-nc-danger uppercase mb-1 font-bold">
+                          ⚠️ Top Violation Cause
                         </span>
-                        <span className="text-xs text-white/80 leading-tight block">
+                        <span className="text-xs text-nc-text-muted leading-tight block">
                           {String(hoverInfo.properties.top_violation_reason || "")
                             .replace(/^\d+\s+/, "")}
                         </span>
@@ -945,14 +1097,14 @@ export default function App() {
               )}
 
               {distance && (
-                <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+                <div className="mt-4 pt-4 border-t border-nc-border flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Navigation className="w-4 h-4 text-nc-neon-teal" />
                     <div>
-                      <div className="text-[10px] text-white/40 uppercase font-black">
-                        Destination Synergy
+                      <div className="text-[10px] text-nc-text-dim uppercase font-black">
+                        Target Destination
                       </div>
-                      <div className="text-xs text-white font-bold truncate max-w-[120px]">
+                      <div className="text-xs text-nc-text font-bold truncate max-w-[120px]">
                         {selectedAddress?.name}
                       </div>
                     </div>
@@ -961,7 +1113,7 @@ export default function App() {
                     <div className="text-sm text-nc-neon-teal font-black">
                       {distance}m
                     </div>
-                    <div className="text-[10px] text-white/40 uppercase">
+                    <div className="text-[10px] text-nc-text-dim uppercase">
                       ~{walkTime(distance)} min walk
                     </div>
                   </div>
@@ -977,7 +1129,7 @@ export default function App() {
               type="circle"
               paint={{
                 "circle-radius": 15,
-                "circle-color": "#00f2ff",
+                "circle-color": THEME_CONFIGS[theme].colors.glowLow,
                 "circle-opacity": 0.2,
                 "circle-blur": 1,
               }}
@@ -987,7 +1139,7 @@ export default function App() {
               type="circle"
               paint={{
                 "circle-radius": 6,
-                "circle-color": "#00f2ff",
+                "circle-color": THEME_CONFIGS[theme].colors.glowLow,
                 "circle-stroke-width": 2,
                 "circle-stroke-color": "#ffffff",
               }}
@@ -1004,7 +1156,7 @@ export default function App() {
                 "text-size": 10,
               }}
               paint={{
-                "text-color": "#00f2ff",
+                "text-color": THEME_CONFIGS[theme].colors.glowLow,
                 "text-halo-color": "rgba(5, 8, 10, 0.8)",
                 "text-halo-width": 2,
               }}
@@ -1014,43 +1166,70 @@ export default function App() {
       </ReactMap>
 
       {/* Bento Stats Footer */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 grid grid-cols-3 gap-4 pointer-events-none">
-        <div className="nv-bento-card pointer-events-auto">
-          <div className="flex items-center gap-3 mb-2">
-            <MapIcon className="w-4 h-4 text-nc-neon-teal" />
-            <span className="text-nv-text-xs font-bold text-white/40 uppercase">
-              Coverage
-            </span>
-          </div>
-          <p className="text-nv-text-xl font-bold">Regional Scope</p>
-          <p className="text-nv-text-xs text-white/30">
-            Helsinki • Espoo • Vantaa
-          </p>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 flex flex-col gap-2 pointer-events-none transition-all duration-300">
+        {/* Toggle Expand / Collapse Button */}
+        <div className="flex justify-end w-full pointer-events-auto pr-2">
+          <button
+            type="button"
+            onClick={() => setIsFooterCollapsed(!isFooterCollapsed)}
+            className="nv-glass rounded-full px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto"
+          >
+            {isFooterCollapsed ? (
+              <>
+                <Info className="w-3.5 h-3.5 text-nc-neon-teal" />
+                <span>Show Safety Guide & Info</span>
+              </>
+            ) : (
+              <>
+                <X className="w-3.5 h-3.5 text-nc-neon-red" />
+                <span>Hide Info Panel</span>
+              </>
+            )}
+          </button>
         </div>
 
-        <div className="nv-bento-card pointer-events-auto">
-          <div className="flex items-center gap-3 mb-2">
-            <Info className="w-4 h-4 text-nc-gold" />
-            <span className="text-nv-text-xs font-bold text-white/40 uppercase">
-              Intelligence
-            </span>
-          </div>
-          <p className="text-nv-text-xl font-bold">165.7k</p>
-          <p className="text-nv-text-xs text-white/30">
-            Violation Records Join
-          </p>
-        </div>
+        {!isFooterCollapsed && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <div className="nv-bento-card pointer-events-auto">
+              <div className="flex items-center gap-3 mb-2">
+                <MapIcon className="w-4 h-4 text-nc-neon-teal" />
+                <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
+                  How to Use
+                </span>
+              </div>
+              <p className="text-[14px] font-bold text-nc-text">Tap to Inspect</p>
+              <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
+                Click or hover on any parking line, sign pole, or highlight to check if it's safe to park.
+              </p>
+            </div>
 
-        <div className="nv-bento-card pointer-events-auto border-nc-neon-teal/20">
-          <div className="flex items-center gap-3 mb-2">
-            <Sliders className="w-4 h-4 text-nc-neon-teal" />
-            <span className="text-nv-text-xs font-bold text-white/40 uppercase">
-              Engine
-            </span>
+            <div className="nv-bento-card pointer-events-auto">
+              <div className="flex items-center gap-3 mb-2">
+                <Shield className="w-4 h-4 text-nc-gold" />
+                <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
+                  Mapped Fines
+                </span>
+              </div>
+              <p className="text-[14px] font-bold text-nc-text">165.7k Tickets Mapped</p>
+              <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
+                We analyze fine density around parking spots so you can instantly recognize high-risk zones.
+              </p>
+            </div>
+
+            <div className="nv-bento-card pointer-events-auto border-nc-neon-teal/20">
+              <div className="flex items-center gap-3 mb-2">
+                <Sliders className="w-4 h-4 text-nc-neon-teal" />
+                <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
+                  Live Guidance
+                </span>
+              </div>
+              <p className="text-[14px] font-bold text-nc-text">Signs Override Map</p>
+              <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
+                Signage and construction change frequently. Always confirm safety against physical street signs!
+              </p>
+            </div>
           </div>
-          <p className="text-nv-text-xl font-bold">DuckDB</p>
-          <p className="text-nv-text-xs text-white/30">Wasm Vector Engine</p>
-        </div>
+        )}
       </div>
     </div>
   );

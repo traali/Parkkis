@@ -1,20 +1,75 @@
 @import "tailwindcss";
 
+:root {
+  --nc-deep: #05080a;
+  --nc-void: #0a0f14;
+  --nc-glass: rgba(10, 15, 20, 0.6);
+  --nc-neon-teal: #00f2ff;
+  --nc-neon-red: #ff3e3e;
+  --nc-gold: #ffcf4b;
+  --nc-purple: #a855f7;
+  --nc-danger: #ef4444;
+  --nc-text: #ffffff;
+  --nc-text-muted: rgba(255, 255, 255, 0.6);
+  --nc-text-dim: rgba(255, 255, 255, 0.35);
+  --nc-border: rgba(255, 255, 255, 0.1);
+  --nc-bg-gradient: radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.05) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(255, 62, 62, 0.05) 0px, transparent 50%);
+}
+
+.theme-light {
+  --nc-deep: #f8fafc;
+  --nc-void: #ffffff;
+  --nc-glass: rgba(255, 255, 255, 0.7);
+  --nc-neon-teal: #0891b2;
+  --nc-neon-red: #dc2626;
+  --nc-gold: #d97706;
+  --nc-purple: #7c3aed;
+  --nc-danger: #dc2626;
+  --nc-text: #0f172a;
+  --nc-text-muted: rgba(15, 23, 42, 0.75);
+  --nc-text-dim: rgba(15, 23, 42, 0.45);
+  --nc-border: rgba(15, 23, 42, 0.08);
+  --nc-bg-gradient: radial-gradient(at 0% 0%, rgba(8, 145, 178, 0.08) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(220, 38, 38, 0.04) 0px, transparent 50%);
+}
+
+.theme-forest {
+  --nc-deep: #06100c;
+  --nc-void: #0a1a14;
+  --nc-glass: rgba(10, 26, 20, 0.6);
+  --nc-neon-teal: #10b981;
+  --nc-neon-red: #ef4444;
+  --nc-gold: #f59e0b;
+  --nc-purple: #8b5cf6;
+  --nc-danger: #ef4444;
+  --nc-text: #e6f4ea;
+  --nc-text-muted: rgba(230, 244, 234, 0.65);
+  --nc-text-dim: rgba(230, 244, 234, 0.35);
+  --nc-border: rgba(16, 185, 129, 0.15);
+  --nc-bg-gradient: radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                    radial-gradient(at 100% 100%, rgba(245, 158, 11, 0.05) 0px, transparent 50%);
+}
+
 @theme {
-  /* Nova Night Captain Palette */
-  --color-nc-deep: #05080a;
-  --color-nc-void: #0a0f14;
-  --color-nc-glass: rgba(15, 23, 42, 0.6);
-  --color-nc-neon-teal: #00f2ff;
-  --color-nc-neon-red: #ff3e3e;
-  --color-nc-gold: #ffcf4b;
-  --color-nc-purple: #a855f7;
-  --color-nc-danger: #ef4444;
+  /* Dynamic Palette */
+  --color-nc-deep: var(--nc-deep);
+  --color-nc-void: var(--nc-void);
+  --color-nc-glass: var(--nc-glass);
+  --color-nc-neon-teal: var(--nc-neon-teal);
+  --color-nc-neon-red: var(--nc-neon-red);
+  --color-nc-gold: var(--nc-gold);
+  --color-nc-purple: var(--nc-purple);
+  --color-nc-danger: var(--nc-danger);
+  --color-nc-text: var(--nc-text);
+  --color-nc-text-muted: var(--nc-text-muted);
+  --color-nc-text-dim: var(--nc-text-dim);
+  --color-nc-border: var(--nc-border);
 
   /* Typography */
   --font-inter: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
 
-  /* Fluid Typography Formulas (Rule 7) */
+  /* Fluid Typography Formulas */
   --nv-text-xs: clamp(0.694rem, 0.65rem + 0.22vw, 0.8rem);
   --nv-text-sm: clamp(0.833rem, 0.78rem + 0.27vw, 0.96rem);
   --nv-text-base: clamp(1rem, 0.93rem + 0.33vw, 1.2rem);
@@ -28,38 +83,43 @@
 @layer base {
   body {
     background-color: var(--color-nc-deep);
-    color: white;
+    color: var(--color-nc-text);
     font-family: var(--font-inter);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow: hidden;
-    background-image:
-      radial-gradient(at 0% 0%, rgba(0, 242, 255, 0.05) 0px, transparent 50%),
-      radial-gradient(
-        at 100% 100%,
-        rgba(255, 62, 62, 0.05) 0px,
-        transparent 50%
-      );
+    background-image: var(--nc-bg-gradient);
+    transition: background-color 0.5s ease, color 0.5s ease;
   }
 }
 
 @layer components {
-  /* Liquid Glassmorphism (Rule 7) */
+  /* Liquid Glassmorphism */
   .nv-glass {
     backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--color-nc-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
     background: linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.05) 0%,
       rgba(255, 255, 255, 0.01) 100%
     );
+    transition: all 0.3s ease;
+  }
+
+  .theme-light .nv-glass {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.3) 100%
+    );
+    box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.1);
   }
 
   .nv-bento-card {
     backdrop-filter: blur(24px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--color-nc-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.45);
     background: linear-gradient(
       135deg,
       rgba(255, 255, 255, 0.05) 0%,
@@ -67,12 +127,21 @@
     );
     border-radius: 1.5rem;
     padding: 1.5rem;
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .theme-light .nv-bento-card {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.6) 0%,
+      rgba(255, 255, 255, 0.3) 100%
+    );
+    box-shadow: 0 15px 35px -10px rgba(15, 23, 42, 0.1);
   }
 
   .nv-bento-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    transform: scale(1.01);
+    border-color: var(--color-nc-neon-teal);
+    transform: scale(1.015);
   }
 
   /* Map Overlays */
@@ -86,10 +155,10 @@
   /* Popup Overrides */
   .nv-popup .maplibregl-popup-content {
     background: var(--color-nc-void);
-    border: 1px solid rgba(0, 242, 255, 0.2);
+    border: 1px solid var(--color-nc-border);
     border-radius: 12px;
-    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.8);
-    color: white;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    color: var(--color-nc-text);
     padding: 0;
   }
 
