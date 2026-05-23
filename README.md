@@ -1,10 +1,10 @@
-# 🅿️ ParkkiS v2.5.0: Helsinki Parking Trap Detector
+# 🅿️ ParkkiS v2.6.0: Helsinki Parking Safety Map
 
 ## Problem
-Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and "trap" spots with confusing signage lead to avoidable fines. Drivers need more than just "free spots"—they need to know *safe* spots.
+Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and confusing signage lead to avoidable fines. Drivers need more than just "free spots"—they need to know *safe* spots.
 
 ## Solution
-ParkkiS is a spatial intelligence dashboard that reduces the financial burden on drivers. It combines real-time parking availability with a probabilistic "Risk Engine" that analyzes historical fine density. It generates a simple 1-10 Risk Score for every spot, helping users avoid high-risk areas.
+ParkkiS is a spatial intelligence dashboard that reduces the financial burden on drivers. It combines real-time parking availability with a geographical mapping of historical fine density. It generates a simple 1-10 Risk Rating for every spot, helping users recognize and avoid high-risk areas.
 
 ## Architecture
 - **Type**: Serverless Spatial (Static Vector Tiles + Edge Compute)
