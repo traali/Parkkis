@@ -162,18 +162,30 @@ export default function App() {
 
   // Visual highlights, emojis, and styling classes for each traffic sign type
   const getSignVisuals = (type: string) => {
-    const t = String(type);
-    if (/^(C37|C38|C39|C40|C44)/.test(t)) {
-      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" };
+    const t = String(type).trim().toUpperCase();
+    if (/^C37/.test(t)) {
+      return { emoji: "🛑", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // No stopping (more severe)
+    }
+    if (/^(C38|C39|C40|C44)/.test(t)) {
+      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // No parking
+    }
+    if (/^C/.test(t)) {
+      return { emoji: "🚫", colorClass: "border-l-4 border-nc-neon-red bg-nc-neon-red/10", textClass: "text-nc-neon-red" }; // General prohibitory
     }
     if (/^(E2|E3)/.test(t)) {
-      return { emoji: "🅿️", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" };
+      return { emoji: "🅿️", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // Parking
     }
-    if (/^(E24|E26|E28)/.test(t)) {
-      return { emoji: "🚕", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" };
+    if (/^E4/.test(t)) {
+      return { emoji: "🚕", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" }; // Taxi stand
     }
-    if (/^(C32|C34)/.test(t)) {
-      return { emoji: "⚠️", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" };
+    if (/^H24/.test(t)) {
+      return { emoji: "🎫", colorClass: "border-l-4 border-nc-purple bg-nc-purple/10", textClass: "text-nc-purple" }; // Resident permit
+    }
+    if (/^H25/.test(t)) {
+      return { emoji: "🛠️", colorClass: "border-l-4 border-nc-gold bg-nc-gold/10", textClass: "text-nc-gold" }; // Maintenance only
+    }
+    if (/^H19/.test(t)) {
+      return { emoji: "🕒", colorClass: "border-l-4 border-nc-neon-teal bg-nc-neon-teal/10", textClass: "text-nc-neon-teal" }; // Time limit
     }
     return { emoji: "ℹ️", colorClass: "border-l-4 border-nc-text/30 bg-nc-text/5", textClass: "text-nc-text" };
   };
@@ -844,15 +856,21 @@ export default function App() {
                 "text-field": [
                   "match",
                   ["get", "tyyppi"],
-                  ["C37", "C38", "C39", "C40", "C44.1", "C44.2"],
-                  "🚫",
+                  "C37",
+                  "🛑", // No stopping
+                  ["C38", "C39", "C40", "C44.1", "C44.2"],
+                  "🚫", // No parking
                   ["E2", "E3.1", "E3.2", "E3.3", "E3.4", "E3.5"],
-                  "🅿️",
-                  ["E24", "E26", "E28"],
-                  "🚕",
-                  ["C32", "C34"],
-                  "⚠️",
-                  "ℹ️"
+                  "🅿️", // Parking Place
+                  "E4.1",
+                  "🚕", // Taxi
+                  "H24",
+                  "🎫", // Resident Permit
+                  "H25",
+                  "🛠️", // Maintenance Only
+                  "H19",
+                  "🕒", // Time limit
+                  "ℹ️" // Info default
                 ],
                 "text-size": 13,
                 "text-offset": [0, -1.2],

@@ -16,37 +16,44 @@ const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
 };
 
 let db: duckdb.AsyncDuckDB | null = null;
+let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
 
 export async function getDuckDB() {
   if (db) return db;
+  if (dbPromise) return dbPromise;
 
-  const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
-  if (!bundle.mainWorker) {
-    throw new Error("DuckDB bundle missing mainWorker");
-  }
-  const worker = new Worker(bundle.mainWorker);
-  const logger = new duckdb.ConsoleLogger();
-  db = new duckdb.AsyncDuckDB(logger, worker);
-  await db.instantiate(bundle.mainModule, bundle.pthreadWorker);
+  dbPromise = (async () => {
+    const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
+    if (!bundle.mainWorker) {
+      throw new Error("DuckDB bundle missing mainWorker");
+    }
+    const worker = new Worker(bundle.mainWorker);
+    const logger = new duckdb.ConsoleLogger();
+    const localDb = new duckdb.AsyncDuckDB(logger, worker);
+    await localDb.instantiate(bundle.mainModule, bundle.pthreadWorker);
 
-  // Load Spatial extension if possible (DuckDB-Wasm support varies)
-  const conn = await db.connect();
-  try {
-    // WORKAROUND for duckdb-wasm issue #2199 'stoi: no conversion' on GeoParquet:
-    // Force loading the default CRS by querying coordinate systems BEFORE loading spatial
-    await conn.query(`SELECT * FROM duckdb_coordinate_systems();`);
+    // Load Spatial extension if possible (DuckDB-Wasm support varies)
+    const conn = await localDb.connect();
+    try {
+      // WORKAROUND for duckdb-wasm issue #2199 'stoi: no conversion' on GeoParquet:
+      // Force loading the default CRS by querying coordinate systems BEFORE loading spatial
+      await conn.query(`SELECT * FROM duckdb_coordinate_systems();`);
 
-    await conn.query(`INSTALL spatial; LOAD spatial;`);
-    console.log("🦆 DuckDB-Wasm Spatial Loaded");
-  } catch (e) {
-    console.warn(
-      "🦆 DuckDB-Wasm Spatial not supported in this bundle, falling back to basic analysis",
-      e,
-    );
-  }
-  await conn.close();
+      await conn.query(`INSTALL spatial; LOAD spatial;`);
+      console.log("🦆 DuckDB-Wasm Spatial Loaded");
+    } catch (e) {
+      console.warn(
+        "🦆 DuckDB-Wasm Spatial not supported in this bundle, falling back to basic analysis",
+        e,
+      );
+    }
+    await conn.close();
 
-  return db;
+    db = localDb;
+    return localDb;
+  })();
+
+  return dbPromise;
 }
 
 export async function loadParquet(name: string, url: string) {
