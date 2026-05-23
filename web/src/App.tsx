@@ -983,7 +983,7 @@ export default function App() {
                 </div>
               )}
 
-              {/* Traffic Sign Data (Visual vertical representation of a physical sign pole) */}
+              {/* Traffic Sign Data (Visual vertical representation of a physical sign pole in real-world order) */}
               {hoverInfo.stackedSigns ? (
                 <div className="space-y-3">
                   <p className="text-xs text-nc-neon-teal font-black uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1.5 flex items-center gap-1.5">
@@ -993,14 +993,27 @@ export default function App() {
                   
                   {/* Vertical metal pole visualization line */}
                   <div className="relative pl-4 space-y-3 before:content-[''] before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-[2px] before:bg-nc-text-dim/30">
-                    {hoverInfo.stackedSigns.map((sign) => {
-                      const visuals = getSignVisuals(String(sign.tyyppi));
-                      return (
-                        <div 
-                          key={String(sign.id)} 
-                          className={`relative space-y-1.5 p-2.5 rounded-lg border border-nc-border/40 hover:border-nc-border transition-all duration-200 shadow-md ${visuals.colorClass}`}
-                        >
-                          {/* Pole connection bullet indicator */}
+                    {[...hoverInfo.stackedSigns]
+                      .sort((a, b) => {
+                        const typeA = String(a.tyyppi || "").toUpperCase();
+                        const typeB = String(b.tyyppi || "").toUpperCase();
+                        
+                        const isMainA = typeA.startsWith("C") || typeA.startsWith("E");
+                        const isMainB = typeB.startsWith("C") || typeB.startsWith("E");
+                        
+                        if (isMainA && !isMainB) return -1; // Main sign A goes above additional panel B
+                        if (!isMainA && isMainB) return 1;  // Main sign B goes above additional panel A
+                        
+                        return typeA.localeCompare(typeB); // Alphabetical ordering for identical hierarchy levels
+                      })
+                      .map((sign) => {
+                        const visuals = getSignVisuals(String(sign.tyyppi));
+                        return (
+                          <div 
+                            key={String(sign.id)} 
+                            className={`relative space-y-1.5 p-2.5 rounded-lg border border-nc-border/40 hover:border-nc-border transition-all duration-200 shadow-md ${visuals.colorClass}`}
+                          >
+                            {/* Pole connection bullet indicator */}
                           <div className={`absolute left-[-16px] top-4 w-2 h-2 rounded-full border border-nc-void ${
                             visuals.textClass === "text-nc-neon-red" ? "bg-nc-neon-red" :
                             visuals.textClass === "text-nc-neon-teal" ? "bg-nc-neon-teal" : "bg-nc-gold"
