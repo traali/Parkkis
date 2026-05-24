@@ -1807,6 +1807,12 @@ export default function App() {
                 const loc = props.location_description && props.location_description !== "N/A" ? props.location_description : null;
                 const isParking = String(subject).toLowerCase().includes("pysäköinti") || String(subject).toLowerCase().includes("pysakoiti");
                 
+                // Scan for official Helsinki case diary codes (e.g. HEL 2024-008895)
+                const helRegex = /HEL\s\d{4}-\d{6}/gi;
+                const allText = `${subject} ${desc} ${props.licence_identifier || ""}`;
+                const helMatch = allText.match(helRegex);
+                const firstHel = helMatch ? helMatch[0] : null;
+                
                 return (
                   // biome-ignore lint/a11y/useKeyWithClickEvents: nested links inside div make this layout semantic
                   // biome-ignore lint/a11y/noStaticElementInteractions: div card container is used for styling layout
@@ -1833,6 +1839,21 @@ export default function App() {
                       <p className="text-[11px] text-nc-text-muted leading-snug pl-1">
                         {renderTextWithLinks(desc)}
                       </p>
+                    )}
+
+                    {/* Official Decision Link Badge */}
+                    {firstHel && (
+                      <div className="pl-1 pt-0.5">
+                        <a
+                          href={`https://paatokset.hel.fi/fi/haku?q=${encodeURIComponent(firstHel)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border border-nc-neon-teal/30 hover:border-nc-neon-teal/50 rounded-xl text-[9px] font-black text-nc-neon-teal uppercase tracking-wider transition-all"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          📜 Decision: {firstHel}
+                        </a>
+                      </div>
                     )}
 
                     {/* Applicant Company */}
