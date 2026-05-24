@@ -132,17 +132,35 @@ const parseJsonSafe = (str: unknown) => {
   }
 };
 
-// Auto hyperlink parser for descriptions
+// Auto hyperlink parser for descriptions (handles both web URLs and HEL-case links)
 const renderTextWithLinks = (text: string) => {
   if (!text) return "";
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-  const parts = text.split(urlRegex);
+  const helRegex = /(HEL\s\d{4}-\d{6})/gi;
+  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL\s\d{4}-\d{6})/gi;
+  const parts = text.split(combinedRegex);
   
   let keyCount = 0;
   return parts.map((part) => {
     keyCount += 1;
     if (part.match(urlRegex)) {
       const href = part.startsWith("http") ? part : `https://${part}`;
+      return (
+        <a
+          key={keyCount}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-nc-neon-teal hover:text-white underline font-bold cursor-pointer break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    if (part.match(helRegex)) {
+      const caseCode = part.toLowerCase().replace(/\s+/g, "-");
+      const href = `https://paatokset.hel.fi/fi/asia/${caseCode}`;
       return (
         <a
           key={keyCount}
@@ -1845,7 +1863,7 @@ export default function App() {
                     {firstHel && (
                       <div className="pl-1 pt-0.5">
                         <a
-                          href={`https://paatokset.hel.fi/fi/haku?q=${encodeURIComponent(firstHel)}`}
+                          href={`https://paatokset.hel.fi/fi/asia/${firstHel.toLowerCase().replace(/\s+/g, "-")}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border border-nc-neon-teal/30 hover:border-nc-neon-teal/50 rounded-xl text-[9px] font-black text-nc-neon-teal uppercase tracking-wider transition-all"
