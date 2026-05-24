@@ -47,6 +47,7 @@ interface HoverInfo {
   properties: Record<string, string | number | boolean | null>;
   isRoadworkConflict: boolean;
   stackedSigns?: Record<string, string | number | boolean | null>[];
+  layerId?: string;
 }
 
 
@@ -117,6 +118,16 @@ const safeGeoJSON = (data: unknown) => {
   return JSON.parse(
     JSON.stringify(data, (_, v) => (typeof v === "bigint" ? Number(v) : v)),
   );
+};
+
+// Safe JSON parser utility
+const parseJsonSafe = (str: unknown) => {
+  if (!str) return null;
+  try {
+    return JSON.parse(String(str));
+  } catch {
+    return null;
+  }
 };
 
 export default function App() {
@@ -512,6 +523,7 @@ export default function App() {
         isRoadworkConflict:
           !!roadwork && hoveredFeature.layer.id !== "roadwork-fill",
         stackedSigns: signs.length > 0 ? signs : undefined,
+        layerId: hoveredFeature.layer.id,
       });
     } else {
       setHoverInfo(null);
@@ -1083,10 +1095,77 @@ export default function App() {
             className="nv-popup"
           >
             <div className="p-3 bg-nc-void text-nc-text rounded-lg border border-nc-border shadow-xl min-w-[240px]">
-              <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
-                <h3 className="font-bold text-nc-text leading-tight">
-                  {hoverInfo.properties.tyyppi || "Parking Area"}
-                </h3>
+              {hoverInfo.layerId === "liipi-points" ? (
+                <>
+                  <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
+                    <h3 className="font-bold text-nc-neon-teal leading-tight flex items-center gap-1.5">
+                      🚲 Park & Ride
+                    </h3>
+                    <span className="bg-nc-neon-teal/20 text-nc-neon-teal font-black px-2 py-0.5 rounded text-[10px] uppercase">
+                      {String(hoverInfo.properties.status || "").replace("_", " ")}
+                    </span>
+                  </div>
+                  <div className="space-y-2 mt-2">
+                    <p className="text-sm font-bold text-nc-text leading-snug">
+                      {(() => {
+                        const nameObj = parseJsonSafe(hoverInfo.properties.name);
+                        return nameObj?.fi || nameObj?.en || nameObj?.sv || String(hoverInfo.properties.name || "");
+                      })()}
+                    </p>
+                    <div className="bg-nc-text/5 border border-nc-border/40 rounded-xl p-3 space-y-1.5">
+                      <span className="block text-[9px] text-nc-text-dim uppercase font-black tracking-wider">
+                        Commuter Capacity
+                      </span>
+                      {(() => {
+                        const capObj = parseJsonSafe(hoverInfo.properties.builtCapacity);
+                        return capObj ? (
+                          Object.entries(capObj).map(([key, val]) => (
+                            <div key={key} className="flex items-center justify-between text-xs">
+                              <span className="text-nc-text-muted capitalize font-medium">
+                                {key === "CAR" ? "🚗 Car Spaces" : key === "BICYCLE" ? "🚲 Bicycle Spaces" : `🔌 ${key}`}
+                              </span>
+                              <span className="font-bold text-nc-text">{String(val)} slots</span>
+                            </div>
+                          ))
+                        ) : (
+                          <span className="text-xs text-nc-text-muted italic">Capacity not specified</span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </>
+              ) : hoverInfo.layerId === "hubi-lines" ? (
+                <>
+                  <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
+                    <h3 className="font-bold text-nc-neon-teal leading-tight flex items-center gap-1.5">
+                      🏢 Public Facility
+                    </h3>
+                    <span className="bg-nc-neon-teal/20 text-nc-neon-teal font-black px-2 py-0.5 rounded text-[10px] uppercase">
+                      Parkkihubi
+                    </span>
+                  </div>
+                  <div className="space-y-2 mt-2">
+                    <p className="text-[10px] text-nc-text-dim uppercase font-black">Facility ID</p>
+                    <p className="text-xs font-mono text-nc-text leading-tight truncate">{String(hoverInfo.properties.id || "")}</p>
+                    <div className="bg-nc-text/5 border border-nc-border/40 rounded-xl p-3 flex justify-between items-center">
+                      <div>
+                        <span className="block text-[9px] text-nc-text-dim uppercase font-black tracking-wider">
+                          Estimated Capacity
+                        </span>
+                        <span className="text-xs font-medium text-nc-text-muted">Public Hub</span>
+                      </div>
+                      <span className="text-sm font-black text-nc-text">
+                        {hoverInfo.properties.capacity_estimate ? `${hoverInfo.properties.capacity_estimate} slots` : "Open space"}
+                      </span>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
+                    <h3 className="font-bold text-nc-text leading-tight">
+                      {hoverInfo.properties.tyyppi || "Parking Area"}
+                    </h3>
                 {hoverInfo.properties.is_new && (
                   <span className="bg-nc-neon-teal text-nc-deep font-black px-2 py-0.5 rounded text-[10px] ml-2 animate-pulse">
                     NEW RULE
@@ -1316,6 +1395,8 @@ export default function App() {
                         </span>
                       </div>
                     )}
+                </>
+              )}
                 </>
               )}
 
