@@ -132,12 +132,87 @@ const parseJsonSafe = (str: unknown) => {
   }
 };
 
+// Typo-tolerant case identifier parser for HEL-case diary codes
+const parseHelCaseTypo = (text: string) => {
+  if (!text) return null;
+  
+  // Look for HEL, optional spaces/dashes, 4-digit year, spaces/dashes, 5-6 digit number
+  // Example: HEL 2023- -005659
+  const typoRegex = /HEL[\s-]*(\d{4})[\s-_]*[\s-_]*(\d{5,6})/i;
+  const match = text.match(typoRegex);
+  if (match) {
+    const year = match[1];
+    const num = match[2];
+    const normalized = `HEL ${year}-${num}`;
+    
+    // Check if the original matches the strict standard "HEL \d{4}-\d{6}" format
+    const originalMatch = match[0];
+    const isStandard = /^HEL\s\d{4}-\d{6}$/.test(originalMatch);
+    
+    return {
+      original: originalMatch,
+      normalized: normalized,
+      hasTypo: !isStandard,
+      caseCode: `hel-${year}-${num}`
+    };
+  }
+  return null;
+};
+
+// Financial rent extractor (matches annual "vuosivuokra" or monthly "kuukausivuokra" text + amounts)
+const extractRentInfo = (text: string) => {
+  if (!text) return null;
+  
+  let annualRent: string | null = null;
+  let monthlyRent: string | null = null;
+  
+  // 1. Annual Rent (vuosivuokra)
+  // Example: 153,00 euron vuosivuokraa
+  const annualRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:vuosivuokra[a-z]*)/i;
+  const annualRegex2 = /(?:vuosivuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
+  const annualRegex3 = /(\d+[\d\s,.]*)\s*(?:€|euroa|euron|euro|e|eur)\s*\/\s*(?:v|vuosi)/i;
+  
+  let m = text.match(annualRegex1) || text.match(annualRegex2) || text.match(annualRegex3);
+  if (m) {
+    annualRent = m[1].trim();
+  }
+  
+  // 2. Monthly Rent (kuukausivuokra)
+  // Example: 12,75 €/kk
+  const monthlyRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:kuukausivuokra[a-z]*)/i;
+  const monthlyRegex2 = /(?:kuukausivuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
+  const monthlyRegex3 = /(\d+[\d\s,.]*)\s*(?:€|euroa|euron|euro|e|eur)\s*\/\s*kk/i;
+  
+  m = text.match(monthlyRegex1) || text.match(monthlyRegex2) || text.match(monthlyRegex3);
+  if (m) {
+    monthlyRent = m[1].trim();
+  }
+  
+  // 3. General Rent (vuokra) fallback
+  if (!annualRent && !monthlyRent) {
+    const generalRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:vuokra[a-z]*)/i;
+    const generalRegex2 = /(?:vuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
+    m = text.match(generalRegex1) || text.match(generalRegex2);
+    if (m) {
+      monthlyRent = m[1].trim(); // Default general to monthly
+    }
+  }
+  
+  if (annualRent || monthlyRent) {
+    return {
+      annual: annualRent,
+      monthly: monthlyRent
+    };
+  }
+  return null;
+};
+
 // Auto hyperlink parser for descriptions (handles both web URLs and HEL-case links)
 const renderTextWithLinks = (text: string) => {
   if (!text) return "";
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-  const helRegex = /(HEL\s\d{4}-\d{6})/gi;
-  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL\s\d{4}-\d{6})/gi;
+  const helRegex = /HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6}/i;
+  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6})/gi;
   const parts = text.split(combinedRegex);
   
   let keyCount = 0;
@@ -159,20 +234,24 @@ const renderTextWithLinks = (text: string) => {
       );
     }
     if (part.match(helRegex)) {
-      const caseCode = part.toLowerCase().replace(/\s+/g, "-");
-      const href = `https://paatokset.hel.fi/fi/asia/${caseCode}`;
-      return (
-        <a
-          key={keyCount}
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-nc-neon-teal hover:text-white underline font-bold cursor-pointer break-all"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {part}
-        </a>
-      );
+      const caseDetails = parseHelCaseTypo(part);
+      if (caseDetails) {
+        const href = `https://paatokset.hel.fi/fi/asia/${caseDetails.caseCode}`;
+        return (
+          <a
+            key={keyCount}
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-nc-neon-teal hover:text-white underline font-bold cursor-pointer break-all"
+            onClick={(e) => e.stopPropagation()}
+            title={caseDetails.hasTypo ? `Original typo: ${caseDetails.original}` : undefined}
+          >
+            {caseDetails.normalized}
+            {caseDetails.hasTypo && <span className="ml-1 text-[9px] text-nc-gold opacity-90 font-black tracking-wide">(⚠️ typo corrected)</span>}
+          </a>
+        );
+      }
     }
     return part;
   });
@@ -1716,7 +1795,7 @@ export default function App() {
 
       {/* Dynamic Reservations List Panel (Slides out from the right) */}
       <div
-        className={`fixed right-6 top-24 bottom-32 w-96 z-45 transition-all duration-500 transform flex flex-col pointer-events-auto ${
+        className={`fixed right-6 top-24 bottom-32 w-96 z-55 transition-all duration-500 transform flex flex-col pointer-events-auto ${
           showResList ? "translate-x-0 opacity-100 scale-100" : "translate-x-full opacity-0 scale-95 pointer-events-none"
         }`}
       >
@@ -1825,11 +1904,12 @@ export default function App() {
                 const loc = props.location_description && props.location_description !== "N/A" ? props.location_description : null;
                 const isParking = String(subject).toLowerCase().includes("pysäköinti") || String(subject).toLowerCase().includes("pysakoiti");
                 
-                // Scan for official Helsinki case diary codes (e.g. HEL 2024-008895)
-                const helRegex = /HEL\s\d{4}-\d{6}/gi;
+                // Typo-tolerant Helsinki case identifier parser (e.g. HEL 2023- -005659)
                 const allText = `${subject} ${desc} ${props.licence_identifier || ""}`;
-                const helMatch = allText.match(helRegex);
-                const firstHel = helMatch ? helMatch[0] : null;
+                const caseDetails = parseHelCaseTypo(allText);
+                
+                // Extract financial rent info from the text description
+                const rentInfo = extractRentInfo(desc);
                 
                 return (
                   // biome-ignore lint/a11y/useKeyWithClickEvents: nested links inside div make this layout semantic
@@ -1860,17 +1940,38 @@ export default function App() {
                     )}
 
                     {/* Official Decision Link Badge */}
-                    {firstHel && (
+                    {caseDetails && (
                       <div className="pl-1 pt-0.5">
                         <a
-                          href={`https://paatokset.hel.fi/fi/asia/${firstHel.toLowerCase().replace(/\s+/g, "-")}`}
+                          href={`https://paatokset.hel.fi/fi/asia/${caseDetails.caseCode}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border border-nc-neon-teal/30 hover:border-nc-neon-teal/50 rounded-xl text-[9px] font-black text-nc-neon-teal uppercase tracking-wider transition-all"
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
+                            caseDetails.hasTypo
+                              ? "bg-nc-gold/10 hover:bg-nc-gold/20 border-nc-gold/40 text-nc-gold"
+                              : "bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border-nc-neon-teal/30 text-nc-neon-teal hover:border-nc-neon-teal/50"
+                          }`}
                           onClick={(e) => e.stopPropagation()}
+                          title={caseDetails.hasTypo ? `Corrected from typo: ${caseDetails.original}` : undefined}
                         >
-                          📜 Decision: {firstHel}
+                          📜 {caseDetails.hasTypo ? `⚠️ Corrected: ${caseDetails.normalized}` : `Decision: ${caseDetails.normalized}`}
                         </a>
+                      </div>
+                    )}
+
+                    {/* Financial Rent Info Pills */}
+                    {rentInfo && (
+                      <div className="flex flex-wrap gap-2 pl-1 pt-0.5">
+                        {rentInfo.annual && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[9px] font-black text-emerald-400 uppercase tracking-wider">
+                            💰 Annual Rent: {rentInfo.annual} €
+                          </span>
+                        )}
+                        {rentInfo.monthly && (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[9px] font-black text-emerald-400 uppercase tracking-wider">
+                            💰 Monthly Rent: {rentInfo.monthly} €
+                          </span>
+                        )}
                       </div>
                     )}
 
