@@ -166,6 +166,11 @@ const extractRentInfo = (text: string) => {
   let annualRent: string | null = null;
   let monthlyRent: string | null = null;
   
+  // Helper to strip any trailing punctuation or trailing spacing from the captured digits
+  const cleanAmount = (val: string) => {
+    return val.trim().replace(/[.,\s]+$/, "");
+  };
+  
   // 1. Annual Rent (vuosivuokra)
   // Example: 153,00 euron vuosivuokraa
   const annualRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:vuosivuokra[a-z]*)/i;
@@ -174,18 +179,18 @@ const extractRentInfo = (text: string) => {
   
   let m = text.match(annualRegex1) || text.match(annualRegex2) || text.match(annualRegex3);
   if (m) {
-    annualRent = m[1].trim();
+    annualRent = cleanAmount(m[1]);
   }
   
   // 2. Monthly Rent (kuukausivuokra)
-  // Example: 12,75 €/kk
+  // Example: 12,75 €/kk, 785,40 euron kuukausivuokra
   const monthlyRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:kuukausivuokra[a-z]*)/i;
   const monthlyRegex2 = /(?:kuukausivuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
   const monthlyRegex3 = /(\d+[\d\s,.]*)\s*(?:€|euroa|euron|euro|e|eur)\s*\/\s*kk/i;
   
   m = text.match(monthlyRegex1) || text.match(monthlyRegex2) || text.match(monthlyRegex3);
   if (m) {
-    monthlyRent = m[1].trim();
+    monthlyRent = cleanAmount(m[1]);
   }
   
   // 3. General Rent (vuokra) fallback
@@ -194,7 +199,7 @@ const extractRentInfo = (text: string) => {
     const generalRegex2 = /(?:vuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
     m = text.match(generalRegex1) || text.match(generalRegex2);
     if (m) {
-      monthlyRent = m[1].trim(); // Default general to monthly
+      monthlyRent = cleanAmount(m[1]); // Default general to monthly
     }
   }
   
@@ -317,6 +322,47 @@ export default function App() {
   const [resSearchQuery, setResSearchQuery] = useState("");
   const [resCategory, setResCategory] = useState("all");
   const [resSortBy, setResSortBy] = useState("start");
+  
+  // Live on-demand decision rent fetching & parsing states
+  const [liveRentMap, setLiveRentMap] = useState<Record<string, { annual: string | null; monthly: string | null } | null>>({});
+  const [loadingRentMap, setLoadingRentMap] = useState<Record<string, boolean>>({});
+  const [errorRentMap, setErrorRentMap] = useState<Record<string, string | null>>({});
+
+  const handleFetchLiveRent = async (caseCode: string) => {
+    if (loadingRentMap[caseCode] || liveRentMap[caseCode]) return;
+    
+    setLoadingRentMap(prev => ({ ...prev, [caseCode]: true }));
+    setErrorRentMap(prev => ({ ...prev, [caseCode]: null }));
+    
+    try {
+      const targetUrl = `https://paatokset.hel.fi/fi/asia/${caseCode}`;
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+      
+      const resp = await fetch(proxyUrl);
+      if (!resp.ok) throw new Error("Network response was not ok");
+      
+      const htmlText = await resp.text();
+      
+      // Parse HTML content to plain text using DOMParser
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, "text/html");
+      const pageText = doc.body.textContent || "";
+      
+      // Extract rent pricing details from the official decision text
+      const extracted = extractRentInfo(pageText);
+      if (extracted) {
+        setLiveRentMap(prev => ({ ...prev, [caseCode]: extracted }));
+      } else {
+        setLiveRentMap(prev => ({ ...prev, [caseCode]: null })); // Mark as fetched with no values
+        setErrorRentMap(prev => ({ ...prev, [caseCode]: "No rent amounts found in decision document." }));
+      }
+    } catch (err) {
+      console.error("Error fetching live decision details:", err);
+      setErrorRentMap(prev => ({ ...prev, [caseCode]: "Failed to load document from Helsinki Decisions." }));
+    } finally {
+      setLoadingRentMap(prev => ({ ...prev, [caseCode]: false }));
+    }
+  };
 
   // Apply theme class to document root
   useEffect(() => {
@@ -1909,7 +1955,15 @@ export default function App() {
                 const caseDetails = parseHelCaseTypo(allText);
                 
                 // Extract financial rent info from the text description
-                const rentInfo = extractRentInfo(desc);
+                const localRent = extractRentInfo(desc);
+                
+                // Determine what rent info to show: either local (pre-parsed) or live (fetched on demand)
+                const liveRent = caseDetails ? liveRentMap[caseDetails.caseCode] : null;
+                const rentInfo = localRent || liveRent;
+                
+                const isLoadingRent = caseDetails ? !!loadingRentMap[caseDetails.caseCode] : false;
+                const rentError = caseDetails ? errorRentMap[caseDetails.caseCode] : null;
+                const hasFetchedLive = caseDetails ? (caseDetails.caseCode in liveRentMap) : false;
                 
                 return (
                   // biome-ignore lint/a11y/useKeyWithClickEvents: nested links inside div make this layout semantic
@@ -1939,9 +1993,9 @@ export default function App() {
                       </p>
                     )}
 
-                    {/* Official Decision Link Badge */}
+                    {/* Official Decision Link Badge & Live Fetcher */}
                     {caseDetails && (
-                      <div className="pl-1 pt-0.5">
+                      <div className="pl-1 pt-0.5 flex flex-wrap items-center gap-2">
                         <a
                           href={`https://paatokset.hel.fi/fi/asia/${caseDetails.caseCode}`}
                           target="_blank"
@@ -1956,6 +2010,20 @@ export default function App() {
                         >
                           📜 {caseDetails.hasTypo ? `⚠️ Corrected: ${caseDetails.normalized}` : `Decision: ${caseDetails.normalized}`}
                         </a>
+                        
+                        {!rentInfo && !(caseDetails.caseCode in liveRentMap) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFetchLiveRent(caseDetails.caseCode);
+                            }}
+                            disabled={isLoadingRent}
+                            className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border border-nc-neon-teal/30 hover:border-nc-neon-teal/50 rounded-xl text-[9px] font-black text-nc-neon-teal uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isLoadingRent ? "⏳ Fetching..." : "🔍 Extract Rent"}
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -1964,15 +2032,22 @@ export default function App() {
                       <div className="flex flex-wrap gap-2 pl-1 pt-0.5">
                         {rentInfo.annual && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[9px] font-black text-emerald-400 uppercase tracking-wider">
-                            💰 Annual Rent: {rentInfo.annual} €
+                            💰 Annual Rent: {rentInfo.annual} € {hasFetchedLive && !localRent && <span className="text-[8px] text-nc-neon-teal font-medium ml-1">(📡 Live)</span>}
                           </span>
                         )}
                         {rentInfo.monthly && (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[9px] font-black text-emerald-400 uppercase tracking-wider">
-                            💰 Monthly Rent: {rentInfo.monthly} €
+                            💰 Monthly Rent: {rentInfo.monthly} € {hasFetchedLive && !localRent && <span className="text-[8px] text-nc-neon-teal font-medium ml-1">(📡 Live)</span>}
                           </span>
                         )}
                       </div>
+                    )}
+
+                    {/* Rent Fetch Feedback Messages */}
+                    {rentError && !localRent && (
+                      <p className="text-[9px] text-nc-text-muted pl-1 italic font-medium">
+                        ℹ️ {rentError}
+                      </p>
                     )}
 
                     {/* Applicant Company */}
