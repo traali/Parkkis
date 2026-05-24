@@ -23,6 +23,8 @@ import {
   Moon,
   Sun,
   TreePine,
+  Calendar,
+  MapPin,
 } from "lucide-react";
 import { getDuckDB, loadParquet } from "./lib/duckdb";
 import type { FeatureCollection } from "geojson";
@@ -130,6 +132,64 @@ const parseJsonSafe = (str: unknown) => {
   }
 };
 
+// Auto hyperlink parser for descriptions
+const renderTextWithLinks = (text: string) => {
+  if (!text) return "";
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+  const parts = text.split(urlRegex);
+  
+  return parts.map((part, index) => {
+    if (part.match(urlRegex)) {
+      const href = part.startsWith("http") ? part : `https://${part}`;
+      return (
+        <a
+          key={index}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-nc-neon-teal hover:text-white underline font-bold cursor-pointer break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+// Centroid calculator for polygons and multipolygons
+const getCentroid = (geometry: any): [number, number] | null => {
+  if (!geometry) return null;
+  try {
+    if (geometry.type === "Point") {
+      return geometry.coordinates as [number, number];
+    }
+    if (geometry.type === "Polygon") {
+      const coords = geometry.coordinates[0];
+      let sumLng = 0;
+      let sumLat = 0;
+      for (const c of coords) {
+        sumLng += c[0];
+        sumLat += c[1];
+      }
+      return [sumLng / coords.length, sumLat / coords.length];
+    }
+    if (geometry.type === "MultiPolygon") {
+      const coords = geometry.coordinates[0][0];
+      let sumLng = 0;
+      let sumLat = 0;
+      for (const c of coords) {
+        sumLng += c[0];
+        sumLat += c[1];
+      }
+      return [sumLng / coords.length, sumLat / coords.length];
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
   const [riskData, setRiskData] = useState<FeatureCollection | null>(null);
@@ -154,6 +214,10 @@ export default function App() {
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [theme, setTheme] = useState<ThemeType>("dark");
   const [isFooterCollapsed, setIsFooterCollapsed] = useState(false);
+  const [showResList, setShowResList] = useState(false);
+  const [resSearchQuery, setResSearchQuery] = useState("");
+  const [resCategory, setResCategory] = useState("all");
+  const [resSortBy, setResSortBy] = useState("start");
 
   // Apply theme class to document root
   useEffect(() => {
@@ -558,6 +622,85 @@ export default function App() {
 
   const distance = calculateDistance();
 
+  // Dynamic filtered and sorted reservations list
+  const getFilteredReservations = () => {
+    if (!reservationData || !reservationData.features) return [];
+    
+    return reservationData.features
+      .filter((feat) => {
+        const props = feat.properties || {};
+        const subject = String(props.rental_subject || "").toLowerCase();
+        
+        // Category Filter
+        if (resCategory === "paid" && !subject.includes("pysäköinti") && !subject.includes("pysakoiti")) return false;
+        if (resCategory === "lisapihat" && !subject.includes("lisäpiha") && !subject.includes("lisapiha")) return false;
+        if (resCategory === "other" && (subject.includes("pysäköinti") || subject.includes("pysakoiti") || subject.includes("lisäpiha") || subject.includes("lisapiha"))) return false;
+        
+        // Search Filter
+        if (resSearchQuery) {
+          const query = resSearchQuery.toLowerCase();
+          const desc = String(props.event_description || "").toLowerCase();
+          const loc = String(props.location_description || "").toLowerCase();
+          const comp = String(props.licence_applicant_company || "").toLowerCase();
+          const identifier = String(props.licence_identifier || "").toLowerCase();
+          const type = String(props.licence_type || "").toLowerCase();
+          
+          if (
+            !desc.includes(query) &&
+            !loc.includes(query) &&
+            !comp.includes(query) &&
+            !identifier.includes(query) &&
+            !type.includes(query)
+          ) {
+            return false;
+          }
+        }
+        
+        return true;
+      })
+      .sort((a, b) => {
+        const propsA = a.properties || {};
+        const propsB = b.properties || {};
+        
+        if (resSortBy === "name") {
+          const nameA = String(propsA.rental_subject || "");
+          const nameB = String(propsB.rental_subject || "");
+          return nameA.localeCompare(nameB);
+        }
+        
+        if (resSortBy === "end") {
+          const endA = String(propsA.event_enddate || propsA.licence_enddate || "9999-12-31");
+          const endB = String(propsB.event_enddate || propsB.licence_enddate || "9999-12-31");
+          return endA.localeCompare(endB);
+        }
+        
+        // Default "start" (newest first)
+        const startA = String(propsA.event_startdate || propsA.licence_startdate || "1970-01-01");
+        const startB = String(propsB.event_startdate || propsB.licence_startdate || "1970-01-01");
+        return startB.localeCompare(startA); // Descending for newest first
+      });
+  };
+
+  const handleReservationClick = (feat: any) => {
+    const center = getCentroid(feat.geometry);
+    if (center && mapRef.current) {
+      mapRef.current.flyTo({
+        center: center,
+        zoom: 17,
+        pitch: 45,
+        duration: 1500
+      });
+      
+      setHoverInfo({
+        longitude: center[0],
+        latitude: center[1],
+        properties: feat.properties,
+        isRoadworkConflict: false,
+        layerId: "reservation-fill",
+      });
+    }
+  };
+
   return (
     <div className="relative w-full h-screen bg-nc-deep text-nc-text">
       {/* Floating Theme Selector (Top-Right) */}
@@ -750,6 +893,21 @@ export default function App() {
                   className={`w-2 h-2 rounded-full ${showReservations ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
                 />
                 RESERVATIONS
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowResList(!showResList)}
+                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                  showResList
+                    ? "border-orange-400 text-orange-400 bg-orange-400/20 shadow-[0_0_15px_rgba(251,146,60,0.3)] font-black"
+                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${showResList ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
+                />
+                📋 LIST VIEW
               </button>
             </div>
           </div>
@@ -1534,6 +1692,178 @@ export default function App() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Dynamic Reservations List Panel (Slides out from the right) */}
+      <div
+        className={`fixed right-6 top-24 bottom-32 w-96 z-45 transition-all duration-500 transform flex flex-col pointer-events-auto ${
+          showResList ? "translate-x-0 opacity-100 scale-100" : "translate-x-full opacity-0 scale-95 pointer-events-none"
+        }`}
+      >
+        <div className="nv-glass border border-nc-border rounded-3xl p-4 flex flex-col h-full overflow-hidden shadow-2xl relative">
+          {/* Header */}
+          <div className="flex justify-between items-center pb-3 border-b border-nc-border">
+            <div>
+              <h2 className="text-nv-text-sm font-black text-nc-text flex items-center gap-1.5 uppercase">
+                📋 Reservations List
+              </h2>
+              <span className="text-[10px] text-nc-text-muted uppercase font-bold tracking-wider">
+                {getFilteredReservations().length} Active Reservations Mapped
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowResList(false)}
+              className="p-1.5 hover:bg-nc-text/10 rounded-full border border-nc-border transition-colors group"
+            >
+              <X className="w-4 h-4 text-nc-text-muted group-hover:text-nc-neon-red transition-colors" />
+            </button>
+          </div>
+
+          {/* Filtering & Sorting Controls */}
+          <div className="space-y-3 py-3 border-b border-nc-border shrink-0">
+            {/* Search Input */}
+            <div className="relative flex items-center">
+              <Search className="w-4 h-4 absolute left-3 text-nc-neon-teal" />
+              <input
+                type="text"
+                placeholder="Search description, applicant, ID..."
+                className="w-full pl-9 pr-8 py-2 bg-nc-void/60 border border-nc-border/60 rounded-2xl text-xs text-nc-text placeholder:text-nc-text-dim focus:outline-none focus:border-nc-neon-teal transition-colors"
+                value={resSearchQuery}
+                onChange={(e) => setResSearchQuery(e.target.value)}
+              />
+              {resSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setResSearchQuery("")}
+                  className="absolute right-3 p-0.5 hover:bg-nc-text/10 rounded-full"
+                >
+                  <X className="w-3.5 h-3.5 text-nc-text-dim" />
+                </button>
+              )}
+            </div>
+
+            {/* Category Tabs */}
+            <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1">
+              {[
+                { id: "all", label: "All" },
+                { id: "paid", label: "🅿️ Parking" },
+                { id: "lisapihat", label: "🔶 Yards" },
+                { id: "other", label: "Other" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setResCategory(tab.id)}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap border ${
+                    resCategory === tab.id
+                      ? "border-orange-400 text-orange-400 bg-orange-400/10 shadow-[0_0_10px_rgba(251,146,60,0.1)]"
+                      : "border-nc-border/40 text-nc-text-dim hover:bg-nc-text/5"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Sorting controls */}
+            <div className="flex items-center justify-between text-[10px] uppercase font-bold text-nc-text-dim">
+              <span>Sort by</span>
+              <div className="flex gap-1.5">
+                {[
+                  { id: "start", label: "Newest" },
+                  { id: "end", label: "Expiring" },
+                  { id: "name", label: "Subject" },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setResSortBy(opt.id)}
+                    className={`px-2 py-1 rounded transition-colors ${
+                      resSortBy === opt.id
+                        ? "text-nc-neon-teal bg-nc-neon-teal/10"
+                        : "text-nc-text-muted hover:text-white"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Scrollable list container */}
+          <div className="flex-1 overflow-y-auto no-scrollbar py-2 space-y-2.5 min-h-0">
+            {getFilteredReservations().length > 0 ? (
+              getFilteredReservations().map((feat: any, idx) => {
+                const props = feat.properties || {};
+                const start = props.event_startdate_txt || props.lic_startdate_txt || "?";
+                const end = props.event_endtdate_txt || props.lic_enddate_txt || "Open";
+                const subject = props.rental_subject || "Temporary Reservation";
+                const desc = props.event_description || props.licence_description || "";
+                const applicant = props.licence_applicant_company && props.licence_applicant_company !== "N/A" ? props.licence_applicant_company : null;
+                const loc = props.location_description && props.location_description !== "N/A" ? props.location_description : null;
+                const isParking = String(subject).toLowerCase().includes("pysäköinti") || String(subject).toLowerCase().includes("pysakoiti");
+                
+                return (
+                  <div
+                    key={props.licence_identifier || idx}
+                    onClick={() => handleReservationClick(feat)}
+                    className="p-3 bg-nc-void/40 border border-nc-border/40 hover:border-orange-400/50 hover:bg-nc-void/70 rounded-2xl cursor-pointer transition-all duration-200 shadow-md group space-y-2 relative overflow-hidden"
+                  >
+                    {/* Background visual indicator border */}
+                    <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${isParking ? "bg-orange-400" : "bg-orange-300/60"}`} />
+                    
+                    {/* Subject & Status */}
+                    <div className="flex justify-between items-start gap-1 pl-1">
+                      <h4 className="text-xs font-black text-nc-text group-hover:text-orange-400 transition-colors uppercase leading-tight">
+                        {isParking ? "🅿️" : "🔶"} {subject}
+                      </h4>
+                      <span className="bg-orange-400/20 text-orange-400 border border-orange-400/30 font-black px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider shrink-0">
+                        Active
+                      </span>
+                    </div>
+
+                    {/* Description (processed with clickable hyperlink parser) */}
+                    {desc && (
+                      <p className="text-[11px] text-nc-text-muted leading-snug pl-1">
+                        {renderTextWithLinks(desc)}
+                      </p>
+                    )}
+
+                    {/* Applicant Company */}
+                    {applicant && (
+                      <p className="text-[10px] text-nc-text-dim font-bold uppercase pl-1 truncate">
+                        🏢 {applicant}
+                      </p>
+                    )}
+
+                    {/* Meta data row: dates & location */}
+                    <div className="pt-2 border-t border-nc-border/30 flex flex-wrap gap-x-3 gap-y-1.5 text-[9px] text-nc-text-dim font-medium pl-1">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-orange-400/70" />
+                        <span>{start} - {end}</span>
+                      </div>
+                      {loc && (
+                        <div className="flex items-center gap-1 max-w-[150px] truncate">
+                          <MapPin className="w-3.5 h-3.5 text-orange-400/70" />
+                          <span title={loc}>{loc}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                <p className="text-xs font-bold text-nc-text-muted">No reservations found</p>
+                <p className="text-[10px] text-nc-text-dim max-w-[200px]">
+                  Try refining your search term or switching the category filter.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
