@@ -288,7 +288,7 @@ const renderTextWithLinks = (text: string) => {
     if (part.match(sopimusRegex)) {
       const match = part.match(/Sopimus\s*(091-\d+-\d+-\d+)/i);
       const contractId = match ? match[1] : part;
-      const href = `https://paatokset.hel.fi/fi/haku?search=${encodeURIComponent(contractId)}`;
+      const href = `https://paatokset.hel.fi/fi/haku?search_api_fulltext=${encodeURIComponent(contractId)}`;
       return (
         <a
           key={keyCount}
