@@ -238,12 +238,13 @@ const extractRentInfo = (text: string) => {
   return null;
 };
 
-// Auto hyperlink parser for descriptions (handles both web URLs and HEL-case links)
+// Auto hyperlink parser for descriptions (handles URLs, HEL-cases, and Sopimus contract codes)
 const renderTextWithLinks = (text: string) => {
   if (!text) return "";
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
   const helRegex = /HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6}/i;
-  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6})/gi;
+  const sopimusRegex = /Sopimus\s*(?:091-\d+-\d+-\d+)/i;
+  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6}|Sopimus\s*(?:091-\d+-\d+-\d+))/gi;
   const parts = text.split(combinedRegex);
   
   let keyCount = 0;
@@ -283,6 +284,24 @@ const renderTextWithLinks = (text: string) => {
           </a>
         );
       }
+    }
+    if (part.match(sopimusRegex)) {
+      const match = part.match(/Sopimus\s*(091-\d+-\d+-\d+)/i);
+      const contractId = match ? match[1] : part;
+      const href = `https://paatokset.hel.fi/fi/haku?search=${encodeURIComponent(contractId)}`;
+      return (
+        <a
+          key={keyCount}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-orange-400 hover:text-white underline font-bold cursor-pointer break-all"
+          onClick={(e) => e.stopPropagation()}
+          title={`Search Helsinki Decisions for lease contract ${contractId}`}
+        >
+          {part}
+        </a>
+      );
     }
     return part;
   });
@@ -1640,7 +1659,7 @@ export default function App() {
                       <div className="bg-orange-400/10 border border-orange-400/30 rounded p-2">
                         <p className="text-xs text-orange-300 font-bold mb-1">{hoverInfo.properties.rental_subject}</p>
                         {hoverInfo.properties.licence_description && hoverInfo.properties.licence_description !== "N/A" && (
-                          <p className="text-[10px] text-nc-text-muted italic">{hoverInfo.properties.licence_description}</p>
+                          <p className="text-[10px] text-nc-text-muted italic">{renderTextWithLinks(String(hoverInfo.properties.licence_description))}</p>
                         )}
                       </div>
                     </>
@@ -1661,7 +1680,7 @@ export default function App() {
                   </div>
                   {hoverInfo.properties.event_description && (
                     <div className="bg-nc-gold/10 border border-nc-gold/30 rounded p-2 text-xs text-nc-gold">
-                      {hoverInfo.properties.event_description}
+                      {renderTextWithLinks(String(hoverInfo.properties.event_description))}
                     </div>
                   )}
                   {hoverInfo.properties.location_description && (
