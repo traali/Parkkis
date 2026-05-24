@@ -692,7 +692,7 @@ export default function App() {
                 <div
                   className={`w-2 h-2 rounded-full ${showViolations ? "bg-nc-danger animate-pulse" : "bg-nc-text/20"}`}
                 />
-                FINE HEATMAP
+                FINE LOCATIONS
               </button>
 
               <button
@@ -771,36 +771,31 @@ export default function App() {
         {violationData && (
           <Source id="violation-heat" type="geojson" data={violationData}>
             <Layer
-              id="violation-heatmap"
-              type="heatmap"
-              maxzoom={17}
+              id="violation-points"
+              type="circle"
               layout={{ visibility: showViolations ? "visible" : "none" }}
               paint={{
-                "heatmap-weight": 0.5,
-                "heatmap-intensity": [
+                "circle-radius": [
                   "interpolate", ["linear"], ["zoom"],
-                  8, 0.3,
-                  16, 1.5,
+                  11, 1.5,
+                  14, 3,
+                  17, 6,
                 ],
-                "heatmap-color": [
-                  "interpolate", ["linear"], ["heatmap-density"],
-                  0,   "rgba(0,0,0,0)",
-                  0.1, "rgba(0,242,255,0.05)",
-                  0.3, "rgba(255,207,75,0.3)",
-                  0.6, "rgba(255,80,50,0.6)",
-                  1.0, "rgba(255,30,30,0.9)",
-                ],
-                "heatmap-radius": [
+                "circle-color": THEME_CONFIGS[theme].colors.glowHigh,
+                "circle-opacity": [
                   "interpolate", ["linear"], ["zoom"],
-                  8, 4,
-                  13, 12,
-                  16, 20,
+                  11, 0.25,
+                  14, 0.45,
+                  17, 0.7,
                 ],
-                "heatmap-opacity": [
+                "circle-stroke-width": [
                   "interpolate", ["linear"], ["zoom"],
-                  10, 0.8,
-                  16, 0.3,
+                  11, 0.5,
+                  14, 1,
+                  17, 1.5,
                 ],
+                "circle-stroke-color": THEME_CONFIGS[theme].colors.glowHigh,
+                "circle-stroke-opacity": 0.5,
               }}
             />
           </Source>
