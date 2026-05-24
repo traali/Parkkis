@@ -238,13 +238,13 @@ const extractRentInfo = (text: string) => {
   return null;
 };
 
-// Auto hyperlink parser for descriptions (handles URLs, HEL-cases, and Sopimus contract codes)
+// Auto hyperlink parser for descriptions (handles URLs, HEL-cases, and Sopimus/Plot contract codes)
 const renderTextWithLinks = (text: string) => {
   if (!text) return "";
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
   const helRegex = /HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6}/i;
-  const sopimusRegex = /Sopimus\s*(?:091-\d+-\d+-\d+)/i;
-  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6}|Sopimus\s*(?:091-\d+-\d+-\d+))/gi;
+  const sopimusRegex = /\b091-\d+-\d+-\d+(?:-\d+)?\b/i;
+  const combinedRegex = /(https?:\/\/[^\s]+|www\.[^\s]+|HEL[\s-]*\d{4}[\s-_]*[\s-_]*\d{5,6}|\b091-\d+-\d+-\d+(?:-\d+)?\b)/gi;
   const parts = text.split(combinedRegex);
   
   let keyCount = 0;
@@ -286,8 +286,8 @@ const renderTextWithLinks = (text: string) => {
       }
     }
     if (part.match(sopimusRegex)) {
-      const match = part.match(/Sopimus\s*(091-\d+-\d+-\d+)/i);
-      const contractId = match ? match[1] : part;
+      const match = part.match(/\b091-\d+-\d+-\d+(?:-\d+)?\b/i);
+      const contractId = match ? match[0] : part;
       const href = `https://paatokset.hel.fi/fi/haku?search_api_fulltext=${encodeURIComponent(contractId)}`;
       return (
         <a
@@ -297,7 +297,7 @@ const renderTextWithLinks = (text: string) => {
           rel="noopener noreferrer"
           className="text-orange-400 hover:text-white underline font-bold cursor-pointer break-all"
           onClick={(e) => e.stopPropagation()}
-          title={`Search Helsinki Decisions for lease contract ${contractId}`}
+          title={`Search Helsinki Decisions for contract/plot ${contractId}`}
         >
           {part}
         </a>
