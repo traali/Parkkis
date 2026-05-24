@@ -72,7 +72,7 @@ type ThemeType = "dark" | "light" | "forest";
 
 const THEME_CONFIGS = {
   dark: {
-    mapStyle: "https://tiles.openfreemap.org/styles/dark",
+    mapStyle: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
     colors: {
       paid: "#3b82f6",
       residential: "#ffb800",
@@ -85,7 +85,7 @@ const THEME_CONFIGS = {
     }
   },
   light: {
-    mapStyle: "https://tiles.openfreemap.org/styles/positron",
+    mapStyle: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
     colors: {
       paid: "#1d4ed8",
       residential: "#d97706",
@@ -98,7 +98,7 @@ const THEME_CONFIGS = {
     }
   },
   forest: {
-    mapStyle: "https://tiles.openfreemap.org/styles/dark",
+    mapStyle: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
     colors: {
       paid: "#10b981",
       residential: "#f59e0b",
@@ -122,6 +122,7 @@ const safeGeoJSON = (data: unknown) => {
 export default function App() {
   const [dbReady, setDbReady] = useState(false);
   const [riskData, setRiskData] = useState<FeatureCollection | null>(null);
+  const [violationData, setViolationData] = useState<FeatureCollection | null>(null);
   const [signData, setSignData] = useState<FeatureCollection | null>(null);
   const [roadworkData, setRoadworkData] = useState<FeatureCollection | null>(null);
   const [reservationData, setReservationData] = useState<FeatureCollection | null>(null);
@@ -133,6 +134,7 @@ export default function App() {
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showNewTraps, setShowNewTraps] = useState(true);
+  const [showViolations, setShowViolations] = useState(true);
   const [showRoadworks, setShowRoadworks] = useState(true);
   const [showReservations, setShowReservations] = useState(true);
   const [showSigns, setShowSigns] = useState(true);
@@ -362,6 +364,20 @@ export default function App() {
  
         setRiskData(safeGeoJSON({ type: "FeatureCollection" as const, features: slotFeatures }));
 
+        // 3b. Load violations as standalone point layer (city-wide coverage)
+        setLoadingMsg("Mapping fine locations city-wide...");
+        const violationResult = await conn.query(`
+          SELECT ST_AsGeoJSON(geom) as geometry
+          FROM violations
+          LIMIT 50000
+        `);
+        const violationFeatures = (violationResult.toArray() as unknown as any[]).map((row) => ({
+          type: "Feature" as const,
+          geometry: JSON.parse(row.geometry),
+          properties: {},
+        }));
+        setViolationData(safeGeoJSON({ type: "FeatureCollection" as const, features: violationFeatures }));
+
         setLoadingMsg("Indexing street parking signs...");
         const signResult = await conn.query(`
           SELECT 
@@ -375,7 +391,8 @@ export default function App() {
               'kilpi_txt2': kilpi_txt2,
               'kilpi_txt3': kilpi_txt3,
               'kilpi_txt4': kilpi_txt4,
-              'kilpi_txt5': kilpi_txt5
+              'kilpi_txt5': kilpi_txt5,
+              'arvo': arvo
             } as properties
           FROM signs
           WHERE is_new = true OR tyyppi IN (
@@ -613,20 +630,6 @@ export default function App() {
                 ))}
               </div>
             )}
-
-            <div className="nv-glass rounded-3xl p-4 flex items-center gap-4">
-              <div className="bg-nc-neon-teal/20 p-2 rounded-2xl">
-                <Shield className="text-nc-neon-teal w-6 h-6" />
-              </div>
-              <div>
-                <h1 className="text-nv-text-lg font-bold tracking-tighter text-nc-text">
-                  PARKKIS
-                </h1>
-                <p className="text-nv-text-xs text-nc-text-muted uppercase tracking-widest">
-                  Helsinki Parking Safety Map
-                </p>
-              </div>
-            </div>
           </div>
 
           {!dbReady && (
@@ -675,6 +678,21 @@ export default function App() {
                   className={`w-2 h-2 rounded-full ${showNewTraps ? "bg-nc-neon-teal animate-pulse" : "bg-nc-text/20"}`}
                 />
                 TICKET HOTSPOTS
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowViolations(!showViolations)}
+                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                  showViolations
+                    ? "border-nc-danger text-nc-danger bg-nc-danger/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
+                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full ${showViolations ? "bg-nc-danger animate-pulse" : "bg-nc-text/20"}`}
+                />
+                FINE HEATMAP
               </button>
 
               <button
@@ -749,6 +767,45 @@ export default function App() {
           trackUserLocation={true}
           showAccuracyCircle={false}
         />
+
+        {violationData && (
+          <Source id="violation-heat" type="geojson" data={violationData}>
+            <Layer
+              id="violation-heatmap"
+              type="heatmap"
+              maxzoom={17}
+              layout={{ visibility: showViolations ? "visible" : "none" }}
+              paint={{
+                "heatmap-weight": 0.5,
+                "heatmap-intensity": [
+                  "interpolate", ["linear"], ["zoom"],
+                  8, 0.3,
+                  16, 1.5,
+                ],
+                "heatmap-color": [
+                  "interpolate", ["linear"], ["heatmap-density"],
+                  0,   "rgba(0,0,0,0)",
+                  0.1, "rgba(0,242,255,0.05)",
+                  0.3, "rgba(255,207,75,0.3)",
+                  0.6, "rgba(255,80,50,0.6)",
+                  1.0, "rgba(255,30,30,0.9)",
+                ],
+                "heatmap-radius": [
+                  "interpolate", ["linear"], ["zoom"],
+                  8, 4,
+                  13, 12,
+                  16, 20,
+                ],
+                "heatmap-opacity": [
+                  "interpolate", ["linear"], ["zoom"],
+                  10, 0.8,
+                  16, 0.3,
+                ],
+              }}
+            />
+          </Source>
+        )}
+
 
         {riskData && (
           <Source id="risk-data" type="geojson" data={riskData}>
@@ -1148,8 +1205,12 @@ export default function App() {
                                 {sign.tyyppi}
                               </span>
                             </div>
-                            <span className="text-[10px] text-nc-text font-black uppercase text-right leading-none truncate max-w-[120px]">
+                            <span 
+                              className="text-[10px] text-nc-text font-black uppercase text-right leading-none truncate max-w-[160px]"
+                              title={`${getSignLabel(String(sign.tyyppi))}${sign.arvo ? ` (${sign.arvo} km/h)` : ""}`}
+                            >
                               {getSignLabel(String(sign.tyyppi))}
+                              {sign.arvo ? ` (${sign.arvo} km/h)` : ""}
                             </span>
                           </div>
 
