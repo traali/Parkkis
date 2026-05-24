@@ -138,12 +138,14 @@ const renderTextWithLinks = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
   const parts = text.split(urlRegex);
   
-  return parts.map((part, index) => {
+  let keyCount = 0;
+  return parts.map((part) => {
+    keyCount += 1;
     if (part.match(urlRegex)) {
       const href = part.startsWith("http") ? part : `https://${part}`;
       return (
         <a
-          key={index}
+          key={keyCount}
           href={href}
           target="_blank"
           rel="noopener noreferrer"
@@ -624,7 +626,7 @@ export default function App() {
 
   // Dynamic filtered and sorted reservations list
   const getFilteredReservations = () => {
-    if (!reservationData || !reservationData.features) return [];
+    if (!reservationData?.features) return [];
     
     return reservationData.features
       .filter((feat) => {
@@ -1806,6 +1808,8 @@ export default function App() {
                 const isParking = String(subject).toLowerCase().includes("pysäköinti") || String(subject).toLowerCase().includes("pysakoiti");
                 
                 return (
+                  // biome-ignore lint/a11y/useKeyWithClickEvents: nested links inside div make this layout semantic
+                  // biome-ignore lint/a11y/noStaticElementInteractions: div card container is used for styling layout
                   <div
                     key={props.licence_identifier || idx}
                     onClick={() => handleReservationClick(feat)}
