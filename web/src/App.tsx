@@ -171,35 +171,61 @@ const extractRentInfo = (text: string) => {
     return val.trim().replace(/[.,\s]+$/, "");
   };
   
-  // 1. Annual Rent (vuosivuokra)
-  // Example: 153,00 euron vuosivuokraa
-  const annualRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:vuosivuokra[a-z]*)/i;
-  const annualRegex2 = /(?:vuosivuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
-  const annualRegex3 = /(\d+[\d\s,.]*)\s*(?:€|euroa|euron|euro|e|eur)\s*\/\s*(?:v|vuosi)/i;
+  const currencyGroup = "(?:euroa|euron|euro|\\be\\b|€)";
+  const currencyGroupWithEur = "(?:€|euroa|euron|euro|\\be\\b|\\beur\\b)";
   
-  let m = text.match(annualRegex1) || text.match(annualRegex2) || text.match(annualRegex3);
-  if (m) {
-    annualRent = cleanAmount(m[1]);
+  // 1. Annual Rent (vuosivuokra) - prioritized by explicitness
+  const annualPatterns = [
+    // [summa] euroa vuodessa/vuosittain/vuodelta
+    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:vuodessa|vuosittain|vuodelta)`, "i"),
+    // [summa] euron vuosivuokraa
+    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:vuosivuokra[a-z]*)`, "i"),
+    // vuosivuokra on [summa] euroa
+    new RegExp(`(?:vuosivuokra[a-z]*)\\s*(?:on\\s*)?(\\d+[\\d\\s,.]*)\\s*${currencyGroup}`, "i"),
+    // [summa] € / v (or vuosi)
+    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroupWithEur}\\s*\\/\\s*(?:v|vuosi)`, "i")
+  ];
+  
+  for (const pattern of annualPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      annualRent = cleanAmount(match[1]);
+      break;
+    }
   }
   
-  // 2. Monthly Rent (kuukausivuokra)
-  // Example: 12,75 €/kk, 785,40 euron kuukausivuokra
-  const monthlyRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:kuukausivuokra[a-z]*)/i;
-  const monthlyRegex2 = /(?:kuukausivuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
-  const monthlyRegex3 = /(\d+[\d\s,.]*)\s*(?:€|euroa|euron|euro|e|eur)\s*\/\s*kk/i;
+  // 2. Monthly Rent (kuukausivuokra) - prioritized by explicitness
+  const monthlyPatterns = [
+    // [summa] euroa kuukaudessa/kuukausittain/kuukaudelta
+    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:kuukaudessa|kuukausittain|kuukaudelta)`, "i"),
+    // [summa] euron kuukausivuokraa
+    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:kuukausivuokra[a-z]*)`, "i"),
+    // kuukausivuokra on [summa] euroa
+    new RegExp(`(?:kuukausivuokra[a-z]*)\\s*(?:on\\s*)?(\\d+[\\d\\s,.]*)\\s*${currencyGroup}`, "i"),
+    // [summa] € / kk
+    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroupWithEur}\\s*\\/\\s*kk`, "i")
+  ];
   
-  m = text.match(monthlyRegex1) || text.match(monthlyRegex2) || text.match(monthlyRegex3);
-  if (m) {
-    monthlyRent = cleanAmount(m[1]);
+  for (const pattern of monthlyPatterns) {
+    const match = text.match(pattern);
+    if (match) {
+      monthlyRent = cleanAmount(match[1]);
+      break;
+    }
   }
   
   // 3. General Rent (vuokra) fallback
   if (!annualRent && !monthlyRent) {
-    const generalRegex1 = /(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)\s*(?:n\s*)?(?:vuokra[a-z]*)/i;
-    const generalRegex2 = /(?:vuokra[a-z]*)\s*(?:on\s*)?(\d+[\d\s,.]*)\s*(?:euroa|euron|euro|e|€)/i;
-    m = text.match(generalRegex1) || text.match(generalRegex2);
-    if (m) {
-      monthlyRent = cleanAmount(m[1]); // Default general to monthly
+    const generalPatterns = [
+      new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:vuokra[a-z]*)`, "i"),
+      new RegExp(`(?:vuokra[a-z]*)\\s*(?:on\\s*)?(\\d+[\\d\\s,.]*)\\s*${currencyGroup}`, "i")
+    ];
+    for (const pattern of generalPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        monthlyRent = cleanAmount(match[1]); // Default general to monthly
+        break;
+      }
     }
   }
   
