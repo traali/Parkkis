@@ -777,25 +777,18 @@ export default function App() {
               paint={{
                 "circle-radius": [
                   "interpolate", ["linear"], ["zoom"],
-                  11, 1.5,
-                  14, 3,
-                  17, 6,
+                  11, 2.5,
+                  14, 6,
+                  17, 12,
                 ],
                 "circle-color": THEME_CONFIGS[theme].colors.glowHigh,
                 "circle-opacity": [
                   "interpolate", ["linear"], ["zoom"],
                   11, 0.25,
-                  14, 0.45,
-                  17, 0.7,
+                  14, 0.35,
+                  17, 0.5,
                 ],
-                "circle-stroke-width": [
-                  "interpolate", ["linear"], ["zoom"],
-                  11, 0.5,
-                  14, 1,
-                  17, 1.5,
-                ],
-                "circle-stroke-color": THEME_CONFIGS[theme].colors.glowHigh,
-                "circle-stroke-opacity": 0.5,
+                "circle-blur": 1.2,
               }}
             />
           </Source>
