@@ -1,19 +1,4 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
-import eh_worker from "@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url";
-import mvp_worker from "@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url";
-import duckdb_wasm_next from "@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url";
-import duckdb_wasm from "@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url";
-
-const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
-  mvp: {
-    mainModule: duckdb_wasm,
-    mainWorker: mvp_worker,
-  },
-  eh: {
-    mainModule: duckdb_wasm_next,
-    mainWorker: eh_worker,
-  },
-};
 
 let db: duckdb.AsyncDuckDB | null = null;
 let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
@@ -23,7 +8,8 @@ export async function getDuckDB() {
   if (dbPromise) return dbPromise;
 
   dbPromise = (async () => {
-    const bundle = await duckdb.selectBundle(MANUAL_BUNDLES);
+    const bundles = duckdb.getJsDelivrBundles();
+    const bundle = await duckdb.selectBundle(bundles);
     if (!bundle.mainWorker) {
       throw new Error("DuckDB bundle missing mainWorker");
     }
