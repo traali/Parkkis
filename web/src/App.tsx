@@ -377,6 +377,16 @@ export default function App() {
   const [loadingRentMap, setLoadingRentMap] = useState<Record<string, boolean>>({});
   const [errorRentMap, setErrorRentMap] = useState<Record<string, string | null>>({});
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.__APP_BUILD_INFO__ = {
+        version: typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0",
+        commit: typeof __COMMIT_HASH__ !== "undefined" ? __COMMIT_HASH__ : "dev",
+        buildTime: typeof __BUILD_TIME__ !== "undefined" ? __BUILD_TIME__ : new Date().toISOString()
+      };
+    }
+  }, []);
+
   const handleFetchLiveRent = async (caseCode: string) => {
     if (loadingRentMap[caseCode] || liveRentMap[caseCode]) return;
     
@@ -1873,16 +1883,27 @@ export default function App() {
 
       {/* Bento Stats Footer */}
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 flex flex-col gap-2 pointer-events-none transition-all duration-300">
-        {/* Toggle Expand / Collapse Buttons */}
-        <div className="flex justify-end w-full pointer-events-auto pr-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setShowMetadataModal(true)}
-            className="nv-glass rounded-full px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
+        {/* Toggle Expand / Collapse Buttons & Version Badge */}
+        <div className="flex items-center justify-between w-full pointer-events-auto pr-2 gap-2 flex-wrap">
+          <div
+            data-testid="app-version-badge"
+            className="nv-glass rounded-full px-3 py-1 text-[10px] font-mono text-nc-text-muted flex items-center gap-1.5 shadow-lg pointer-events-auto border border-nc-border/40"
           >
-            <Database className="w-3.5 h-3.5 text-nc-neon-teal" />
-            <span>🌐 Paikkatieto & Metadata</span>
-          </button>
+            <span className="font-bold text-nc-neon-teal">ParkkiS</span>
+            <span>•</span>
+            <span>v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0"}</span>
+            <span>(git:{typeof __COMMIT_HASH__ !== "undefined" ? __COMMIT_HASH__ : "dev"})</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMetadataModal(true)}
+              className="nv-glass rounded-full px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
+            >
+              <Database className="w-3.5 h-3.5 text-nc-neon-teal" />
+              <span>🌐 Paikkatieto & Metadata</span>
+            </button>
           
           <button
             type="button"
@@ -1901,6 +1922,7 @@ export default function App() {
               </>
             )}
           </button>
+          </div>
         </div>
 
         {!isFooterCollapsed && (
