@@ -53,7 +53,7 @@ export async function getParkingMapletTool(args: {
     ],
     _meta: {
       ui: {
-        resourceUri: `ui://parkkis/maplet?venue=${encodeURIComponent(risk.venueName)}&lat=${args.lat}&lng=${args.lng}&risk=${risk.riskRating1to10}`,
+        resourceUri: `ui://parkkis/maplet?venue=${encodeURIComponent(risk.venueName || "Kenttä")}&lat=${args.lat}&lng=${args.lng}&risk=${risk.riskRating1to10 || 3}`,
       },
     },
   };
