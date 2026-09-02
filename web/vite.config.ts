@@ -20,6 +20,6 @@ export default defineConfig({
     __BUILD_TIME__: JSON.stringify(buildTime),
   },
   plugins: [react(), tailwindcss()],
-  // Deployment base for GitHub Pages
-  base: "/Parkkis/",
+  // Relative base for Cloudflare Pages and GitHub Pages
+  base: "./",
 });
