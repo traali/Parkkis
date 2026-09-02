@@ -160,6 +160,7 @@ export default function App() {
         const response = await fetch(
           `https://api.hel.fi/servicemap/v2/search/?type=address&page_size=5&q=${encodeURIComponent(searchQuery)}&language=fi`,
         );
+        if (!response.ok) throw new Error(`Servicemap HTTP ${response.status}`);
         const data = await response.json();
         setSearchResults(data.results || []);
       } catch (err) {
