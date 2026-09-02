@@ -2144,13 +2144,17 @@ export default function App() {
       </div>
       {/* Dynamic Metadata Catalogue Modal */}
       {showMetadataModal && (
-        <div 
-          className="fixed inset-0 bg-nc-void/80 backdrop-blur-md z-60 flex items-center justify-center p-4 animate-in fade-in duration-300 pointer-events-auto"
-          onClick={() => setShowMetadataModal(false)}
-        >
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Sulje metatiedot"
+            className="fixed inset-0 bg-nc-void/80 backdrop-blur-md animate-in fade-in duration-300 w-full h-full cursor-default border-none"
+            onClick={() => setShowMetadataModal(false)}
+          />
           <div 
-            className="nv-glass border border-nc-border/60 rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            className="nv-glass border border-nc-border/60 rounded-3xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl relative animate-in zoom-in-95 duration-300 z-10"
           >
             {/* Modal Header */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-nc-border/40 shrink-0">
@@ -2245,15 +2249,14 @@ export default function App() {
                           { field: "Tiedonkeruumenetelmä", value: "Mobiili- ja selainpohjainen sovellus siirtokehotusliikennemerkkien pystytyspöytäkirjojen dokumentointiin" },
                           { field: "Yhteyshenkilö 1", value: "Anne-Marie Kaksonen (Helsingin kaupunki, Kaupunkiympäristön toimiala, Palvelut ja luvat, Pysäköinninvalvonta ja pysäköintipalvelut)" },
                           { field: "Avainsanat", value: "Siirtokehotukset, ajoneuvojen siirrot, pystytyspöytäkirjat", badge: true },
-                          { field: "Metatietojen päivitys", value: "12.5.2026 11.58.34" }
-                        ].map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-nc-text/5 transition-colors">
+                        ].map((row) => (
+                          <tr key={row.field} className="hover:bg-nc-text/5 transition-colors">
                             <td className="p-3 font-bold text-nc-text-muted">{row.field}</td>
                             <td className="p-3 text-nc-text leading-relaxed">
                               {row.badge ? (
                                 <div className="flex flex-wrap gap-1.5">
-                                  {row.value.split(", ").map((kw, kwIdx) => (
-                                    <span key={kwIdx} className="px-2 py-0.5 bg-nc-neon-teal/10 border border-nc-neon-teal/20 text-nc-neon-teal text-[9px] uppercase font-bold rounded-lg tracking-wider">
+                                  {row.value.split(", ").map((kw) => (
+                                    <span key={kw} className="px-2 py-0.5 bg-nc-neon-teal/10 border border-nc-neon-teal/20 text-nc-neon-teal text-[9px] uppercase font-bold rounded-lg tracking-wider">
                                       {kw}
                                     </span>
                                   ))}
@@ -2297,8 +2300,8 @@ export default function App() {
                           { layer: "avoindata:Winkki_works", desc: "Active street construction zones, pipe works, road maintenance, and temporary closures." },
                           { layer: "avoindata:Pysakointipaikat", desc: "Helsinki municipal public parking space geometries, zone divisions, and time rules." },
                           { layer: "avoindata:Pysakointivirheet", desc: "Historical municipal parking ticket density (165k mapped tickets) parsed to evaluate parking risk index." }
-                        ].map((row, rIdx) => (
-                          <tr key={rIdx} className="hover:bg-nc-text/5 transition-colors">
+                        ].map((row) => (
+                          <tr key={row.layer} className="hover:bg-nc-text/5 transition-colors">
                             <td className="p-3 font-mono font-bold text-nc-neon-teal">{row.layer}</td>
                             <td className="p-3 text-nc-text leading-relaxed">{row.desc}</td>
                           </tr>

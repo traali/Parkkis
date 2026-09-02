@@ -10,7 +10,9 @@
     "dev": "cd web && npm run dev",
     "build": "cd web && npm run build",
     "lint": "npx @biomejs/biome lint .",
-    "check": "npx @biomejs/biome check --write ."
+    "check": "npx @biomejs/biome check --write .",
+    "test:contracts": "node ../contracts/verify-contracts.mjs Parkkis",
+    "visit": "node scripts/monastery-visitor.mjs"
   },
   "keywords": [],
   "author": "",

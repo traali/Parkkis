@@ -1,0 +1,28 @@
+name: Monastic Clean-Room Pre-Visitation Gate
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  monastery-gate:
+    name: Deterministic Pre-Visitation Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Monastic Pre-Visitation Gate
+        run: npm run visit
