@@ -7,7 +7,7 @@
  */
 
 import { calculateParkingRiskContract } from "./contracts";
-import type { ParkingRiskContract } from "../../contracts";
+import type { ParkingRiskContract } from "./contracts";
 
 export interface McpToolResponse {
   content: Array<{
