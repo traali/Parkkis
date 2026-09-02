@@ -8,15 +8,22 @@ export async function getDuckDB() {
   if (dbPromise) return dbPromise;
 
   dbPromise = (async () => {
-    const bundles = duckdb.getJsDelivrBundles();
-    const bundle = await duckdb.selectBundle(bundles);
-    if (!bundle.mainWorker) {
-      throw new Error("DuckDB bundle missing mainWorker");
-    }
-    const worker = new Worker(bundle.mainWorker);
-    const logger = new duckdb.ConsoleLogger();
-    const localDb = new duckdb.AsyncDuckDB(logger, worker);
-    await localDb.instantiate(bundle.mainModule, bundle.pthreadWorker);
+    try {
+      const bundles = duckdb.getJsDelivrBundles();
+      const bundle = await duckdb.selectBundle(bundles);
+      if (!bundle.mainWorker) {
+        throw new Error("DuckDB bundle missing mainWorker");
+      }
+      
+      // Blob wrapper to bypass Cross-Origin Worker security restrictions on CDN scripts
+      const workerBlob = new Blob([`importScripts("${bundle.mainWorker}");`], {
+        type: "text/javascript",
+      });
+      const workerUrl = URL.createObjectURL(workerBlob);
+      const worker = new Worker(workerUrl);
+      const logger = new duckdb.ConsoleLogger();
+      const localDb = new duckdb.AsyncDuckDB(logger, worker);
+      await localDb.instantiate(bundle.mainModule, bundle.pthreadWorker);
 
     // Load Spatial extension if possible (DuckDB-Wasm support varies)
     const conn = await localDb.connect();
@@ -37,7 +44,12 @@ export async function getDuckDB() {
 
     db = localDb;
     return localDb;
-  })();
+  } catch (err) {
+    console.warn("🦆 DuckDB WASM initialization error (falling back to spatial GeoJSON presets):", err);
+    dbPromise = null;
+    throw err;
+  }
+})();
 
   return dbPromise;
 }

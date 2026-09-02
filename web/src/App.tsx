@@ -788,7 +788,57 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const latParam = searchParams.get("lat");
+      const lonParam = searchParams.get("lon") || searchParams.get("lng");
+      const themeParam = searchParams.get("theme");
+
+      if (themeParam && (themeParam === "dark" || themeParam === "light" || themeParam === "forest")) {
+        setTheme(themeParam as ThemeType);
+      }
+
+      if (latParam && lonParam) {
+        const lat = parseFloat(latParam);
+        const lon = parseFloat(lonParam);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          const rawVenue = window.location.pathname.replace(/^\/venue\//, "").replace(/\+/g, " ");
+          const venueName = rawVenue ? decodeURIComponent(rawVenue) : "Ottelukenttä";
+          setSelectedAddress({
+            latitude: lat,
+            longitude: lon,
+            name: venueName,
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("URL params parsing error in Parkkis:", err);
+    }
+  }, []);
+
   const onMapLoad = useCallback(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const latParam = searchParams.get("lat");
+      const lonParam = searchParams.get("lon") || searchParams.get("lng");
+      if (latParam && lonParam && mapRef.current) {
+        const lat = parseFloat(latParam);
+        const lon = parseFloat(lonParam);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          mapRef.current.flyTo({
+            center: [lon, lat],
+            zoom: 16,
+            pitch: 50,
+            duration: 1500,
+          });
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("Error centering map on venue params:", err);
+    }
+
     if (geoControlRef.current) {
       geoControlRef.current.trigger();
     }
