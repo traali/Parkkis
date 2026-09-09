@@ -1,11 +1,24 @@
+# Lefthook - Sovereign Monastic Quality Gate for ParkkiS
 pre-commit:
-  parallel: false
+  parallel: true
   commands:
-    biome-lint:
-      glob: "*.{js,ts,jsx,tsx,json}"
+    anti-slop-tokens:
+      run: node ../scripts/git-guard.mjs tokens {staged_files}
+      glob: "*.{ts,tsx,js,jsx,json,mjs}"
+    secrets:
+      run: node ../scripts/git-guard.mjs secrets {staged_files}
+      glob: "*"
+    lint:
       run: npx @biomejs/biome lint {staged_files}
+      glob: "*.{ts,tsx,js,jsx,json,mjs}"
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: node ../scripts/git-guard.mjs commit-msg {1}
+
 pre-push:
   parallel: false
   commands:
-    monastery-visit:
-      run: npm run visit
+    sovereign-check:
+      run: npm run check

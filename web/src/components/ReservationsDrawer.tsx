@@ -154,10 +154,17 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
               const hasFetchedLive = caseDetails ? (caseDetails.caseCode in liveRentMap) : false;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={props.licence_identifier || idx}
                   onClick={() => onSelectReservation(feat)}
-                  className="p-3 bg-nc-void/40 border border-nc-border/40 hover:border-orange-400/50 hover:bg-nc-void/70 rounded-2xl cursor-pointer transition-all duration-200 shadow-md group space-y-2 relative overflow-hidden text-left"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onSelectReservation(feat);
+                    }
+                  }}
+                  className="w-full p-3 bg-nc-void/40 border border-nc-border/40 hover:border-orange-400/50 hover:bg-nc-void/70 rounded-2xl cursor-pointer transition-all duration-200 shadow-md group space-y-2 relative overflow-hidden text-left"
                 >
                   <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${isParking ? "bg-orange-400" : "bg-orange-300/60"}`} />
 
@@ -248,7 +255,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })
           ) : (

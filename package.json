@@ -10,8 +10,10 @@
     "dev": "cd web && npm run dev",
     "build": "cd web && npm run build",
     "lint": "npx @biomejs/biome lint .",
-    "check": "npx @biomejs/biome check --write .",
-    "test:contracts": "node ../contracts/verify-contracts.mjs Parkkis",
+    "typecheck": "tsc -b web/tsconfig.json && npx tsc --noEmit src/contracts.ts src/mcp-app.ts",
+    "check:types": "npm run typecheck",
+    "test": "node --test tests/domain-invariants.test.mjs",
+    "check": "npm run lint && npm run typecheck && npm test",
     "visit": "node scripts/monastery-visitor.mjs"
   },
   "keywords": [],
