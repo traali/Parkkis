@@ -3,10 +3,10 @@ pre-commit:
   parallel: true
   commands:
     anti-slop-tokens:
-      run: node ../scripts/git-guard.mjs tokens {staged_files}
+      run: node scripts/git-guard.mjs tokens {staged_files}
       glob: "*.{ts,tsx,js,jsx,json,mjs}"
     secrets:
-      run: node ../scripts/git-guard.mjs secrets {staged_files}
+      run: node scripts/git-guard.mjs secrets {staged_files}
       glob: "*"
     lint:
       run: npx @biomejs/biome lint {staged_files}
@@ -15,7 +15,7 @@ pre-commit:
 commit-msg:
   commands:
     conventional-commit:
-      run: node ../scripts/git-guard.mjs commit-msg {1}
+      run: node scripts/git-guard.mjs commit-msg {1}
 
 pre-push:
   parallel: false
