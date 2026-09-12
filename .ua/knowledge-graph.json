@@ -1,0 +1,1787 @@
+{
+  "version": "1.0.0",
+  "kind": "codebase",
+  "project": {
+    "name": "Parkkis",
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [
+      "vite"
+    ],
+    "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"—they need to know *safe* spots.",
+    "analyzedAt": "2026-09-12T10:44:08.538Z",
+    "gitCommitHash": "768a951470713b9ba188b41531066eea53ab11d9"
+  },
+  "nodes": [
+    {
+      "id": "pipeline:.github/workflows/cd.yml",
+      "type": "pipeline",
+      "name": "cd.yml",
+      "summary": "CI/CD workflow",
+      "tags": [
+        "ci"
+      ],
+      "complexity": "simple",
+      "filePath": ".github/workflows/cd.yml"
+    },
+    {
+      "id": "pipeline:.github/workflows/deploy.yml",
+      "type": "pipeline",
+      "name": "deploy.yml",
+      "summary": "CI/CD workflow",
+      "tags": [
+        "ci"
+      ],
+      "complexity": "simple",
+      "filePath": ".github/workflows/deploy.yml"
+    },
+    {
+      "id": "pipeline:.github/workflows/ingest.yml",
+      "type": "pipeline",
+      "name": "ingest.yml",
+      "summary": "CI/CD workflow",
+      "tags": [
+        "ci"
+      ],
+      "complexity": "simple",
+      "filePath": ".github/workflows/ingest.yml"
+    },
+    {
+      "id": "pipeline:.github/workflows/monastic-visit.yml",
+      "type": "pipeline",
+      "name": "monastic-visit.yml",
+      "summary": "CI/CD workflow",
+      "tags": [
+        "ci"
+      ],
+      "complexity": "simple",
+      "filePath": ".github/workflows/monastic-visit.yml"
+    },
+    {
+      "id": "document:AGENTS.md",
+      "type": "document",
+      "name": "AGENTS.md",
+      "summary": "AGENTS.md — The Rule of ParkkiS",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "AGENTS.md"
+    },
+    {
+      "id": "document:README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "🅿️ ParkkiS v2.6.0: Helsinki Parking Safety Map",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "README.md"
+    },
+    {
+      "id": "document:ROLL.md",
+      "type": "document",
+      "name": "ROLL.md",
+      "summary": "ROLL.md — The Chronicle of ParkkiS",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "ROLL.md"
+    },
+    {
+      "id": "document:docs/plans/HOUSE_TEST_SPEC.md",
+      "type": "document",
+      "name": "HOUSE_TEST_SPEC.md",
+      "summary": "ParkkiS — 5-point test spec",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "docs/plans/HOUSE_TEST_SPEC.md"
+    },
+    {
+      "id": "document:docs/walkthroughs/phase4.md",
+      "type": "document",
+      "name": "phase4.md",
+      "summary": "Walkthrough - Phase 4: Regional Synergy Engine",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "docs/walkthroughs/phase4.md"
+    },
+    {
+      "id": "file:engine/describe.js",
+      "type": "file",
+      "name": "describe.js",
+      "summary": "const duckdb = require(\"duckdb\");",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/describe.js"
+    },
+    {
+      "id": "config:engine/package.json",
+      "type": "config",
+      "name": "package.json",
+      "summary": "Config package.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/package.json"
+    },
+    {
+      "id": "file:engine/src/analyze_signs.js",
+      "type": "file",
+      "name": "analyze_signs.js",
+      "summary": "const fs = require(\"fs-extra\");",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/analyze_signs.js"
+    },
+    {
+      "id": "file:engine/src/check_signs.js",
+      "type": "file",
+      "name": "check_signs.js",
+      "summary": "const duckdb = require(\"duckdb\");",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/check_signs.js"
+    },
+    {
+      "id": "file:engine/src/fetch.ts",
+      "type": "file",
+      "name": "fetch.ts",
+      "summary": "const _limit = pLimit(5);",
+      "tags": [
+        "app"
+      ],
+      "complexity": "complex",
+      "filePath": "engine/src/fetch.ts"
+    },
+    {
+      "id": "class:engine/src/fetch.ts:HarvesterClient",
+      "type": "class",
+      "name": "HarvesterClient",
+      "summary": "class HarvesterClient in engine/src/fetch.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/fetch.ts",
+      "lineRange": [
+        137,
+        137
+      ]
+    },
+    {
+      "id": "file:engine/src/fetch_liipi.ts",
+      "type": "file",
+      "name": "fetch_liipi.ts",
+      "summary": "const LIIPI_API = \"https://parking.fintraffic.fi/api/v1/facilities.geojson\";",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/fetch_liipi.ts"
+    },
+    {
+      "id": "file:engine/src/fetch_roadworks.ts",
+      "type": "file",
+      "name": "fetch_roadworks.ts",
+      "summary": "const HEL_WFS_URL = \"https://kartta.hel.fi/ws/geoserver/avoindata/wfs\";",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/fetch_roadworks.ts"
+    },
+    {
+      "id": "file:engine/src/fetch_signs.ts",
+      "type": "file",
+      "name": "fetch_signs.ts",
+      "summary": "const _limit = pLimit(5);",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "engine/src/fetch_signs.ts"
+    },
+    {
+      "id": "class:engine/src/fetch_signs.ts:HarvesterClient",
+      "type": "class",
+      "name": "HarvesterClient",
+      "summary": "class HarvesterClient in engine/src/fetch_signs.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/fetch_signs.ts",
+      "lineRange": [
+        21,
+        21
+      ]
+    },
+    {
+      "id": "file:engine/src/pipeline.ts",
+      "type": "file",
+      "name": "pipeline.ts",
+      "summary": "const CACHE_DIR = path.join(process.cwd(), \".cache/raw\");",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "engine/src/pipeline.ts"
+    },
+    {
+      "id": "file:engine/src/process.js",
+      "type": "file",
+      "name": "process.js",
+      "summary": "const duckdb = require(\"duckdb\");",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "engine/src/process.js"
+    },
+    {
+      "id": "file:engine/src/query.js",
+      "type": "file",
+      "name": "query.js",
+      "summary": "const duckdb = require(\"duckdb\");",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/query.js"
+    },
+    {
+      "id": "file:engine/src/test_roadworks.ts",
+      "type": "file",
+      "name": "test_roadworks.ts",
+      "summary": "async function testRoadworks() {",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/test_roadworks.ts"
+    },
+    {
+      "id": "file:engine/src/test_wfs.ts",
+      "type": "file",
+      "name": "test_wfs.ts",
+      "summary": "async function testWFS() {",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/test_wfs.ts"
+    },
+    {
+      "id": "file:engine/src/test_winkki.ts",
+      "type": "file",
+      "name": "test_winkki.ts",
+      "summary": "async function testWinkki() {",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/src/test_winkki.ts"
+    },
+    {
+      "id": "config:engine/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "summary": "Config tsconfig.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "engine/tsconfig.json"
+    },
+    {
+      "id": "config:federation.neighbors.json",
+      "type": "config",
+      "name": "federation.neighbors.json",
+      "summary": "Config federation.neighbors.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "federation.neighbors.json"
+    },
+    {
+      "id": "config:lefthook.yml",
+      "type": "config",
+      "name": "lefthook.yml",
+      "summary": "Config lefthook.yml",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "lefthook.yml"
+    },
+    {
+      "id": "document:llms.txt",
+      "type": "document",
+      "name": "llms.txt",
+      "summary": "Parkkisakko: Helsinki Parking Trap Detector",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "llms.txt"
+    },
+    {
+      "id": "config:package.json",
+      "type": "config",
+      "name": "package.json",
+      "summary": "Config package.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "package.json"
+    },
+    {
+      "id": "file:scripts/check-neighbors.mjs",
+      "type": "file",
+      "name": "check-neighbors.mjs",
+      "summary": "#!/usr/bin/env node",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "complex",
+      "filePath": "scripts/check-neighbors.mjs"
+    },
+    {
+      "id": "endpoint:scripts/check-neighbors.mjs:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "tooling"
+      ],
+      "complexity": "moderate",
+      "filePath": "scripts/check-neighbors.mjs"
+    },
+    {
+      "id": "file:scripts/git-guard.mjs",
+      "type": "file",
+      "name": "git-guard.mjs",
+      "summary": "#!/usr/bin/env node",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "simple",
+      "filePath": "scripts/git-guard.mjs"
+    },
+    {
+      "id": "file:scripts/monastery-visitor.mjs",
+      "type": "file",
+      "name": "monastery-visitor.mjs",
+      "summary": "const ROOT = process.cwd();",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "simple",
+      "filePath": "scripts/monastery-visitor.mjs"
+    },
+    {
+      "id": "file:scripts/understand.mjs",
+      "type": "file",
+      "name": "understand.mjs",
+      "summary": "#!/usr/bin/env node",
+      "tags": [
+        "tooling"
+      ],
+      "complexity": "complex",
+      "filePath": "scripts/understand.mjs"
+    },
+    {
+      "id": "endpoint:scripts/understand.mjs:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "tooling"
+      ],
+      "complexity": "moderate",
+      "filePath": "scripts/understand.mjs"
+    },
+    {
+      "id": "file:src/contracts.ts",
+      "type": "file",
+      "name": "contracts.ts",
+      "summary": "venueSlug: string;",
+      "tags": [
+        "contract"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/contracts.ts"
+    },
+    {
+      "id": "function:src/contracts.ts:calculateParkingRiskContract",
+      "type": "function",
+      "name": "calculateParkingRiskContract",
+      "summary": "function calculateParkingRiskContract in src/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/contracts.ts",
+      "lineRange": [
+        99,
+        99
+      ]
+    },
+    {
+      "id": "class:src/contracts.ts:ParkingRiskContract",
+      "type": "class",
+      "name": "ParkingRiskContract",
+      "summary": "class ParkingRiskContract in src/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/contracts.ts",
+      "lineRange": [
+        10,
+        10
+      ]
+    },
+    {
+      "id": "class:src/contracts.ts:CrossRepoQueryContract",
+      "type": "class",
+      "name": "CrossRepoQueryContract",
+      "summary": "class CrossRepoQueryContract in src/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/contracts.ts",
+      "lineRange": [
+        25,
+        25
+      ]
+    },
+    {
+      "id": "class:src/contracts.ts:SupportedSport",
+      "type": "class",
+      "name": "SupportedSport",
+      "summary": "class SupportedSport in src/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/contracts.ts",
+      "lineRange": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "function:src/contracts.ts:CONTRACT_VERSION",
+      "type": "function",
+      "name": "CONTRACT_VERSION",
+      "summary": "function CONTRACT_VERSION in src/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/contracts.ts",
+      "lineRange": [
+        6,
+        6
+      ]
+    },
+    {
+      "id": "file:src/mcp-app.ts",
+      "type": "file",
+      "name": "mcp-app.ts",
+      "summary": "content: Array<{",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts"
+    },
+    {
+      "id": "function:src/mcp-app.ts:getParkingMapletTool",
+      "type": "function",
+      "name": "getParkingMapletTool",
+      "summary": "function getParkingMapletTool in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        33,
+        33
+      ]
+    },
+    {
+      "id": "class:src/mcp-app.ts:McpToolResponse",
+      "type": "class",
+      "name": "McpToolResponse",
+      "summary": "class McpToolResponse in src/mcp-app.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "src/mcp-app.ts",
+      "lineRange": [
+        12,
+        12
+      ]
+    },
+    {
+      "id": "file:tests/domain-invariants.test.mjs",
+      "type": "file",
+      "name": "domain-invariants.test.mjs",
+      "summary": "const d = new Date(date);",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "tests/domain-invariants.test.mjs"
+    },
+    {
+      "id": "function:tests/domain-invariants.test.mjs:calculateParkingDiscArrival",
+      "type": "function",
+      "name": "calculateParkingDiscArrival",
+      "summary": "function calculateParkingDiscArrival in tests/domain-invariants.test.mjs",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "tests/domain-invariants.test.mjs",
+      "lineRange": [
+        5,
+        5
+      ]
+    },
+    {
+      "id": "function:tests/domain-invariants.test.mjs:getCentroid",
+      "type": "function",
+      "name": "getCentroid",
+      "summary": "function getCentroid in tests/domain-invariants.test.mjs",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "tests/domain-invariants.test.mjs",
+      "lineRange": [
+        24,
+        24
+      ]
+    },
+    {
+      "id": "function:tests/domain-invariants.test.mjs:isValidDuckDbTableName",
+      "type": "function",
+      "name": "isValidDuckDbTableName",
+      "summary": "function isValidDuckDbTableName in tests/domain-invariants.test.mjs",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "tests/domain-invariants.test.mjs",
+      "lineRange": [
+        41,
+        41
+      ]
+    },
+    {
+      "id": "document:web/README.md",
+      "type": "document",
+      "name": "README.md",
+      "summary": "React + TypeScript + Vite",
+      "tags": [
+        "docs"
+      ],
+      "complexity": "simple",
+      "filePath": "web/README.md"
+    },
+    {
+      "id": "file:web/eslint.config.js",
+      "type": "file",
+      "name": "eslint.config.js",
+      "summary": "globalIgnores([\"dist\"]),",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "web/eslint.config.js"
+    },
+    {
+      "id": "config:web/package.json",
+      "type": "config",
+      "name": "package.json",
+      "summary": "Config package.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "web/package.json"
+    },
+    {
+      "id": "file:web/src/App.tsx",
+      "type": "file",
+      "name": "App.tsx",
+      "summary": "MapLayerMouseEvent,",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "complex",
+      "filePath": "web/src/App.tsx"
+    },
+    {
+      "id": "endpoint:web/src/App.tsx:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "ui"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/App.tsx"
+    },
+    {
+      "id": "file:web/src/components/MetadataCatalogueModal.tsx",
+      "type": "file",
+      "name": "MetadataCatalogueModal.tsx",
+      "summary": "interface MetadataCatalogueModalProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/components/MetadataCatalogueModal.tsx"
+    },
+    {
+      "id": "function:web/src/components/MetadataCatalogueModal.tsx:MetadataCatalogueModal",
+      "type": "function",
+      "name": "MetadataCatalogueModal",
+      "summary": "function MetadataCatalogueModal in web/src/components/MetadataCatalogueModal.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/MetadataCatalogueModal.tsx",
+      "lineRange": [
+        9,
+        9
+      ]
+    },
+    {
+      "id": "file:web/src/components/ParkingMapView.tsx",
+      "type": "file",
+      "name": "ParkingMapView.tsx",
+      "summary": "GeolocateControl,",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "complex",
+      "filePath": "web/src/components/ParkingMapView.tsx"
+    },
+    {
+      "id": "class:web/src/components/ParkingMapView.tsx:Address",
+      "type": "class",
+      "name": "Address",
+      "summary": "class Address in web/src/components/ParkingMapView.tsx",
+      "tags": [
+        "ui",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/ParkingMapView.tsx",
+      "lineRange": [
+        16,
+        16
+      ]
+    },
+    {
+      "id": "class:web/src/components/ParkingMapView.tsx:ParkingMapViewProps",
+      "type": "class",
+      "name": "ParkingMapViewProps",
+      "summary": "class ParkingMapViewProps in web/src/components/ParkingMapView.tsx",
+      "tags": [
+        "ui",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/ParkingMapView.tsx",
+      "lineRange": [
+        22,
+        22
+      ]
+    },
+    {
+      "id": "function:web/src/components/ParkingMapView.tsx:ParkingMapView",
+      "type": "function",
+      "name": "ParkingMapView",
+      "summary": "function ParkingMapView in web/src/components/ParkingMapView.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/ParkingMapView.tsx",
+      "lineRange": [
+        50,
+        50
+      ]
+    },
+    {
+      "id": "file:web/src/components/ParkingPopup.tsx",
+      "type": "file",
+      "name": "ParkingPopup.tsx",
+      "summary": "longitude: number;",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "complex",
+      "filePath": "web/src/components/ParkingPopup.tsx"
+    },
+    {
+      "id": "class:web/src/components/ParkingPopup.tsx:HoverInfo",
+      "type": "class",
+      "name": "HoverInfo",
+      "summary": "class HoverInfo in web/src/components/ParkingPopup.tsx",
+      "tags": [
+        "ui",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/ParkingPopup.tsx",
+      "lineRange": [
+        6,
+        6
+      ]
+    },
+    {
+      "id": "function:web/src/components/ParkingPopup.tsx:ParkingPopup",
+      "type": "function",
+      "name": "ParkingPopup",
+      "summary": "function ParkingPopup in web/src/components/ParkingPopup.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/ParkingPopup.tsx",
+      "lineRange": [
+        22,
+        22
+      ]
+    },
+    {
+      "id": "file:web/src/components/ReservationsDrawer.tsx",
+      "type": "file",
+      "name": "ReservationsDrawer.tsx",
+      "summary": "interface ReservationsDrawerProps {",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "complex",
+      "filePath": "web/src/components/ReservationsDrawer.tsx"
+    },
+    {
+      "id": "function:web/src/components/ReservationsDrawer.tsx:ReservationsDrawer",
+      "type": "function",
+      "name": "ReservationsDrawer",
+      "summary": "function ReservationsDrawer in web/src/components/ReservationsDrawer.tsx",
+      "tags": [
+        "ui",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/components/ReservationsDrawer.tsx",
+      "lineRange": [
+        21,
+        21
+      ]
+    },
+    {
+      "id": "file:web/src/hooks/useParkingLayers.ts",
+      "type": "file",
+      "name": "useParkingLayers.ts",
+      "summary": "const [dbReady, setDbReady] = useState(false);",
+      "tags": [
+        "app"
+      ],
+      "complexity": "complex",
+      "filePath": "web/src/hooks/useParkingLayers.ts"
+    },
+    {
+      "id": "function:web/src/hooks/useParkingLayers.ts:useParkingLayers",
+      "type": "function",
+      "name": "useParkingLayers",
+      "summary": "function useParkingLayers in web/src/hooks/useParkingLayers.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/hooks/useParkingLayers.ts",
+      "lineRange": [
+        7,
+        7
+      ]
+    },
+    {
+      "id": "endpoint:web/src/hooks/useParkingLayers.ts:taso",
+      "type": "endpoint",
+      "name": "Torneopal/TASO",
+      "summary": "Association REST client",
+      "tags": [
+        "taso",
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/hooks/useParkingLayers.ts"
+    },
+    {
+      "id": "file:web/src/lib/contracts.ts",
+      "type": "file",
+      "name": "contracts.ts",
+      "summary": "venueSlug: string;",
+      "tags": [
+        "contract"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/lib/contracts.ts"
+    },
+    {
+      "id": "function:web/src/lib/contracts.ts:calculateParkingRiskContract",
+      "type": "function",
+      "name": "calculateParkingRiskContract",
+      "summary": "function calculateParkingRiskContract in web/src/lib/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/contracts.ts",
+      "lineRange": [
+        99,
+        99
+      ]
+    },
+    {
+      "id": "class:web/src/lib/contracts.ts:ParkingRiskContract",
+      "type": "class",
+      "name": "ParkingRiskContract",
+      "summary": "class ParkingRiskContract in web/src/lib/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/contracts.ts",
+      "lineRange": [
+        10,
+        10
+      ]
+    },
+    {
+      "id": "class:web/src/lib/contracts.ts:CrossRepoQueryContract",
+      "type": "class",
+      "name": "CrossRepoQueryContract",
+      "summary": "class CrossRepoQueryContract in web/src/lib/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/contracts.ts",
+      "lineRange": [
+        25,
+        25
+      ]
+    },
+    {
+      "id": "class:web/src/lib/contracts.ts:SupportedSport",
+      "type": "class",
+      "name": "SupportedSport",
+      "summary": "class SupportedSport in web/src/lib/contracts.ts",
+      "tags": [
+        "contract",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/contracts.ts",
+      "lineRange": [
+        8,
+        8
+      ]
+    },
+    {
+      "id": "function:web/src/lib/contracts.ts:CONTRACT_VERSION",
+      "type": "function",
+      "name": "CONTRACT_VERSION",
+      "summary": "function CONTRACT_VERSION in web/src/lib/contracts.ts",
+      "tags": [
+        "contract",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/contracts.ts",
+      "lineRange": [
+        6,
+        6
+      ]
+    },
+    {
+      "id": "file:web/src/lib/duckdb.ts",
+      "type": "file",
+      "name": "duckdb.ts",
+      "summary": "let db: duckdb.AsyncDuckDB | null = null;",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/lib/duckdb.ts"
+    },
+    {
+      "id": "function:web/src/lib/duckdb.ts:getDuckDB",
+      "type": "function",
+      "name": "getDuckDB",
+      "summary": "function getDuckDB in web/src/lib/duckdb.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/duckdb.ts",
+      "lineRange": [
+        6,
+        6
+      ]
+    },
+    {
+      "id": "function:web/src/lib/duckdb.ts:loadParquet",
+      "type": "function",
+      "name": "loadParquet",
+      "summary": "function loadParquet in web/src/lib/duckdb.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/duckdb.ts",
+      "lineRange": [
+        57,
+        57
+      ]
+    },
+    {
+      "id": "file:web/src/lib/helsinkiCaseParser.tsx",
+      "type": "file",
+      "name": "helsinkiCaseParser.tsx",
+      "summary": "original: string;",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/lib/helsinkiCaseParser.tsx"
+    },
+    {
+      "id": "class:web/src/lib/helsinkiCaseParser.tsx:HelCaseDetails",
+      "type": "class",
+      "name": "HelCaseDetails",
+      "summary": "class HelCaseDetails in web/src/lib/helsinkiCaseParser.tsx",
+      "tags": [
+        "ui",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/helsinkiCaseParser.tsx",
+      "lineRange": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": "class:web/src/lib/helsinkiCaseParser.tsx:RentInfo",
+      "type": "class",
+      "name": "RentInfo",
+      "summary": "class RentInfo in web/src/lib/helsinkiCaseParser.tsx",
+      "tags": [
+        "ui",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/helsinkiCaseParser.tsx",
+      "lineRange": [
+        10,
+        10
+      ]
+    },
+    {
+      "id": "file:web/src/lib/mapThemes.ts",
+      "type": "file",
+      "name": "mapThemes.ts",
+      "summary": "dark: {",
+      "tags": [
+        "app"
+      ],
+      "complexity": "moderate",
+      "filePath": "web/src/lib/mapThemes.ts"
+    },
+    {
+      "id": "class:web/src/lib/mapThemes.ts:ThemeType",
+      "type": "class",
+      "name": "ThemeType",
+      "summary": "class ThemeType in web/src/lib/mapThemes.ts",
+      "tags": [
+        "app",
+        "class"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/mapThemes.ts",
+      "lineRange": [
+        1,
+        1
+      ]
+    },
+    {
+      "id": "function:web/src/lib/mapThemes.ts:THEME_CONFIGS",
+      "type": "function",
+      "name": "THEME_CONFIGS",
+      "summary": "function THEME_CONFIGS in web/src/lib/mapThemes.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/mapThemes.ts",
+      "lineRange": [
+        3,
+        3
+      ]
+    },
+    {
+      "id": "function:web/src/lib/mapThemes.ts:CATEGORIES",
+      "type": "function",
+      "name": "CATEGORIES",
+      "summary": "function CATEGORIES in web/src/lib/mapThemes.ts",
+      "tags": [
+        "app",
+        "function"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/lib/mapThemes.ts",
+      "lineRange": [
+        45,
+        45
+      ]
+    },
+    {
+      "id": "file:web/src/main.tsx",
+      "type": "file",
+      "name": "main.tsx",
+      "summary": "const rootElement = document.getElementById(\"root\");",
+      "tags": [
+        "ui"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/main.tsx"
+    },
+    {
+      "id": "file:web/src/vite-env.d.ts",
+      "type": "file",
+      "name": "vite-env.d.ts",
+      "summary": "declare const __APP_VERSION__: string;",
+      "tags": [
+        "app"
+      ],
+      "complexity": "simple",
+      "filePath": "web/src/vite-env.d.ts"
+    },
+    {
+      "id": "config:web/tsconfig.json",
+      "type": "config",
+      "name": "tsconfig.json",
+      "summary": "Config tsconfig.json",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "web/tsconfig.json"
+    },
+    {
+      "id": "file:web/vite.config.ts",
+      "type": "file",
+      "name": "vite.config.ts",
+      "summary": "const commitHash = (() => {",
+      "tags": [
+        "config"
+      ],
+      "complexity": "simple",
+      "filePath": "web/vite.config.ts"
+    },
+    {
+      "id": "concept:the-rule",
+      "type": "concept",
+      "name": "The Rule (AGENTS.md)",
+      "summary": "Supreme house rule, <1500 words",
+      "tags": [
+        "governance"
+      ],
+      "complexity": "simple",
+      "filePath": "AGENTS.md"
+    },
+    {
+      "id": "concept:chapter-of-neighbors",
+      "type": "concept",
+      "name": "Chapter of Neighbors",
+      "summary": "Visit-gate that freezes contracts and peer AGENTS.md",
+      "tags": [
+        "governance",
+        "treaty"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "schema:src/contracts.ts",
+      "type": "schema",
+      "name": "Federation contracts",
+      "summary": "Canonical v1.0.0 treaty adapters",
+      "tags": [
+        "treaty"
+      ],
+      "complexity": "moderate",
+      "filePath": "src/contracts.ts"
+    }
+  ],
+  "edges": [
+    {
+      "source": "pipeline:.github/workflows/cd.yml",
+      "target": "document:AGENTS.md",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "pipeline:.github/workflows/deploy.yml",
+      "target": "document:AGENTS.md",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "pipeline:.github/workflows/ingest.yml",
+      "target": "document:AGENTS.md",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "pipeline:.github/workflows/monastic-visit.yml",
+      "target": "document:AGENTS.md",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.4
+    },
+    {
+      "source": "file:engine/src/fetch.ts",
+      "target": "class:engine/src/fetch.ts:HarvesterClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:engine/src/fetch_signs.ts",
+      "target": "class:engine/src/fetch_signs.ts:HarvesterClient",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:scripts/check-neighbors.mjs",
+      "target": "endpoint:scripts/check-neighbors.mjs:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:scripts/understand.mjs",
+      "target": "endpoint:scripts/understand.mjs:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:src/contracts.ts",
+      "target": "function:src/contracts.ts:calculateParkingRiskContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/contracts.ts",
+      "target": "class:src/contracts.ts:ParkingRiskContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/contracts.ts",
+      "target": "class:src/contracts.ts:CrossRepoQueryContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/contracts.ts",
+      "target": "class:src/contracts.ts:SupportedSport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/contracts.ts",
+      "target": "function:src/contracts.ts:CONTRACT_VERSION",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "function:src/mcp-app.ts:getParkingMapletTool",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "class:src/mcp-app.ts:McpToolResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "file:src/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:src/mcp-app.ts",
+      "target": "file:src/contracts.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:tests/domain-invariants.test.mjs",
+      "target": "function:tests/domain-invariants.test.mjs:calculateParkingDiscArrival",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/domain-invariants.test.mjs",
+      "target": "function:tests/domain-invariants.test.mjs:getCentroid",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:tests/domain-invariants.test.mjs",
+      "target": "function:tests/domain-invariants.test.mjs:isValidDuckDbTableName",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "file:web/src/components/ParkingMapView.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "file:web/src/hooks/useParkingLayers.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "file:web/src/lib/mapThemes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "file:web/src/components/MetadataCatalogueModal.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "file:web/src/components/ReservationsDrawer.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "file:web/src/components/ParkingPopup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/App.tsx",
+      "target": "endpoint:web/src/App.tsx:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/components/MetadataCatalogueModal.tsx",
+      "target": "function:web/src/components/MetadataCatalogueModal.tsx:MetadataCatalogueModal",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ParkingMapView.tsx",
+      "target": "class:web/src/components/ParkingMapView.tsx:Address",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ParkingMapView.tsx",
+      "target": "class:web/src/components/ParkingMapView.tsx:ParkingMapViewProps",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ParkingMapView.tsx",
+      "target": "function:web/src/components/ParkingMapView.tsx:ParkingMapView",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ParkingMapView.tsx",
+      "target": "file:web/src/lib/mapThemes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ParkingMapView.tsx",
+      "target": "file:web/src/components/ParkingPopup.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ParkingPopup.tsx",
+      "target": "class:web/src/components/ParkingPopup.tsx:HoverInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ParkingPopup.tsx",
+      "target": "function:web/src/components/ParkingPopup.tsx:ParkingPopup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ParkingPopup.tsx",
+      "target": "file:web/src/lib/mapThemes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ParkingPopup.tsx",
+      "target": "file:web/src/lib/helsinkiCaseParser.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/components/ReservationsDrawer.tsx",
+      "target": "function:web/src/components/ReservationsDrawer.tsx:ReservationsDrawer",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/components/ReservationsDrawer.tsx",
+      "target": "file:web/src/lib/helsinkiCaseParser.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/hooks/useParkingLayers.ts",
+      "target": "function:web/src/hooks/useParkingLayers.ts:useParkingLayers",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/hooks/useParkingLayers.ts",
+      "target": "file:web/src/lib/duckdb.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/hooks/useParkingLayers.ts",
+      "target": "file:web/src/lib/mapThemes.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/hooks/useParkingLayers.ts",
+      "target": "file:web/src/lib/helsinkiCaseParser.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:web/src/hooks/useParkingLayers.ts",
+      "target": "endpoint:web/src/hooks/useParkingLayers.ts:taso",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:web/src/lib/contracts.ts",
+      "target": "function:web/src/lib/contracts.ts:calculateParkingRiskContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/contracts.ts",
+      "target": "class:web/src/lib/contracts.ts:ParkingRiskContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/contracts.ts",
+      "target": "class:web/src/lib/contracts.ts:CrossRepoQueryContract",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/contracts.ts",
+      "target": "class:web/src/lib/contracts.ts:SupportedSport",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/contracts.ts",
+      "target": "function:web/src/lib/contracts.ts:CONTRACT_VERSION",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/duckdb.ts",
+      "target": "function:web/src/lib/duckdb.ts:getDuckDB",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/duckdb.ts",
+      "target": "function:web/src/lib/duckdb.ts:loadParquet",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/helsinkiCaseParser.tsx",
+      "target": "class:web/src/lib/helsinkiCaseParser.tsx:HelCaseDetails",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/helsinkiCaseParser.tsx",
+      "target": "class:web/src/lib/helsinkiCaseParser.tsx:RentInfo",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/mapThemes.ts",
+      "target": "class:web/src/lib/mapThemes.ts:ThemeType",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/mapThemes.ts",
+      "target": "function:web/src/lib/mapThemes.ts:THEME_CONFIGS",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/lib/mapThemes.ts",
+      "target": "function:web/src/lib/mapThemes.ts:CATEGORIES",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:web/src/main.tsx",
+      "target": "file:web/src/App.tsx",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "document:AGENTS.md",
+      "target": "concept:the-rule",
+      "type": "documents",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:src/contracts.ts",
+      "target": "schema:src/contracts.ts",
+      "type": "defines_schema",
+      "direction": "forward",
+      "weight": 1
+    }
+  ],
+  "layers": [
+    {
+      "id": "ci",
+      "name": "Ci",
+      "description": "ci layer",
+      "nodeIds": [
+        "pipeline:.github/workflows/cd.yml",
+        "pipeline:.github/workflows/deploy.yml",
+        "pipeline:.github/workflows/ingest.yml",
+        "pipeline:.github/workflows/monastic-visit.yml"
+      ]
+    },
+    {
+      "id": "docs",
+      "name": "Docs",
+      "description": "docs layer",
+      "nodeIds": [
+        "document:AGENTS.md",
+        "document:README.md",
+        "document:ROLL.md",
+        "document:docs/plans/HOUSE_TEST_SPEC.md",
+        "document:docs/walkthroughs/phase4.md",
+        "document:llms.txt",
+        "document:web/README.md"
+      ]
+    },
+    {
+      "id": "app",
+      "name": "App",
+      "description": "app layer",
+      "nodeIds": [
+        "file:engine/describe.js",
+        "file:engine/src/analyze_signs.js",
+        "file:engine/src/check_signs.js",
+        "file:engine/src/fetch.ts",
+        "class:engine/src/fetch.ts:HarvesterClient",
+        "file:engine/src/fetch_liipi.ts",
+        "file:engine/src/fetch_roadworks.ts",
+        "file:engine/src/fetch_signs.ts",
+        "class:engine/src/fetch_signs.ts:HarvesterClient",
+        "file:engine/src/pipeline.ts",
+        "file:engine/src/process.js",
+        "file:engine/src/query.js",
+        "file:engine/src/test_roadworks.ts",
+        "file:engine/src/test_wfs.ts",
+        "file:engine/src/test_winkki.ts",
+        "file:src/mcp-app.ts",
+        "function:src/mcp-app.ts:getParkingMapletTool",
+        "class:src/mcp-app.ts:McpToolResponse",
+        "file:tests/domain-invariants.test.mjs",
+        "function:tests/domain-invariants.test.mjs:calculateParkingDiscArrival",
+        "function:tests/domain-invariants.test.mjs:getCentroid",
+        "function:tests/domain-invariants.test.mjs:isValidDuckDbTableName",
+        "file:web/src/hooks/useParkingLayers.ts",
+        "function:web/src/hooks/useParkingLayers.ts:useParkingLayers",
+        "file:web/src/lib/duckdb.ts",
+        "function:web/src/lib/duckdb.ts:getDuckDB",
+        "function:web/src/lib/duckdb.ts:loadParquet",
+        "file:web/src/lib/mapThemes.ts",
+        "class:web/src/lib/mapThemes.ts:ThemeType",
+        "function:web/src/lib/mapThemes.ts:THEME_CONFIGS",
+        "function:web/src/lib/mapThemes.ts:CATEGORIES",
+        "file:web/src/vite-env.d.ts"
+      ]
+    },
+    {
+      "id": "config",
+      "name": "Config",
+      "description": "config layer",
+      "nodeIds": [
+        "config:engine/package.json",
+        "config:engine/tsconfig.json",
+        "config:federation.neighbors.json",
+        "config:lefthook.yml",
+        "config:package.json",
+        "file:web/eslint.config.js",
+        "config:web/package.json",
+        "config:web/tsconfig.json",
+        "file:web/vite.config.ts"
+      ]
+    },
+    {
+      "id": "tooling",
+      "name": "Tooling",
+      "description": "tooling layer",
+      "nodeIds": [
+        "file:scripts/check-neighbors.mjs",
+        "file:scripts/git-guard.mjs",
+        "file:scripts/monastery-visitor.mjs",
+        "file:scripts/understand.mjs"
+      ]
+    },
+    {
+      "id": "contract",
+      "name": "Contract",
+      "description": "contract layer",
+      "nodeIds": [
+        "file:src/contracts.ts",
+        "function:src/contracts.ts:calculateParkingRiskContract",
+        "class:src/contracts.ts:ParkingRiskContract",
+        "class:src/contracts.ts:CrossRepoQueryContract",
+        "class:src/contracts.ts:SupportedSport",
+        "function:src/contracts.ts:CONTRACT_VERSION",
+        "file:web/src/lib/contracts.ts",
+        "function:web/src/lib/contracts.ts:calculateParkingRiskContract",
+        "class:web/src/lib/contracts.ts:ParkingRiskContract",
+        "class:web/src/lib/contracts.ts:CrossRepoQueryContract",
+        "class:web/src/lib/contracts.ts:SupportedSport",
+        "function:web/src/lib/contracts.ts:CONTRACT_VERSION"
+      ]
+    },
+    {
+      "id": "ui",
+      "name": "Ui",
+      "description": "ui layer",
+      "nodeIds": [
+        "file:web/src/App.tsx",
+        "file:web/src/components/MetadataCatalogueModal.tsx",
+        "function:web/src/components/MetadataCatalogueModal.tsx:MetadataCatalogueModal",
+        "file:web/src/components/ParkingMapView.tsx",
+        "class:web/src/components/ParkingMapView.tsx:Address",
+        "class:web/src/components/ParkingMapView.tsx:ParkingMapViewProps",
+        "function:web/src/components/ParkingMapView.tsx:ParkingMapView",
+        "file:web/src/components/ParkingPopup.tsx",
+        "class:web/src/components/ParkingPopup.tsx:HoverInfo",
+        "function:web/src/components/ParkingPopup.tsx:ParkingPopup",
+        "file:web/src/components/ReservationsDrawer.tsx",
+        "function:web/src/components/ReservationsDrawer.tsx:ReservationsDrawer",
+        "file:web/src/lib/helsinkiCaseParser.tsx",
+        "class:web/src/lib/helsinkiCaseParser.tsx:HelCaseDetails",
+        "class:web/src/lib/helsinkiCaseParser.tsx:RentInfo",
+        "file:web/src/main.tsx"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "The Rule",
+      "description": "Read AGENTS.md before changing code.",
+      "nodeIds": [
+        "document:AGENTS.md",
+        "concept:the-rule"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Treaty",
+      "description": "Contract fields this house must keep.",
+      "nodeIds": [
+        "schema:src/contracts.ts"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "Services",
+      "description": "API clients and TASO cache policy.",
+      "nodeIds": [
+        "endpoint:scripts/check-neighbors.mjs:taso",
+        "endpoint:scripts/understand.mjs:taso",
+        "endpoint:web/src/App.tsx:taso",
+        "endpoint:web/src/hooks/useParkingLayers.ts:taso"
+      ]
+    },
+    {
+      "order": 4,
+      "title": "UI",
+      "description": "Pages the family actually opens.",
+      "nodeIds": [
+        "file:web/src/App.tsx",
+        "file:web/src/components/MetadataCatalogueModal.tsx",
+        "file:web/src/components/ParkingMapView.tsx",
+        "file:web/src/components/ParkingPopup.tsx",
+        "file:web/src/components/ReservationsDrawer.tsx",
+        "file:web/src/lib/helsinkiCaseParser.tsx",
+        "file:web/src/main.tsx"
+      ]
+    },
+    {
+      "order": 5,
+      "title": "Visit gate",
+      "description": "npm run visit + check-neighbors.mjs",
+      "nodeIds": [
+        "file:scripts/check-neighbors.mjs",
+        "endpoint:scripts/check-neighbors.mjs:taso"
+      ]
+    }
+  ]
+}

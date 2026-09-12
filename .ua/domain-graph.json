@@ -1,0 +1,374 @@
+{
+  "version": "1.0.0",
+  "kind": "knowledge",
+  "project": {
+    "name": "Parkkis",
+    "languages": [
+      "javascript",
+      "typescript"
+    ],
+    "frameworks": [
+      "vite"
+    ],
+    "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"—they need to know *safe* spots.",
+    "analyzedAt": "2026-09-12T10:44:08.538Z",
+    "gitCommitHash": "768a951470713b9ba188b41531066eea53ab11d9"
+  },
+  "nodes": [
+    {
+      "id": "domain:Parkkis",
+      "type": "domain",
+      "name": "Parkkis",
+      "summary": "House Parkkis",
+      "tags": [
+        "house"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "flow:matchday",
+      "type": "flow",
+      "name": "Saturday matchday",
+      "summary": "Saturday matchday",
+      "tags": [
+        "flow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "step:matchday:ingest-schedule",
+      "type": "step",
+      "name": "ingest-schedule",
+      "summary": "ingest-schedule",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:matchday:detect-conflict",
+      "type": "step",
+      "name": "detect-conflict",
+      "summary": "detect-conflict",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:matchday:open-stats",
+      "type": "step",
+      "name": "open-stats",
+      "summary": "open-stats",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:matchday:park-and-weather",
+      "type": "step",
+      "name": "park-and-weather",
+      "summary": "park-and-weather",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "flow:taso-cache",
+      "type": "flow",
+      "name": "Torneopal cache",
+      "summary": "Torneopal cache",
+      "tags": [
+        "flow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "step:taso-cache:classify-live-upcoming-played",
+      "type": "step",
+      "name": "classify-live-upcoming-played",
+      "summary": "classify-live-upcoming-played",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:taso-cache:no-store-live",
+      "type": "step",
+      "name": "no-store-live",
+      "summary": "no-store-live",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:taso-cache:short-upcoming",
+      "type": "step",
+      "name": "short-upcoming",
+      "summary": "short-upcoming",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:taso-cache:immutable-played",
+      "type": "step",
+      "name": "immutable-played",
+      "summary": "immutable-played",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "flow:visitation",
+      "type": "flow",
+      "name": "Chapter of Neighbors",
+      "summary": "Chapter of Neighbors",
+      "tags": [
+        "flow"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "step:visitation:lint-test",
+      "type": "step",
+      "name": "lint-test",
+      "summary": "lint-test",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:visitation:contract-freeze",
+      "type": "step",
+      "name": "contract-freeze",
+      "summary": "contract-freeze",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:visitation:peer-agents",
+      "type": "step",
+      "name": "peer-agents",
+      "summary": "peer-agents",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "step:visitation:5-point-plans",
+      "type": "step",
+      "name": "5-point-plans",
+      "summary": "5-point-plans",
+      "tags": [
+        "step"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "domain:pelipaiva",
+      "type": "domain",
+      "name": "pelipaiva",
+      "summary": "Peer monastery pelipaiva",
+      "tags": [
+        "peer"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "domain:sports-federation",
+      "type": "domain",
+      "name": "sports-federation",
+      "summary": "Peer monastery sports-federation",
+      "tags": [
+        "peer"
+      ],
+      "complexity": "simple"
+    }
+  ],
+  "edges": [
+    {
+      "source": "domain:Parkkis",
+      "target": "flow:matchday",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:matchday",
+      "target": "step:matchday:ingest-schedule",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:matchday",
+      "target": "step:matchday:detect-conflict",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.95
+    },
+    {
+      "source": "flow:matchday",
+      "target": "step:matchday:open-stats",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:matchday",
+      "target": "step:matchday:park-and-weather",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.85
+    },
+    {
+      "source": "domain:Parkkis",
+      "target": "flow:taso-cache",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:taso-cache",
+      "target": "step:taso-cache:classify-live-upcoming-played",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:taso-cache",
+      "target": "step:taso-cache:no-store-live",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.95
+    },
+    {
+      "source": "flow:taso-cache",
+      "target": "step:taso-cache:short-upcoming",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:taso-cache",
+      "target": "step:taso-cache:immutable-played",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.85
+    },
+    {
+      "source": "domain:Parkkis",
+      "target": "flow:visitation",
+      "type": "contains_flow",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:visitation",
+      "target": "step:visitation:lint-test",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "flow:visitation",
+      "target": "step:visitation:contract-freeze",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.95
+    },
+    {
+      "source": "flow:visitation",
+      "target": "step:visitation:peer-agents",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "flow:visitation",
+      "target": "step:visitation:5-point-plans",
+      "type": "flow_step",
+      "direction": "forward",
+      "weight": 0.85
+    },
+    {
+      "source": "domain:Parkkis",
+      "target": "domain:pelipaiva",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.9
+    },
+    {
+      "source": "domain:Parkkis",
+      "target": "domain:sports-federation",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.9
+    }
+  ],
+  "layers": [
+    {
+      "id": "domain",
+      "name": "Domain",
+      "description": "Business flows",
+      "nodeIds": [
+        "domain:Parkkis",
+        "flow:matchday",
+        "step:matchday:ingest-schedule",
+        "step:matchday:detect-conflict",
+        "step:matchday:open-stats",
+        "step:matchday:park-and-weather",
+        "flow:taso-cache",
+        "step:taso-cache:classify-live-upcoming-played",
+        "step:taso-cache:no-store-live",
+        "step:taso-cache:short-upcoming",
+        "step:taso-cache:immutable-played",
+        "flow:visitation",
+        "step:visitation:lint-test",
+        "step:visitation:contract-freeze",
+        "step:visitation:peer-agents",
+        "step:visitation:5-point-plans",
+        "domain:pelipaiva",
+        "domain:sports-federation"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "This house",
+      "description": "Parkkis",
+      "nodeIds": [
+        "domain:Parkkis"
+      ]
+    },
+    {
+      "order": 2,
+      "title": "Matchday",
+      "description": "Family Saturday path",
+      "nodeIds": [
+        "flow:matchday"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "Cache & visit",
+      "description": "Live/upcoming cache + neighbor gate",
+      "nodeIds": [
+        "flow:taso-cache",
+        "flow:visitation"
+      ]
+    }
+  ]
+}

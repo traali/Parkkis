@@ -15,7 +15,8 @@
     "test": "node --test tests/domain-invariants.test.mjs",
     "check": "npm run lint && npm run typecheck && npm test",
     "visit": "node scripts/monastery-visitor.mjs",
-    "check:neighbors": "node scripts/check-neighbors.mjs"
+    "check:neighbors": "node scripts/check-neighbors.mjs",
+    "understand": "node scripts/understand.mjs"
   },
   "keywords": [],
   "author": "",
