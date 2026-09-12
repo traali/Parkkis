@@ -30,3 +30,8 @@ Append-only record of architectural decisions, dispensations, rule amendments, a
 - **Verdict:** PASS | PASS WITH FINDINGS | BLOCK
 - **Summary:** <1-2 sentences on what was decided or changed>
 ```
+
+## 2026-09-12 — Chapter of Neighbors
+- **Office / Author:** Legate
+- **Verdict:** PASS
+- **Summary:** Vendored check-neighbors.mjs into visit. Graph: federation.neighbors.json. 5-point HOUSE_TEST_SPEC.md. SupportedSport includes weather. Future contract/rule breaks fail closed.

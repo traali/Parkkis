@@ -1,0 +1,104 @@
+{
+  "version": "1.0.0",
+  "kattorepo": "sports-federation",
+  "canonicalContracts": "https://raw.githubusercontent.com/traali/sports-federation/main/contracts/index.ts",
+  "testPlanStandard": "https://raw.githubusercontent.com/traali/sports-federation/main/docs/plans/TEST_PLAN_STANDARD.md",
+  "requiredCanonicalInterfaces": [
+    "MatchdayContextContract",
+    "ParkingRiskContract",
+    "SportStatsContract",
+    "CrossRepoQueryContract",
+    "WeatherForecastContract"
+  ],
+  "requiredRuleTokens": ["visit", "contract"],
+  "houses": {
+    "pelipaiva": {
+      "branch": "main",
+      "live": "https://pelipaiva.pages.dev",
+      "provides": ["MatchdayContextContract", "ParkingRiskContract", "SportStatsContract", "CrossRepoQueryContract", "WeatherForecastContract"],
+      "needs": ["football-stats", "floorball-stats", "basketball-stats", "volleyball-stats", "Parkkis", "weather-stats"],
+      "taso": null,
+      "role": "hub"
+    },
+    "football-stats": {
+      "branch": "main",
+      "live": "https://football-stats-agk.pages.dev",
+      "provides": ["SportStatsContract", "CrossRepoQueryContract"],
+      "needs": ["pelipaiva", "sports-federation"],
+      "taso": {
+        "sport": "spl",
+        "origin": "https://spl.torneopal.net/taso/rest/getSeasons",
+        "proxy": "https://taso-proxy.sakkoja.workers.dev/spl/getSeasons",
+        "accept": "json/4h7dznqdxwtp3hsfdyf5r793uahfxy7x",
+        "referer": "https://tulospalvelu.palloliitto.fi/"
+      },
+      "role": "satellite"
+    },
+    "floorball-stats": {
+      "branch": "main",
+      "live": "https://floorball-stats.pages.dev",
+      "provides": ["SportStatsContract", "CrossRepoQueryContract"],
+      "needs": ["pelipaiva", "sports-federation"],
+      "taso": {
+        "sport": "ssbl",
+        "origin": "https://salibandy-api.torneopal.net/taso/rest/getTeam?team_id=25301",
+        "proxy": "https://taso-proxy.sakkoja.workers.dev/ssbl/getTeam?team_id=25301",
+        "accept": "json/zsn3anknxzcfzc23k53jqdcd4pymutsf",
+        "referer": "https://tulospalvelu.salibandy.fi/"
+      },
+      "role": "satellite"
+    },
+    "basketball-stats": {
+      "branch": "main",
+      "live": "https://basketball-stats-byu.pages.dev",
+      "provides": ["SportStatsContract", "CrossRepoQueryContract"],
+      "needs": ["pelipaiva", "sports-federation"],
+      "taso": {
+        "sport": "basket",
+        "origin": "https://koripallo-api.torneopal.net/taso/rest/getCompetitions",
+        "proxy": "https://taso-proxy.sakkoja.workers.dev/basket/getCompetitions",
+        "accept": "json/df8e84j9xtdz269euy3h",
+        "referer": "https://tulospalvelu.basket.fi/"
+      },
+      "role": "satellite"
+    },
+    "volleyball-stats": {
+      "branch": "main",
+      "live": "https://volleyball-stats-7xq.pages.dev",
+      "provides": ["SportStatsContract", "CrossRepoQueryContract"],
+      "needs": ["pelipaiva", "sports-federation"],
+      "taso": {
+        "sport": "volley",
+        "origin": "https://lentopallo-api.torneopal.net/taso/rest/getCompetitions",
+        "proxy": "https://taso-proxy.sakkoja.workers.dev/volley/getCompetitions",
+        "accept": "json/df8e84j9xtdz269euy3h",
+        "referer": "https://lentopallo.torneopal.net/"
+      },
+      "role": "satellite"
+    },
+    "Parkkis": {
+      "branch": "master",
+      "live": "https://parkkis.pages.dev",
+      "provides": ["ParkingRiskContract", "CrossRepoQueryContract"],
+      "needs": ["pelipaiva", "sports-federation"],
+      "taso": null,
+      "role": "satellite"
+    },
+    "weather-stats": {
+      "branch": "main",
+      "live": "https://weather-stats.pages.dev",
+      "provides": ["WeatherForecastContract", "CrossRepoQueryContract"],
+      "needs": ["pelipaiva", "sports-federation"],
+      "taso": null,
+      "role": "satellite"
+    },
+    "sports-federation": {
+      "branch": "main",
+      "live": null,
+      "provides": ["MatchdayContextContract", "ParkingRiskContract", "SportStatsContract", "CrossRepoQueryContract", "WeatherForecastContract"],
+      "needs": ["pelipaiva", "football-stats", "floorball-stats", "basketball-stats", "volleyball-stats", "Parkkis", "weather-stats"],
+      "taso": null,
+      "role": "kattorepo"
+    }
+  }
+}

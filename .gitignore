@@ -8,3 +8,4 @@ dist
 web/dist
 web/public/data/*.parquet
 *.log
+.agent/visitations/neighbors-*.json

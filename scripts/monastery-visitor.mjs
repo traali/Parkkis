@@ -52,4 +52,14 @@ if (!fs.existsSync(VISITATIONS_DIR)) {
 
 console.log('================================================================');
 console.log('✨ [MONASTERY] Pre-conditions met! Ready for Clean-Room Visitor.');
+
+// Chapter of Neighbors — peer monasteries, contracts, plans
+try {
+  console.log('🔗 Chapter of Neighbors (peer monasteries + contracts + plans)...')
+  execSync('node scripts/check-neighbors.mjs', { stdio: 'inherit', cwd: ROOT })
+} catch {
+  console.error('❌ [BLOCKER] Neighbor check failed. Peer houses must stay in line.')
+  process.exit(1)
+}
+
 console.log('================================================================\n');

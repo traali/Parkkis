@@ -5,7 +5,7 @@
 
 export const CONTRACT_VERSION = "1.0.0" as const;
 
-export type SupportedSport = "football" | "volleyball" | "floorball" | "basketball" | "other";
+export type SupportedSport = "football" | "volleyball" | "floorball" | "basketball" | "weather" | "other";
 
 export interface ParkingRiskContract {
   venueSlug: string;
