@@ -13,9 +13,6 @@ jobs:
   pages:
     name: Deploy Cloudflare Pages (production)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
     steps:
       - name: Token present?
         id: token
@@ -43,17 +40,19 @@ jobs:
 
       - name: Install Dependencies
         if: steps.token.outputs.present == 'true'
+        working-directory: web
         run: npm ci || npm install
 
       - name: Build Production Frontend
         if: steps.token.outputs.present == 'true'
+        working-directory: web
         run: npm run build
 
       - name: Deploy Cloudflare Pages production alias
         if: steps.token.outputs.present == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${ secrets.CLOUDFLARE_API_TOKEN }
-          accountId: ${ secrets.CLOUDFLARE_ACCOUNT_ID }
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: web
           command: pages deploy dist --project-name=parkkis --commit-dirty=true
