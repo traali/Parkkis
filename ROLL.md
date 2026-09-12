@@ -15,6 +15,11 @@ Append-only record of architectural decisions, dispensations, rule amendments, a
 - **Verdict:** PASS
 - **Summary:** Standalone MapLibre GL maplet widget exposes 1-10 risk gauge and fine density to AI hosts via `ui://parkkis/maplet` while leaving existing web UI 100% intact.
 
+## 2026-09-12 — Chapter of Faults: title + CD
+- **Office / Author:** Cellarer
+- **Verdict:** PASS WITH FINDINGS
+- **Summary:** `<title>` is ParkkiS. Added `.github/workflows/cd.yml` (project `parkkis`). Production still lags until `CLOUDFLARE_API_TOKEN` has Account.Cloudflare Pages:Edit. Parent: traali/sports-federation#1. House: #18.
+
 ---
 
 ## Format for New Entries:
