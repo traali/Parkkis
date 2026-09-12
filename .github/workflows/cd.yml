@@ -12,16 +12,29 @@ permissions:
 jobs:
   pages:
     name: Deploy Cloudflare Pages (production)
-    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: web
     steps:
+      - name: Token present?
+        id: token
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -n "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::CLOUDFLARE_API_TOKEN missing — skipping Pages deploy (Cellarer)"
+          fi
+
       - name: Checkout Code
+        if: steps.token.outputs.present == 'true'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: steps.token.outputs.present == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -29,15 +42,18 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Install Dependencies
+        if: steps.token.outputs.present == 'true'
         run: npm ci || npm install
 
       - name: Build Production Frontend
+        if: steps.token.outputs.present == 'true'
         run: npm run build
 
       - name: Deploy Cloudflare Pages production alias
+        if: steps.token.outputs.present == 'true'
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${ secrets.CLOUDFLARE_API_TOKEN }
+          accountId: ${ secrets.CLOUDFLARE_ACCOUNT_ID }
           workingDirectory: web
           command: pages deploy dist --project-name=parkkis --commit-dirty=true
