@@ -607,7 +607,7 @@ function metersBetween(
             <span className="font-bold text-nc-neon-teal">ParkkiS</span>
             <span>•</span>
             <span>v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0"}</span>
-            <span>(git:{typeof __COMMIT_HASH__ !== "undefined" ? __COMMIT_HASH__ : "dev"})</span>
+            <span className="hidden sm:inline">(git:{typeof __COMMIT_HASH__ !== "undefined" ? __COMMIT_HASH__ : "dev"})</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -628,12 +628,12 @@ function metersBetween(
             {isFooterCollapsed ? (
               <>
                 <Info className="w-3.5 h-3.5 text-nc-neon-teal" />
-                <span>Show Safety Guide & Info</span>
+                <span>Näytä ohje</span>
               </>
             ) : (
               <>
                 <X className="w-3.5 h-3.5 text-nc-neon-red" />
-                <span>Hide Info Panel</span>
+                <span>Piilota ohje</span>
               </>
             )}
           </button>
@@ -646,12 +646,12 @@ function metersBetween(
               <div className="flex items-center gap-3 mb-2">
                 <MapIcon className="w-4 h-4 text-nc-neon-teal" />
                 <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
-                  How to Use
+                  Käyttö
                 </span>
               </div>
-              <p className="text-[14px] font-bold text-nc-text">Tap to Inspect</p>
+              <p className="text-[14px] font-bold text-nc-text">Napauta paikkaa</p>
               <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                Click or hover on any parking line, sign pole, or highlight to check if it's safe to park.
+                Napauta parkkiviivaa tai merkkiä. Katso aina myös kadun kyltti.
               </p>
             </div>
 
@@ -659,12 +659,12 @@ function metersBetween(
               <div className="flex items-center gap-3 mb-2">
                 <Shield className="w-4 h-4 text-nc-gold" />
                 <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
-                  Mapped Fines
+                  Sakot kartalla
                 </span>
               </div>
-              <p className="text-[14px] font-bold text-nc-text">165.7k Tickets Mapped</p>
+              <p className="text-[14px] font-bold text-nc-text">165 700 sakkoa</p>
               <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                We analyze fine density around parking spots so you can instantly recognize high-risk zones.
+                Kartta näyttää, missä sakkoja on annettu paljon.
               </p>
             </div>
 
@@ -672,12 +672,12 @@ function metersBetween(
               <div className="flex items-center gap-3 mb-2">
                 <Sliders className="w-4 h-4 text-nc-neon-teal" />
                 <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
-                  Live Guidance
+                  Muista
                 </span>
               </div>
-              <p className="text-[14px] font-bold text-nc-text">Signs Override Map</p>
+              <p className="text-[14px] font-bold text-nc-text">Kyltti voittaa kartan</p>
               <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                Signage and construction change frequently. Always confirm safety against physical street signs!
+                Työmaa ja kyltit muuttuvat. Varmista paikka kadun merkistä.
               </p>
             </div>
           </div>

@@ -13,7 +13,7 @@ export function useParkingLayers() {
   const [reservationData, setReservationData] = useState<FeatureCollection | null>(null);
   const [liipiData, setLiipiData] = useState<FeatureCollection | null>(null);
   const [hubiData, setHubiData] = useState<FeatureCollection | null>(null);
-  const [loadingMsg, setLoadingMsg] = useState("Initializing Helsinki Parking Safety Map...");
+  const [loadingMsg, setLoadingMsg] = useState("Avataan Helsingin parkkikarttaa...");
 
   // Layer visibility toggles
   const [activeFilter, setActiveFilter] = useState("all");
@@ -57,7 +57,7 @@ export function useParkingLayers() {
   useEffect(() => {
     const initData = async () => {
       try {
-        setLoadingMsg("Loading local parking spots...");
+        setLoadingMsg("Ladataan pysäköintipaikkoja...");
 
         const baseUrl = import.meta.env.BASE_URL.endsWith("/")
           ? import.meta.env.BASE_URL
@@ -79,7 +79,7 @@ export function useParkingLayers() {
           loadParquet("hubi", hubiUrl),
         ]);
 
-        setLoadingMsg("Calculating parking risk areas...");
+        setLoadingMsg("Lasketaan sakkoriskiä...");
         const db = await getDuckDB();
         const conn = await db.connect();
 
@@ -123,7 +123,7 @@ export function useParkingLayers() {
  
         setRiskData(safeGeoJSON({ type: "FeatureCollection" as const, features: slotFeatures }));
 
-        setLoadingMsg("Mapping fine locations city-wide...");
+        setLoadingMsg("Merkitään sakkoja kartalle...");
         const violationResult = await conn.query(`
           SELECT ST_AsGeoJSON(geom) as geometry
           FROM violations
@@ -136,7 +136,7 @@ export function useParkingLayers() {
         }));
         setViolationData(safeGeoJSON({ type: "FeatureCollection" as const, features: violationFeatures }));
 
-        setLoadingMsg("Indexing street parking signs...");
+        setLoadingMsg("Luetaan pysäköintimerkkejä...");
         const signResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry,
@@ -169,7 +169,7 @@ export function useParkingLayers() {
 
         setSignData(safeGeoJSON({ type: "FeatureCollection" as const, features: signFeatures }));
 
-        setLoadingMsg("Scanning for active construction & reservations...");
+        setLoadingMsg("Haetaan työmaita ja varauksia...");
         const HEL_WFS = "https://kartta.hel.fi/ws/geoserver/avoindata/wfs";
         const wfsParams = (typeName: string, filter: string) =>
           `${HEL_WFS}?service=WFS&version=2.0.0&request=GetFeature&typeName=${typeName}&outputFormat=application/json&srsName=EPSG:4326&cql_filter=${encodeURIComponent(filter)}&count=2000`;
@@ -199,7 +199,7 @@ export function useParkingLayers() {
           setReservationData(safeGeoJSON(rentsData as FeatureCollection));
         }
  
-        setLoadingMsg("Loading Park & Ride connections...");
+        setLoadingMsg("Haetaan liityntäpysäköintiä...");
         const liipiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
@@ -216,7 +216,7 @@ export function useParkingLayers() {
         };
         setLiipiData(safeGeoJSON(liipiGeoJSON));
 
-        setLoadingMsg("Connecting to public parking database...");
+        setLoadingMsg("Yhdistetään pysäköintitietoon...");
         const hubiResult = await conn.query(`
           SELECT 
             ST_AsGeoJSON(geom) as geometry, 
@@ -237,7 +237,7 @@ export function useParkingLayers() {
         setDbReady(true);
       } catch (e) {
         console.error("Data Engine Failure:", e);
-        setLoadingMsg("Failed to initialize. Check console.");
+        setLoadingMsg("Kartta ei auennut. Yritä uudelleen.");
       }
     };
     initData();
