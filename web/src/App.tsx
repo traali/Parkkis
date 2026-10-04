@@ -80,7 +80,9 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [theme, setTheme] = useState<ThemeType>("dark");
-  const [isFooterCollapsed, setIsFooterCollapsed] = useState(false);
+  const [isFooterCollapsed, setIsFooterCollapsed] = useState(
+    () => typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches
+  );
   const [showResList, setShowResList] = useState(false);
   const [resSearchQuery, setResSearchQuery] = useState("");
   const [resCategory, setResCategory] = useState("all");
@@ -390,7 +392,7 @@ function metersBetween(
 
       {/* Nova HUD */}
       <div className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none">
-        <div className="flex justify-between items-start w-full">
+        <div className="flex flex-col gap-2 w-full pr-16 sm:pr-0 sm:flex-row sm:justify-between sm:items-start">
           <div className="flex flex-col gap-4 w-full max-w-md pointer-events-auto">
             {/* Search Bar */}
             <div className="nv-glass rounded-3xl p-1 flex items-center shadow-2xl border border-nc-border">
@@ -399,7 +401,7 @@ function metersBetween(
               </div>
               <input
                 type="text"
-                placeholder="Search address (e.g. Mannerheimintie 1)"
+                placeholder="Hae osoite, esim. Mannerheimintie 1"
                 className="bg-transparent border-none text-nc-text text-sm w-full py-3 focus:outline-none placeholder:text-nc-text-dim"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
