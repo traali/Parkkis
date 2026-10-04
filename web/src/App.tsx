@@ -6,7 +6,6 @@ import type {
 import "maplibre-gl/dist/maplibre-gl.css";
 import type maplibregl from "maplibre-gl";
 import { ParkingMapView, type Address } from "./components/ParkingMapView";
-import * as turf from "@turf/turf";
 import {
   Filter,
   Info,
@@ -250,15 +249,24 @@ export default function App() {
   }, []);
 
 
+function metersBetween(
+  a: { longitude: number; latitude: number },
+  b: { longitude: number; latitude: number }
+) {
+  const rad = Math.PI / 180;
+  const dLat = (b.latitude - a.latitude) * rad;
+  const dLon = (b.longitude - a.longitude) * rad;
+  const lat1 = a.latitude * rad;
+  const lat2 = b.latitude * rad;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
   const calculateDistance = () => {
     if (!selectedAddress || !hoverInfo) return null;
-    const from = turf.point([
-      selectedAddress.longitude,
-      selectedAddress.latitude,
-    ]);
-    const to = turf.point([hoverInfo.longitude, hoverInfo.latitude]);
-    const d = turf.distance(from, to, { units: "kilometers" });
-    return (d * 1000).toFixed(0); // Meters
+    return metersBetween(selectedAddress, hoverInfo).toFixed(0);
   };
 
   const walkTime = (meters: string) => {
