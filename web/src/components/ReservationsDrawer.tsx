@@ -66,7 +66,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
             <Search className="w-4 h-4 absolute left-3 text-nc-neon-teal" />
             <input
               type="text"
-              placeholder="Search description, applicant, ID..."
+              placeholder="Hae varausta, hakijaa tai tunnusta"
               className="w-full pl-9 pr-8 py-2 bg-nc-void/60 border border-nc-border/60 rounded-2xl text-xs text-nc-text placeholder:text-nc-text-dim focus:outline-none focus:border-nc-neon-teal transition-colors"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
