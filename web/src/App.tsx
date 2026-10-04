@@ -131,6 +131,7 @@ export default function App() {
         setSearchResults(data.results || []);
       } catch (err) {
         console.error("Search failed:", err);
+        setSearchResults([]);
       }
     }, 300);
 
