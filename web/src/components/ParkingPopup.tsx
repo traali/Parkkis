@@ -3,6 +3,22 @@ import { Navigation, Shield } from "lucide-react";
 import { parseJsonSafe, getCategoryLabel, getSignVisuals, getSignLabel } from "../lib/mapThemes";
 import { renderTextWithLinks } from "../lib/helsinkiCaseParser";
 
+const LIIPI_STATUS: Record<string, string> = {
+  IN_OPERATION: "Käytössä",
+  INACTIVE: "Ei käytössä",
+  TEMPORARILY_CLOSED: "Tilapäisesti suljettu",
+  EXCEPTIONAL_SITUATION: "Poikkeustilanne",
+};
+
+const LIIPI_CAPACITY: Record<string, string> = {
+  CAR: "🚗 Autopaikat",
+  BICYCLE: "🚲 Pyöräpaikat",
+  BICYCLE_SECURE_SPACE: "🔒 Pyöräsuoja",
+  DISABLED: "♿ Inva-paikat",
+  ELECTRIC_CAR: "🔌 Sähköautopaikat",
+  MOTORCYCLE: "🏍️ Moottoripyöräpaikat",
+};
+
 export interface HoverInfo {
   longitude: number;
   latitude: number;
@@ -31,81 +47,105 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
         <>
           <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
             <h3 className="font-bold text-nc-neon-teal leading-tight flex items-center gap-1.5">
-              🚲 Park & Ride
+              🅿️ Liityntäpysäköinti
             </h3>
             <span className="bg-nc-neon-teal/20 text-nc-neon-teal font-black px-2 py-0.5 rounded text-[10px] uppercase">
-              {String(hoverInfo.properties.status || "").replace("_", " ")}
+              {LIIPI_STATUS[String(hoverInfo.properties.status || "")] || String(hoverInfo.properties.status || "")}
             </span>
           </div>
           <div className="space-y-2 mt-2">
             <p className="text-sm font-bold text-nc-text leading-snug">
               {(() => {
+                if (hoverInfo.properties.name_fi) return String(hoverInfo.properties.name_fi);
                 const nameObj = parseJsonSafe(hoverInfo.properties.name);
-                return nameObj?.fi || nameObj?.en || nameObj?.sv || String(hoverInfo.properties.name || "");
+                return nameObj?.fi || nameObj?.en || nameObj?.sv || "";
               })()}
             </p>
             <div className="bg-nc-text/5 border border-nc-border/40 rounded-xl p-3 space-y-1.5">
               <span className="block text-[9px] text-nc-text-dim uppercase font-black tracking-wider">
-                Commuter Capacity
+                Paikkamäärä
               </span>
               {(() => {
                 const capObj = parseJsonSafe(hoverInfo.properties.builtCapacity);
                 return capObj ? (
                   Object.entries(capObj).map(([key, val]) => (
                     <div key={key} className="flex items-center justify-between text-xs">
-                      <span className="text-nc-text-muted capitalize font-medium">
-                        {key === "CAR" ? "🚗 Car Spaces" : key === "BICYCLE" ? "🚲 Bicycle Spaces" : `🔌 ${key}`}
+                      <span className="text-nc-text-muted font-medium">
+                        {LIIPI_CAPACITY[key] || key}
                       </span>
-                      <span className="font-bold text-nc-text">{String(val)} slots</span>
+                      <span className="font-bold text-nc-text">{String(val)}</span>
                     </div>
                   ))
                 ) : (
-                  <span className="text-xs text-nc-text-muted italic">Capacity not specified</span>
+                  <span className="text-xs text-nc-text-muted italic">Ei tietoa</span>
                 );
               })()}
             </div>
+            <p className="text-[9px] text-nc-text-dim leading-tight">
+              Lähde: Fintraffic (tallenne). Tarkista ajantasainen tila paikan päältä.
+            </p>
           </div>
         </>
       ) : hoverInfo.layerId === "hubi-lines" ? (
         <>
           <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
             <h3 className="font-bold text-nc-neon-teal leading-tight flex items-center gap-1.5">
-              🏢 Public Facility
+              🅿️ Pysäköintialue
             </h3>
             <span className="bg-nc-neon-teal/20 text-nc-neon-teal font-black px-2 py-0.5 rounded text-[10px] uppercase">
               Parkkihubi
             </span>
           </div>
           <div className="space-y-2 mt-2">
-            <p className="text-[10px] text-nc-text-dim uppercase font-black">Facility ID</p>
-            <p className="text-xs font-mono text-nc-text leading-tight truncate">{String(hoverInfo.properties.id || "")}</p>
             <div className="bg-nc-text/5 border border-nc-border/40 rounded-xl p-3 flex justify-between items-center">
               <div>
                 <span className="block text-[9px] text-nc-text-dim uppercase font-black tracking-wider">
-                  Estimated Capacity
+                  Arvioitu paikkamäärä
                 </span>
-                <span className="text-xs font-medium text-nc-text-muted">Public Hub</span>
+                <span className="text-xs font-medium text-nc-text-muted">Parkkihubi</span>
               </div>
               <span className="text-sm font-black text-nc-text">
-                {hoverInfo.properties.capacity_estimate ? `${hoverInfo.properties.capacity_estimate} slots` : "Open space"}
+                {hoverInfo.properties.capacity_estimate ? `${hoverInfo.properties.capacity_estimate} paikkaa` : "Ei tietoa"}
               </span>
             </div>
           </div>
         </>
+      ) : hoverInfo.layerId === "roadwork-fill" ? (
+        <div className="space-y-2">
+          <p className="text-sm text-nc-gold font-bold uppercase tracking-wider flex items-center gap-1.5">
+            🚧 {String(hoverInfo.properties.work_kind || "Katutyö")}
+          </p>
+          {hoverInfo.properties.work_address && (
+            <p className="text-xs text-nc-text font-bold leading-snug">{String(hoverInfo.properties.work_address)}</p>
+          )}
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="bg-nc-text/5 rounded p-2">
+              <span className="block text-[9px] text-nc-text-dim uppercase font-bold">Alkaa</span>
+              <span className="text-[11px] font-bold text-nc-text">{String(hoverInfo.properties.work_start || "?")}</span>
+            </div>
+            <div className="bg-nc-text/5 rounded p-2">
+              <span className="block text-[9px] text-nc-text-dim uppercase font-bold">Päättyy</span>
+              <span className="text-[11px] font-bold text-nc-text">{String(hoverInfo.properties.work_end || "?")}</span>
+            </div>
+          </div>
+          <div className="text-[9px] text-nc-text-dim">
+            {hoverInfo.properties.work_id ? `Tunnus: ${hoverInfo.properties.work_id} · ` : ""}Lähde: Helsingin kaupunki
+          </div>
+        </div>
       ) : (
         <>
           <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
             <h3 className="font-bold text-nc-text leading-tight">
-              {hoverInfo.properties.tyyppi || "Parking Area"}
+              {hoverInfo.properties.tyyppi || "Pysäköintipaikka"}
             </h3>
             {hoverInfo.properties.is_new && (
               <span className="bg-nc-neon-teal text-nc-deep font-black px-2 py-0.5 rounded text-[10px] ml-2 animate-pulse">
-                NEW RULE
+                UUSI MERKKI
               </span>
             )}
             {hoverInfo.properties.asukaspysakointitunnus && (
               <span className="bg-nc-purple text-nc-text font-black px-2 py-0.5 rounded text-xs ml-2 shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.5)]">
-                Zone {hoverInfo.properties.asukaspysakointitunnus}
+                Vyöhyke {hoverInfo.properties.asukaspysakointitunnus}
               </span>
             )}
           </div>
@@ -114,7 +154,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
           <div className="flex items-center justify-between mb-4 bg-nc-text/5 rounded-xl p-3 border border-nc-border">
             <div className="flex flex-col">
               <span className="text-[10px] text-nc-text-dim uppercase font-black tracking-wider">
-                Parking Risk
+                Sakkoriski
               </span>
               <span
                 className={`text-xl font-black ${
@@ -127,22 +167,22 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                 }`}
               >
                 {hoverInfo.isRoadworkConflict
-                  ? "Restricted"
+                  ? "Tarkista"
                   : Number(hoverInfo.properties.risk_score ?? 0) > 7
-                    ? "High Risk"
+                    ? "Korkea"
                     : Number(hoverInfo.properties.risk_score ?? 0) > 3
-                      ? "Moderate Risk"
-                      : "Low Risk"}
+                      ? "Kohtalainen"
+                      : "Matala"}
               </span>
             </div>
             <div className="text-right">
               <span className="text-[10px] text-nc-text-dim uppercase font-black block">
-                Tickets Mapped
+                Sakot lähellä (2023)
               </span>
               <span className="text-sm font-bold text-nc-text">
-                {hoverInfo.properties.fine_count !== undefined
-                  ? `${hoverInfo.properties.fine_count} fines`
-                  : "0 fines"}
+                {hoverInfo.properties.fine_count !== undefined && hoverInfo.properties.fine_count !== null
+                  ? `${hoverInfo.properties.fine_count} kpl`
+                  : "–"}
               </span>
             </div>
           </div>
@@ -150,10 +190,10 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
           {hoverInfo.isRoadworkConflict && (
             <div className="bg-nc-danger/20 border border-nc-danger/50 rounded p-2 mb-3 animate-pulse">
               <span className="block text-xs text-nc-danger font-black uppercase mb-1">
-                ⚠️ ROADWORK CONFLICT
+                ⚠️ Työmaa tai vuokra-alue
               </span>
               <p className="text-[10px] text-nc-text-muted leading-tight">
-                This spot is currently restricted due to active street works.
+                Paikka on voimassa olevan työmaan tai katualueen vuokra-alueen kohdalla. Tarkista kyltit paikan päällä.
               </p>
             </div>
           )}
@@ -163,7 +203,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
             <div className="space-y-3">
               <p className="text-xs text-nc-neon-teal font-black uppercase tracking-wider border-b border-nc-neon-teal/20 pb-1.5 flex items-center gap-1.5">
                 <Shield className="w-3.5 h-3.5" />
-                Sign Pole Stack ({hoverInfo.stackedSigns.length} Signs)
+                Liikennemerkit ({hoverInfo.stackedSigns.length})
               </p>
 
               <div className="relative pl-4 space-y-3 before:content-[''] before:absolute before:left-[5px] before:top-2 before:bottom-2 before:w-[2px] before:bg-nc-text-dim/30">
@@ -229,7 +269,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
               {hoverInfo.properties.rental_subject ? (
                 <>
                   <p className="text-sm text-orange-400 font-bold uppercase tracking-wider flex items-center gap-1.5">
-                    🔶 Temporary Reservation
+                    🔶 Katualueen vuokraus
                   </p>
                   <div className="bg-orange-400/10 border border-orange-400/30 rounded p-2">
                     <p className="text-xs text-orange-300 font-bold mb-1">{hoverInfo.properties.rental_subject}</p>
@@ -240,17 +280,17 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                 </>
               ) : (
                 <p className="text-sm text-nc-gold font-bold uppercase tracking-wider flex items-center gap-1.5">
-                  🚧 Street Work
+                  🚧 Katutyö
                 </p>
               )}
               <div className="grid grid-cols-2 gap-1.5">
                 <div className="bg-nc-text/5 rounded p-2">
-                  <span className="block text-[9px] text-nc-text-dim uppercase font-bold">From</span>
+                  <span className="block text-[9px] text-nc-text-dim uppercase font-bold">Alkaa</span>
                   <span className="text-[11px] font-bold text-nc-text">{hoverInfo.properties.event_startdate_txt || hoverInfo.properties.lic_startdate_txt || "?"}</span>
                 </div>
                 <div className="bg-nc-text/5 rounded p-2">
-                  <span className="block text-[9px] text-nc-text-dim uppercase font-bold">Until</span>
-                  <span className="text-[11px] font-bold text-nc-text">{hoverInfo.properties.event_endtdate_txt || hoverInfo.properties.lic_enddate_txt || "Open"}</span>
+                  <span className="block text-[9px] text-nc-text-dim uppercase font-bold">Päättyy</span>
+                  <span className="text-[11px] font-bold text-nc-text">{hoverInfo.properties.event_endtdate_txt || hoverInfo.properties.lic_enddate_txt || "?"}</span>
                 </div>
               </div>
               {hoverInfo.properties.event_description && (
@@ -262,7 +302,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                 <p className="text-[10px] text-nc-text-muted italic">{hoverInfo.properties.location_description}</p>
               )}
               <div className="text-[9px] text-nc-text-dim">
-                Permit: {hoverInfo.properties.licence_identifier}
+                Lupa: {hoverInfo.properties.licence_identifier} · Lähde: Helsingin kaupunki
               </div>
             </div>
           ) : (
@@ -274,10 +314,10 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
               {hoverInfo.properties.asukaspysakointitunnus && (
                 <div className="bg-nc-purple/10 border border-nc-purple/30 rounded p-2 mb-3">
                   <p className="text-[10px] text-nc-purple font-bold uppercase mb-1">
-                    Resident Privilege
+                    Asukaspysäköinti
                   </p>
                   <p className="text-[10px] text-nc-text-muted leading-tight">
-                    Requires permit for Zone {hoverInfo.properties.asukaspysakointitunnus}. Others must follow time rules below.
+                    Vyöhykkeen {hoverInfo.properties.asukaspysakointitunnus} asukastunnuksella saa pysäköidä. Muut noudattavat alla olevia aikoja ja maksuja.
                   </p>
                 </div>
               )}
@@ -285,27 +325,36 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
               <div className="grid grid-cols-2 gap-2 mt-2">
                 <div className="bg-nc-text/5 rounded p-2">
                   <span className="block text-xs text-nc-text-dim uppercase">
-                    Time Rules
+                    Voimassa
                   </span>
                   <span className="font-bold text-nc-text text-sm">
-                    {hoverInfo.properties.voimassaolo || "-"}
-                    {hoverInfo.properties.kesto ? ` (${hoverInfo.properties.kesto})` : ""}
+                    {hoverInfo.properties.voimassaolo || "–"}
+                    {hoverInfo.properties.kesto ? ` · enint. ${hoverInfo.properties.kesto}` : ""}
                   </span>
+                  {String(hoverInfo.properties.voimassaolo || "").includes("(") && (
+                    <span className="block text-[9px] text-nc-text-dim leading-tight mt-0.5">
+                      Arkisin, suluissa lauantaisin
+                    </span>
+                  )}
                 </div>
                 <div className="bg-nc-text/5 rounded p-2">
                   <span className="block text-xs text-nc-text-dim uppercase">
-                    Capacity
+                    Paikkoja
                   </span>
                   <span className="font-bold text-nc-text text-sm">
-                    {hoverInfo.properties.paikat_ala || "?"} slots
+                    {hoverInfo.properties.paikat_ala ? String(hoverInfo.properties.paikat_ala) : "Ei tietoa"}
                   </span>
                 </div>
               </div>
 
+              {hoverInfo.properties.lisatieto && (
+                <p className="text-[10px] text-nc-text-muted leading-tight mt-2">{String(hoverInfo.properties.lisatieto)}</p>
+              )}
+
               {Number(hoverInfo.properties.risk_score ?? 0) >= 3 && hoverInfo.properties.top_violation_reason && (
                 <div className="bg-nc-danger/10 border border-nc-danger/30 rounded p-2 mt-2">
                   <span className="block text-xs text-nc-danger uppercase mb-1 font-bold">
-                    ⚠️ Top Violation Cause
+                    ⚠️ Yleisin sakon syy (2023)
                   </span>
                   <span className="text-xs text-nc-text-muted leading-tight block">
                     {String(hoverInfo.properties.top_violation_reason || "").replace(/^\d+\s+/, "")}
@@ -323,7 +372,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
             <Navigation className="w-4 h-4 text-nc-neon-teal" />
             <div>
               <div className="text-[10px] text-nc-text-dim uppercase font-black">
-                Target Destination
+                Kohde
               </div>
               <div className="text-xs text-nc-text font-bold truncate max-w-[120px]">
                 {selectedAddress?.name}
@@ -335,7 +384,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
               {distance}m
             </div>
             <div className="text-[10px] text-nc-text-dim uppercase">
-              ~{walkTime(distance)} min walk
+              ~{walkTime(distance)} min kävellen (linnuntietä)
             </div>
           </div>
         </div>

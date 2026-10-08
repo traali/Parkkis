@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   MapLayerMouseEvent,
   MapRef,
@@ -33,11 +33,78 @@ import type { HoverInfo } from "./components/ParkingPopup";
 
 
 interface SearchResult {
-  id: number;
+  id?: number;
   name: { fi: string; sv: string };
+  municipality?: { name?: { fi?: string; sv?: string } };
   location: {
     coordinates: [number, number];
   };
+}
+
+/** Finland, generously. Anything outside is a broken link, not a venue. */
+const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 };
+/** No mapped Helsinki parking space this close to the venue → say so. */
+const COVERAGE_RADIUS_M = 600;
+
+/**
+ * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
+ * (also accepts ?lng= and ?venue=<name>).
+ */
+function readVenueFromUrl(): Address | null {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const lat = Number.parseFloat(params.get("lat") ?? "");
+    const lon = Number.parseFloat(params.get("lon") ?? params.get("lng") ?? "");
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    if (
+      lat < FINLAND_BOUNDS.minLat || lat > FINLAND_BOUNDS.maxLat ||
+      lon < FINLAND_BOUNDS.minLon || lon > FINLAND_BOUNDS.maxLon
+    ) {
+      console.warn("Parkkis: venue coordinates outside Finland, ignored", lat, lon);
+      return null;
+    }
+    const match = window.location.pathname.match(/^\/venue\/(.+?)\/?$/);
+    let name = "";
+    if (match) {
+      try {
+        name = decodeURIComponent(match[1].replace(/\+/g, " "));
+      } catch {
+        name = match[1];
+      }
+    }
+    if (!name) name = params.get("venue") ?? "";
+    return { latitude: lat, longitude: lon, name: name.trim() || "Kohde" };
+  } catch (err) {
+    console.warn("URL params parsing error in Parkkis:", err);
+    return null;
+  }
+}
+
+function readThemeFromUrl(): ThemeType {
+  const t = new URLSearchParams(window.location.search).get("theme");
+  if (t === "light" || t === "forest") return t;
+  return "dark"; // "dark" and Pelipäivä's "night-captain" are the same theme
+}
+
+function metersBetween(
+  a: { longitude: number; latitude: number },
+  b: { longitude: number; latitude: number },
+) {
+  const rad = Math.PI / 180;
+  const dLat = (b.latitude - a.latitude) * rad;
+  const dLon = (b.longitude - a.longitude) * rad;
+  const lat1 = a.latitude * rad;
+  const lat2 = b.latitude * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+function firstCoordinate(geometry: unknown): [number, number] | null {
+  let c: unknown = (geometry as { coordinates?: unknown } | null)?.coordinates;
+  while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
+  return Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number"
+    ? [c[0], c[1]]
+    : null;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -50,6 +117,7 @@ const INITIAL_VIEW_STATE = {
 export default function App() {
   const {
     dbReady,
+    loadFailed,
     loadingMsg,
     riskData,
     violationData,
@@ -58,6 +126,9 @@ export default function App() {
     reservationData,
     liipiData,
     hubiData,
+    dataFacts,
+    roadworkStatus,
+    reservationStatus,
     activeFilter,
     setActiveFilter,
     showNewTraps,
@@ -70,16 +141,14 @@ export default function App() {
     setShowReservations,
     showSigns,
     setShowSigns,
-    liveRentMap,
-    loadingRentMap,
-    handleFetchLiveRent,
   } = useParkingLayers();
 
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-  const [theme, setTheme] = useState<ThemeType>("dark");
+  const [venueFromLink] = useState<Address | null>(() => readVenueFromUrl());
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(venueFromLink);
+  const [theme, setTheme] = useState<ThemeType>(() => readThemeFromUrl());
   const [isFooterCollapsed, setIsFooterCollapsed] = useState(
     () => typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches
   );
@@ -116,10 +185,7 @@ export default function App() {
 
   // Debounced Search Logic
   useEffect(() => {
-    if (searchQuery.length < 3) {
-      setSearchResults([]);
-      return;
-    }
+    if (searchQuery.length < 3) return;
 
     const delayDebounceFn = setTimeout(async () => {
       try {
@@ -128,7 +194,7 @@ export default function App() {
         );
         if (!response.ok) throw new Error(`Servicemap HTTP ${response.status}`);
         const data = await response.json();
-        setSearchResults(data.results || []);
+        setSearchResults(Array.isArray(data.results) ? data.results : []);
       } catch (err) {
         console.error("Search failed:", err);
       }
@@ -194,77 +260,21 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      const latParam = searchParams.get("lat");
-      const lonParam = searchParams.get("lon") || searchParams.get("lng");
-      const themeParam = searchParams.get("theme");
-
-      if (themeParam && (themeParam === "dark" || themeParam === "light" || themeParam === "forest")) {
-        setTheme(themeParam as ThemeType);
-      }
-
-      if (latParam && lonParam) {
-        const lat = parseFloat(latParam);
-        const lon = parseFloat(lonParam);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          const rawVenue = window.location.pathname.replace(/^\/venue\//, "").replace(/\+/g, " ");
-          const venueName = rawVenue ? decodeURIComponent(rawVenue) : "Ottelukenttä";
-          setSelectedAddress({
-            latitude: lat,
-            longitude: lon,
-            name: venueName,
-          });
-        }
-      }
-    } catch (err) {
-      console.warn("URL params parsing error in Parkkis:", err);
-    }
-  }, []);
-
   const onMapLoad = useCallback(() => {
-    try {
-      const searchParams = new URLSearchParams(window.location.search);
-      const latParam = searchParams.get("lat");
-      const lonParam = searchParams.get("lon") || searchParams.get("lng");
-      if (latParam && lonParam && mapRef.current) {
-        const lat = parseFloat(latParam);
-        const lon = parseFloat(lonParam);
-        if (!isNaN(lat) && !isNaN(lon)) {
-          mapRef.current.flyTo({
-            center: [lon, lat],
-            zoom: 16,
-            pitch: 50,
-            duration: 1500,
-          });
-          return;
-        }
-      }
-    } catch (err) {
-      console.warn("Error centering map on venue params:", err);
+    if (venueFromLink && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [venueFromLink.longitude, venueFromLink.latitude],
+        zoom: 16,
+        pitch: 50,
+        duration: 1500,
+      });
+      return;
     }
-
     if (geoControlRef.current) {
       geoControlRef.current.trigger();
     }
-  }, []);
+  }, [venueFromLink]);
 
-
-function metersBetween(
-  a: { longitude: number; latitude: number },
-  b: { longitude: number; latitude: number }
-) {
-  const rad = Math.PI / 180;
-  const dLat = (b.latitude - a.latitude) * rad;
-  const dLon = (b.longitude - a.longitude) * rad;
-  const lat1 = a.latitude * rad;
-  const lat2 = b.latitude * rad;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
 
   const calculateDistance = () => {
     if (!selectedAddress || !hoverInfo) return null;
@@ -276,6 +286,20 @@ function metersBetween(
   };
 
   const distance = calculateDistance();
+
+  // Is the deep-linked venue inside the area the Helsinki data covers?
+  const venueOutsideData = useMemo(() => {
+    if (!venueFromLink || !riskData) return false;
+    for (const f of riskData.features) {
+      const c = firstCoordinate(f.geometry);
+      if (c && metersBetween(venueFromLink, { longitude: c[0], latitude: c[1] }) <= COVERAGE_RADIUS_M) {
+        return false;
+      }
+    }
+    return true;
+  }, [venueFromLink, riskData]);
+
+  const visibleSearchResults = searchQuery.length >= 3 ? searchResults : [];
 
   // Dynamic filtered and sorted reservations list
   const getFilteredReservations = () => {
@@ -323,6 +347,10 @@ function metersBetween(
           return nameA.localeCompare(nameB);
         }
         
+        if (resSortBy === "id") {
+          return String(propsA.licence_identifier || "").localeCompare(String(propsB.licence_identifier || ""));
+        }
+
         if (resSortBy === "end") {
           const endA = String(propsA.event_enddate || propsA.licence_enddate || "9999-12-31");
           const endB = String(propsB.event_enddate || propsB.licence_enddate || "9999-12-31");
@@ -418,12 +446,12 @@ function metersBetween(
             </div>
 
             {/* Search Results */}
-            {searchResults.length > 0 && (
+            {visibleSearchResults.length > 0 && (
               <div className="nv-glass rounded-2xl overflow-hidden border border-nc-border shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
-                {searchResults.map((result: SearchResult) => (
+                {visibleSearchResults.map((result: SearchResult) => (
                   <button
                     type="button"
-                    key={result.id}
+                    key={`${result.name.fi}-${result.location.coordinates.join(",")}`}
                     onClick={() => onSelectAddress(result)}
                     className="w-full text-left px-4 py-3 hover:bg-nc-neon-teal/10 transition-colors border-b border-nc-border/40 last:border-0 group flex items-center gap-3"
                   >
@@ -433,7 +461,7 @@ function metersBetween(
                         {result.name.fi || result.name.sv}
                       </div>
                       <div className="text-[10px] text-nc-text-dim uppercase tracking-wider">
-                        Helsinki Region
+                        {result.municipality?.name?.fi || result.municipality?.name?.sv || ""}
                       </div>
                     </div>
                   </button>
@@ -442,9 +470,22 @@ function metersBetween(
             )}
           </div>
 
+          {venueFromLink && venueOutsideData && (
+            <div
+              data-testid="venue-coverage-note"
+              className="nv-glass rounded-3xl px-5 py-3 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-nc-gold/40"
+            >
+              <b className="text-nc-gold">{venueFromLink.name}:</b> ParkkiS-aineisto kattaa Helsingin kantakaupungin ja asukasvyöhykkeiden kadut.
+              Tämän paikan lähellä ei ole Helsingin pysäköintitietoja, joten katso pysäköinti paikan omista ohjeista ja kylteistä.
+            </div>
+          )}
+
           {!dbReady && (
-            <div className="nv-glass rounded-3xl px-6 py-3 flex items-center gap-3 animate-pulse">
-              <div className="w-2 h-2 rounded-full bg-nc-neon-teal shadow-[0_0_10px_#00f2ff]" />
+            <div
+              data-testid="loading-status"
+              className={`nv-glass rounded-3xl px-6 py-3 flex items-center gap-3 ${loadFailed ? "border border-nc-danger/50" : "animate-pulse"}`}
+            >
+              <div className={`w-2 h-2 rounded-full ${loadFailed ? "bg-nc-danger" : "bg-nc-neon-teal shadow-[0_0_10px_#00f2ff]"}`} />
               <span className="text-nv-text-sm font-medium text-nc-text">
                 {loadingMsg}
               </span>
@@ -487,7 +528,7 @@ function metersBetween(
                 <div
                   className={`w-2 h-2 rounded-full ${showNewTraps ? "bg-nc-neon-teal animate-pulse" : "bg-nc-text/20"}`}
                 />
-                TICKET HOTSPOTS
+                UUDET MERKIT
               </button>
 
               <button
@@ -502,7 +543,7 @@ function metersBetween(
                 <div
                   className={`w-2 h-2 rounded-full ${showViolations ? "bg-nc-danger animate-pulse" : "bg-nc-text/20"}`}
                 />
-                FINE LOCATIONS
+                SAKOT 2023
               </button>
 
               <button
@@ -517,7 +558,7 @@ function metersBetween(
                 <div
                   className={`w-2 h-2 rounded-full ${showSigns ? "bg-nc-text animate-pulse" : "bg-nc-text/20"}`}
                 />
-                PARKING SIGNS
+                LIIKENNEMERKIT
               </button>
 
               <button
@@ -532,7 +573,7 @@ function metersBetween(
                 <div
                   className={`w-2 h-2 rounded-full ${showRoadworks ? "bg-nc-gold animate-pulse" : "bg-nc-text/20"}`}
                 />
-                CONSTRUCTION
+                TYÖMAAT{roadworkStatus === "loading" ? " …" : roadworkStatus === "error" ? " (ei saatu)" : roadworkData ? ` (${roadworkData.features.length})` : ""}
               </button>
 
               <button
@@ -547,7 +588,7 @@ function metersBetween(
                 <div
                   className={`w-2 h-2 rounded-full ${showReservations ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
                 />
-                RESERVATIONS
+                VUOKRA-ALUEET{reservationStatus === "loading" ? " …" : reservationStatus === "error" ? " (ei saatu)" : ""}
               </button>
 
               <button
@@ -562,7 +603,7 @@ function metersBetween(
                 <div
                   className={`w-2 h-2 rounded-full ${showResList ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
                 />
-                📋 LIST VIEW
+                📋 LISTA
               </button>
             </div>
           </div>
@@ -617,7 +658,7 @@ function metersBetween(
               className="nv-glass rounded-full px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
             >
               <Database className="w-3.5 h-3.5 text-nc-neon-teal" />
-              <span>🌐 Paikkatieto & Metadata</span>
+              <span>Tietolähteet</span>
             </button>
           
           <button
@@ -662,9 +703,13 @@ function metersBetween(
                   Sakot kartalla
                 </span>
               </div>
-              <p className="text-[14px] font-bold text-nc-text">165 700 sakkoa</p>
+              <p className="text-[14px] font-bold text-nc-text" data-testid="fine-count">
+                {dataFacts
+                  ? `${dataFacts.fineCount.toLocaleString("fi-FI")} sakkoa${dataFacts.fineYears ? ` (${dataFacts.fineYears})` : ""}`
+                  : "Ladataan…"}
+              </p>
               <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                Kartta näyttää, missä sakkoja on annettu paljon.
+                Helsingin kaupungin avoin sakkoaineisto. Kartta näyttää, missä sakkoja on annettu paljon.
               </p>
             </div>
 
@@ -678,6 +723,7 @@ function metersBetween(
               <p className="text-[14px] font-bold text-nc-text">Kyltti voittaa kartan</p>
               <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
                 Työmaa ja kyltit muuttuvat. Varmista paikka kadun merkistä.
+                {dataFacts?.slotsUpdated ? ` Pysäköintipaikat päivitetty ${new Date(dataFacts.slotsUpdated).toLocaleDateString("fi-FI")}.` : ""}
               </p>
             </div>
           </div>
@@ -696,15 +742,14 @@ function metersBetween(
         sortBy={resSortBy}
         onSortByChange={setResSortBy}
         onSelectReservation={handleReservationClick}
-        liveRentMap={liveRentMap}
-        loadingRentMap={loadingRentMap}
-        onFetchLiveRent={handleFetchLiveRent}
+        status={reservationStatus}
       />
 
       {/* Dynamic Metadata Catalogue Modal */}
       <MetadataCatalogueModal
         isOpen={showMetadataModal}
         onClose={() => setShowMetadataModal(false)}
+        dataFacts={dataFacts}
       />
     </div>
   );

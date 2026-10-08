@@ -1,6 +1,7 @@
 import React from "react";
 import { Search, X, Calendar, MapPin } from "lucide-react";
-import { parseHelCaseTypo, extractRentInfo, renderTextWithLinks, type RentInfo } from "../lib/helsinkiCaseParser";
+import { parseHelCaseTypo, renderTextWithLinks } from "../lib/helsinkiCaseParser";
+import type { LiveStatus } from "../hooks/useParkingLayers";
 
 interface ReservationsDrawerProps {
   isOpen: boolean;
@@ -13,9 +14,7 @@ interface ReservationsDrawerProps {
   sortBy: string;
   onSortByChange: (sort: string) => void;
   onSelectReservation: (feat: any) => void;
-  liveRentMap: Record<string, RentInfo | null>;
-  loadingRentMap: Record<string, boolean>;
-  onFetchLiveRent: (caseCode: string) => void;
+  status: LiveStatus;
 }
 
 export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
@@ -29,9 +28,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
   sortBy,
   onSortByChange,
   onSelectReservation,
-  liveRentMap,
-  loadingRentMap,
-  onFetchLiveRent,
+  status,
 }) => {
   return (
     <div
@@ -44,10 +41,14 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
         <div className="flex justify-between items-center pb-3 border-b border-nc-border">
           <div>
             <h2 className="text-nv-text-sm font-black text-nc-text flex items-center gap-1.5 uppercase">
-              📋 Reservations List
+              📋 Katualueen vuokraukset
             </h2>
             <span className="text-[10px] text-nc-text-muted uppercase font-bold tracking-wider">
-              {reservations.length} Active Reservations Mapped
+              {status === "loading"
+                ? "Haetaan Helsingin kaupungilta..."
+                : status === "error"
+                  ? "Tietoja ei saatu juuri nyt"
+                  : `${reservations.length} voimassa tänään · Lähde: Helsingin kaupunki`}
             </span>
           </div>
           <button
@@ -85,10 +86,10 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
           {/* Category Tabs */}
           <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1">
             {[
-              { id: "all", label: "All" },
-              { id: "paid", label: "🅿️ Parking" },
-              { id: "lisapihat", label: "🔶 Yards" },
-              { id: "other", label: "Other" },
+              { id: "all", label: "Kaikki" },
+              { id: "paid", label: "🅿️ Pysäköinti" },
+              { id: "lisapihat", label: "🔶 Lisäpihat" },
+              { id: "other", label: "Muut" },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -110,9 +111,9 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
             <span>Sort by</span>
             <div className="flex gap-1.5">
               {[
-                { id: "start", label: "Newest" },
-                { id: "end", label: "Expiring" },
-                { id: "id", label: "Permit #" },
+                { id: "start", label: "Uusimmat" },
+                { id: "end", label: "Päättyvät" },
+                { id: "id", label: "Lupanumero" },
               ].map((s) => (
                 <button
                   key={s.id}
@@ -137,8 +138,8 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
             reservations.map((feat: any, idx) => {
               const props = feat.properties || {};
               const start = props.event_startdate_txt || props.lic_startdate_txt || "?";
-              const end = props.event_endtdate_txt || props.lic_enddate_txt || "Open";
-              const subject = props.rental_subject || "Temporary Reservation";
+              const end = props.event_endtdate_txt || props.lic_enddate_txt || "?";
+              const subject = props.rental_subject || "Vuokraus";
               const desc = props.event_description || props.licence_description || "";
               const applicant = props.licence_applicant_company && props.licence_applicant_company !== "N/A" ? props.licence_applicant_company : null;
               const loc = props.location_description && props.location_description !== "N/A" ? props.location_description : null;
@@ -146,12 +147,6 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
 
               const allText = `${subject} ${desc} ${props.licence_identifier || ""}`;
               const caseDetails = parseHelCaseTypo(allText);
-
-              const localRent = extractRentInfo(desc);
-              const liveRent = caseDetails ? liveRentMap[caseDetails.caseCode] : null;
-              const rentInfo = localRent || liveRent;
-              const isLoadingRent = caseDetails ? !!loadingRentMap[caseDetails.caseCode] : false;
-              const hasFetchedLive = caseDetails ? (caseDetails.caseCode in liveRentMap) : false;
 
               return (
                 <button
@@ -174,7 +169,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
                       {isParking ? "🅿️" : "🔶"} {subject}
                     </h4>
                     <span className="bg-orange-400/20 text-orange-400 border border-orange-400/30 font-black px-1.5 py-0.5 rounded text-[8px] uppercase tracking-wider shrink-0">
-                      Active
+                      Voimassa
                     </span>
                   </div>
 
@@ -198,40 +193,11 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
                             : "bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border-nc-neon-teal/30 text-nc-neon-teal hover:border-nc-neon-teal/50"
                         }`}
                         onClick={(e) => e.stopPropagation()}
-                        title={caseDetails.hasTypo ? `Corrected from typo: ${caseDetails.original}` : undefined}
+                        title={caseDetails.hasTypo ? `Alkuperäinen merkintä: ${caseDetails.original}` : undefined}
                       >
-                        📜 {caseDetails.hasTypo ? `⚠️ Corrected: ${caseDetails.normalized}` : `Decision: ${caseDetails.normalized}`}
+                        📜 Päätös: {caseDetails.normalized}
                       </a>
 
-                      {!rentInfo && !(caseDetails.caseCode in liveRentMap) && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onFetchLiveRent(caseDetails.caseCode);
-                          }}
-                          disabled={isLoadingRent}
-                          className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border border-nc-neon-teal/30 hover:border-nc-neon-teal/50 rounded-xl text-[9px] font-black text-nc-neon-teal uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {isLoadingRent ? "⏳ Fetching..." : "🔍 Extract Rent"}
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Financial Rent Info Pills */}
-                  {rentInfo && (
-                    <div className="flex flex-wrap gap-2 pl-1 pt-0.5">
-                      {rentInfo.annual && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[9px] font-black text-emerald-400 uppercase tracking-wider">
-                          💰 Annual Rent: {rentInfo.annual} € {hasFetchedLive && !localRent && <span className="text-[8px] text-nc-neon-teal font-medium ml-1">(📡 Live)</span>}
-                        </span>
-                      )}
-                      {rentInfo.monthly && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-[9px] font-black text-emerald-400 uppercase tracking-wider">
-                          💰 Monthly Rent: {rentInfo.monthly} € {hasFetchedLive && !localRent && <span className="text-[8px] text-nc-neon-teal font-medium ml-1">(📡 Live)</span>}
-                        </span>
-                      )}
                     </div>
                   )}
 
@@ -260,10 +226,12 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
             })
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
-              <p className="text-xs font-bold text-nc-text-muted">No reservations found</p>
-              <p className="text-[10px] text-nc-text-dim max-w-[200px]">
-                Try refining your search term or switching the category filter.
+              <p className="text-xs font-bold text-nc-text-muted">
+                {status === "error" ? "Vuokraustietoja ei saatu Helsingin kaupungilta" : status === "loading" ? "Haetaan..." : "Ei osumia"}
               </p>
+              {status === "ok" && (
+                <p className="text-[10px] text-nc-text-dim max-w-[200px]">Kokeile toista hakusanaa tai luokkaa.</p>
+              )}
             </div>
           )}
         </div>
