@@ -7,11 +7,6 @@ export interface HelCaseDetails {
   caseCode: string;
 }
 
-export interface RentInfo {
-  annual: string | null;
-  monthly: string | null;
-}
-
 // Typo-tolerant case identifier parser for HEL-case diary codes (e.g. HEL 2023- -005659)
 export const parseHelCaseTypo = (text: string): HelCaseDetails | null => {
   if (!text) return null;
@@ -31,70 +26,6 @@ export const parseHelCaseTypo = (text: string): HelCaseDetails | null => {
       hasTypo: !isStandard,
       caseCode: `hel-${year}-${num}`
     };
-  }
-  return null;
-};
-
-// Financial rent extractor (matches annual "vuosivuokra" or monthly "kuukausivuokra" text + amounts)
-export const extractRentInfo = (text: string): RentInfo | null => {
-  if (!text) return null;
-
-  let annualRent: string | null = null;
-  let monthlyRent: string | null = null;
-
-  const cleanAmount = (val: string) => val.trim().replace(/[.,\s]+$/, "");
-  const currencyGroup = "(?:euroa|euron|euro|\\be\\b|€)";
-  const currencyGroupWithEur = "(?:€|euroa|euron|euro|\\be\\b|\\beur\\b)";
-
-  // 1. Annual Rent (vuosivuokra)
-  const annualPatterns = [
-    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:vuodessa|vuosittain|vuodelta)`, "i"),
-    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:vuosivuokra[a-z]*)`, "i"),
-    new RegExp(`(?:vuosivuokra[a-z]*)\\s*(?:on\\s*)?(\\d+[\\d\\s,.]*)\\s*${currencyGroup}`, "i"),
-    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroupWithEur}\\s*\\/\\s*(?:v|vuosi)`, "i")
-  ];
-
-  for (const pattern of annualPatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      annualRent = cleanAmount(match[1]);
-      break;
-    }
-  }
-
-  // 2. Monthly Rent (kuukausivuokra)
-  const monthlyPatterns = [
-    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:kuukaudessa|kuukausittain|kuukaudelta)`, "i"),
-    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:kuukausivuokra[a-z]*)`, "i"),
-    new RegExp(`(?:kuukausivuokra[a-z]*)\\s*(?:on\\s*)?(\\d+[\\d\\s,.]*)\\s*${currencyGroup}`, "i"),
-    new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroupWithEur}\\s*\\/\\s*kk`, "i")
-  ];
-
-  for (const pattern of monthlyPatterns) {
-    const match = text.match(pattern);
-    if (match) {
-      monthlyRent = cleanAmount(match[1]);
-      break;
-    }
-  }
-
-  // 3. General Rent fallback
-  if (!annualRent && !monthlyRent) {
-    const generalPatterns = [
-      new RegExp(`(\\d+[\\d\\s,.]*)\\s*${currencyGroup}\\s*(?:n\\s*)?(?:vuokra[a-z]*)`, "i"),
-      new RegExp(`(?:vuokra[a-z]*)\\s*(?:on\\s*)?(\\d+[\\d\\s,.]*)\\s*${currencyGroup}`, "i")
-    ];
-    for (const pattern of generalPatterns) {
-      const match = text.match(pattern);
-      if (match) {
-        monthlyRent = cleanAmount(match[1]);
-        break;
-      }
-    }
-  }
-
-  if (annualRent || monthlyRent) {
-    return { annual: annualRent, monthly: monthlyRent };
   }
   return null;
 };

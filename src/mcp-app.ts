@@ -1,13 +1,11 @@
 /**
  * ParkkiS MCP App Tool Handler
- * Standard: @modelcontextprotocol/ext-apps (2026 UI Capabilities Standard)
- * Reference: https://modelcontextprotocol.info/blog/mcp-apps-ui-capabilities/
  *
- * Exposes interactive parking maplet tools with `_meta.ui.resourceUri`.
+ * Returns a deep link to the live ParkkiS map for a venue. It does not invent a
+ * risk score: the score is shown on the map, computed from real fine data.
  */
 
-import { calculateParkingRiskContract } from "./contracts";
-import type { ParkingRiskContract } from "./contracts";
+import { buildParkingDeepLink } from "./contracts";
 
 export interface McpToolResponse {
   content: Array<{
@@ -26,34 +24,25 @@ export interface McpToolResponse {
   };
 }
 
-/**
- * MCP App Tool: get_parking_maplet
- * Returns structured parking risk contract data and an interactive UI widget resource URI.
- */
+/** MCP App Tool: get_parking_maplet */
 export async function getParkingMapletTool(args: {
   venueSlug: string;
   venueName: string;
   lat: number;
   lng: number;
 }): Promise<McpToolResponse> {
-  const risk: ParkingRiskContract = calculateParkingRiskContract(
-    args.venueSlug || "default",
-    args.venueName || "Kenttä",
-    { lat: args.lat, lng: args.lng }
-  );
-
-  const summary = `🅿️ Pysäköintiturvallisuus (${risk.venueName}): Riski-indeksi ${risk.riskRating1to10}/10 (${risk.safetyCategory.toUpperCase()}). Kävelyetäisyys: ${risk.walkDistanceMeters}m (~${risk.walkTimeMinutes} min). Aluetunnus: ${risk.zoneLabel}.`;
-
+  const name = args.venueName || args.venueSlug || "Kohde";
+  const url = buildParkingDeepLink(name, { lat: args.lat, lng: args.lng }, { embed: true });
   return {
     content: [
       {
         type: "text",
-        text: summary,
+        text: `🅿️ ${name}: pysäköintipaikat, kyltit ja sakkotilastot kartalla: ${url}`,
       },
     ],
     _meta: {
       ui: {
-        resourceUri: `ui://parkkis/maplet?venue=${encodeURIComponent(risk.venueName || "Kenttä")}&lat=${args.lat}&lng=${args.lng}&risk=${risk.riskRating1to10 || 3}`,
+        resourceUri: url,
       },
     },
   };

@@ -2,6 +2,7 @@ import React from "react";
 import ReactMap, {
   GeolocateControl,
   Layer,
+  Marker,
   NavigationControl,
   Popup,
   Source,
@@ -77,7 +78,9 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
   const mapFilter: import("maplibre-gl").FilterSpecification =
     activeFilter === "all"
       ? ["has", "category"]
-      : ["==", ["get", "category"], activeFilter];
+      : activeFilter === "residential"
+        ? ["==", ["get", "resident_zone"], true]
+        : ["==", ["get", "category"], activeFilter];
 
   return (
       <ReactMap
@@ -96,6 +99,16 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
         onLoad={onMapLoad}
+        attributionControl={{
+          compact: true,
+          customAttribution: [
+            '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
+            "Pysäköintipaikat, sakot, työmaat ja vuokra-alueet: Helsingin kaupunki (CC BY 4.0)",
+            "Liikennemerkit: Väylävirasto / Digiroad (CC BY 4.0)",
+            "Liityntäpysäköinti: Fintraffic (CC BY 4.0)",
+            "Pysäköintialueet: Parkkihubi / Helsingin kaupunki",
+          ],
+        }}
       >
         <NavigationControl position="bottom-right" />
         <GeolocateControl
@@ -144,8 +157,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                   ["get", "category"],
                   "paid",
                   THEME_CONFIGS[theme].colors.paid,
-                  "residential",
-                  THEME_CONFIGS[theme].colors.residential,
+                  "restricted",
+                  THEME_CONFIGS[theme].colors.restricted,
                   "free",
                   THEME_CONFIGS[theme].colors.free,
                   "special",
@@ -281,44 +294,6 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                 "circle-blur": 1,
               }}
             />
-            <Layer
-              id="sign-labels"
-              type="symbol"
-              minzoom={15}
-              layout={{
-                "text-field": [
-                  "match",
-                  ["get", "tyyppi"],
-                  "C37",
-                  "🛑", // No stopping
-                  ["C38", "C39", "C40", "C44.1", "C44.2"],
-                  "🚫", // No parking
-                  ["E2", "E3.1", "E3.2", "E3.3", "E3.4", "E3.5"],
-                  "🅿️", // Parking Place
-                  "E4.1",
-                  "🚕", // Taxi
-                  "H12.7",
-                  "♿", // Disabled parking
-                  "H12.9",
-                  "🔌", // EV charging
-                  "H24",
-                  "🎫", // Resident Permit
-                  "H25",
-                  "🛠️", // Maintenance Only
-                  "H19",
-                  "🕒", // Time limit
-                  "ℹ️" // Info default
-                ],
-                "text-size": 13,
-                "text-offset": [0, -1.2],
-                "text-anchor": "bottom",
-                "visibility": showSigns ? "visible" : "none"
-              }}
-              paint={{
-                "text-halo-color": "rgba(5, 8, 10, 0.95)",
-                "text-halo-width": 2,
-              }}
-            />
           </Source>
         )}
 
@@ -341,21 +316,6 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                 "line-color": "#ffcf4b",
                 "line-width": 2.5,
                 "line-dasharray": [3, 1],
-              }}
-            />
-            <Layer
-              id="roadwork-label"
-              type="symbol"
-              minzoom={14}
-              layout={{
-                visibility: showRoadworks ? "visible" : "none",
-                "text-field": "🚧",
-                "text-size": 16,
-                "symbol-placement": "point",
-              }}
-              paint={{
-                "text-halo-color": "rgba(5,8,10,0.9)",
-                "text-halo-width": 2,
               }}
             />
           </Source>
@@ -388,26 +348,6 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                 "line-dasharray": [4, 2],
               }}
             />
-            <Layer
-              id="reservation-label"
-              type="symbol"
-              minzoom={14}
-              layout={{
-                visibility: showReservations ? "visible" : "none",
-                "text-field": [
-                  "match",
-                  ["get", "rental_subject"],
-                  "Pysäköinti", "🅿️",
-                  "🔶",
-                ],
-                "text-size": 14,
-                "symbol-placement": "point",
-              }}
-              paint={{
-                "text-halo-color": "rgba(5,8,10,0.9)",
-                "text-halo-width": 2,
-              }}
-            />
           </Source>
         )}
 
@@ -426,6 +366,14 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
               walkTime={walkTime}
             />
           </Popup>
+        )}
+        {selectedAddress && (
+          <Marker
+            longitude={selectedAddress.longitude}
+            latitude={selectedAddress.latitude}
+            anchor="bottom"
+            color="#00f2ff"
+          />
         )}
         {liipiData && (
           <Source id="liipi-hubs" type="geojson" data={liipiData}>
@@ -452,9 +400,10 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             <Layer
               id="liipi-labels"
               type="symbol"
+              minzoom={12}
               layout={{
-                "text-field": ["coalesce", ["get", "fi", ["get", "name"]], ["get", "name"]],
-                "text-font": ["Noto Sans Bold"],
+                "text-field": ["get", "name_fi"],
+                "text-font": ["Open Sans Bold"],
                 "text-variable-anchor": ["top", "bottom", "left", "right"],
                 "text-radial-offset": 0.8,
                 "text-justify": "auto",
