@@ -8,6 +8,7 @@ export const THEME_CONFIGS = {
       residential: "#ffb800",
       free: "#22c55e",
       special: "#a855f7",
+      restricted: "#ef4444",
       other: "#888888",
       glowLow: "#00f2ff",
       glowMid: "#ffcf4b",
@@ -21,6 +22,7 @@ export const THEME_CONFIGS = {
       residential: "#d97706",
       free: "#16a34a",
       special: "#7c3aed",
+      restricted: "#dc2626",
       other: "#4b5563",
       glowLow: "#0891b2",
       glowMid: "#d97706",
@@ -34,6 +36,7 @@ export const THEME_CONFIGS = {
       residential: "#f59e0b",
       free: "#34d399",
       special: "#8b5cf6",
+      restricted: "#ef4444",
       other: "#4b5563",
       glowLow: "#10b981",
       glowMid: "#f59e0b",
@@ -43,19 +46,20 @@ export const THEME_CONFIGS = {
 };
 
 export const CATEGORIES = [
-  { id: "all", label: "All Slots" },
-  { id: "residential", label: "Residential" },
-  { id: "paid", label: "Paid" },
-  { id: "free", label: "Free" },
-  { id: "special", label: "Special (EV/Inva)" },
+  { id: "all", label: "Kaikki" },
+  { id: "paid", label: "Maksullinen" },
+  { id: "free", label: "Ilmainen" },
+  { id: "residential", label: "Asukasvyöhyke" },
+  { id: "special", label: "Erityispaikat" },
+  { id: "restricted", label: "Pysäköintikielto" },
 ];
 
 export const getCategoryLabel = (category: string, luokka: string = "") => {
-  if (category === "residential") return "Resident Permit Parking (Asukaspysäköinti)";
-  if (category === "paid") return "Paid Parking (Maksullinen)";
-  if (category === "free") return "Free Parking (Ilmainen)";
-  if (category === "special") return "Special Parking (EV/Disabled)";
-  return luokka || "Standard Parking";
+  if (category === "paid") return "Maksullinen pysäköinti";
+  if (category === "free") return "Ilmainen pysäköinti";
+  if (category === "special") return "Erityispaikka (esim. sähköauto, inva, taksi, lastaus)";
+  if (category === "restricted") return "Pysäköintikielto";
+  return luokka || "Muu pysäköintialue";
 };
 
 export const getSignLabel = (type: string) => {

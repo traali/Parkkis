@@ -39,7 +39,6 @@ async function main() {
       { name: "violations", path: path.join(CACHE_DIR, "violations.json") },
       { name: "hubi", path: path.join(CACHE_DIR, "hubi.json") },
       { name: "signs", path: path.join(CACHE_DIR, "signs.json") },
-      { name: "roadworks", path: path.join(CACHE_DIR, "roadworks.json") },
       { name: "liipi", path: path.join(CACHE_DIR, "liipi.json") },
     ];
 
