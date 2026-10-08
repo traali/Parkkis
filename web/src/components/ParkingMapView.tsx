@@ -9,10 +9,19 @@ import ReactMap, {
   type MapLayerMouseEvent,
   type MapRef,
 } from "react-map-gl/maplibre";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import { THEME_CONFIGS, type ThemeType } from "../lib/mapThemes";
 import { ParkingPopup, type HoverInfo } from "./ParkingPopup";
+import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
+
+// MapLibre 6 is ESM-only and, under a bundler, needs the worker URL set
+// explicitly (see the v5 → v6 migration guide). Loaded lazily so the map
+// library stays in its own chunk.
+const maplibreLib = import("maplibre-gl").then((lib) => {
+  lib.setWorkerUrl(maplibreWorkerUrl);
+  return lib;
+});
 
 export interface Address {
   longitude: number;
@@ -84,6 +93,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
 
   return (
       <ReactMap
+        mapLib={maplibreLib}
         ref={mapRef}
         initialViewState={initialViewState}
         style={{ width: "100%", height: "100%" }}
