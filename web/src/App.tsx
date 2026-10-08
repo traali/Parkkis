@@ -4,7 +4,7 @@ import type {
   MapRef,
 } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type maplibregl from "maplibre-gl";
+import type * as maplibregl from "maplibre-gl";
 import { ParkingMapView, type Address } from "./components/ParkingMapView";
 import {
   Filter,

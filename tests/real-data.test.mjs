@@ -66,3 +66,20 @@ describe('Pelipäivä venue deep link', () => {
     assert.equal(read(join(ROOT, 'src/contracts.ts')), read(join(ROOT, 'web/src/lib/contracts.ts')));
   });
 });
+
+describe('MapLibre 6', () => {
+  it('uses maplibre-gl 6 (GHSA fix) and sets the bundled worker URL', () => {
+    const pkg = JSON.parse(read(join(ROOT, 'web/package.json')));
+    assert.match(pkg.dependencies['maplibre-gl'], /^\^6\./);
+    const view = read(join(ROOT, 'web/src/components/ParkingMapView.tsx'));
+    assert.match(view, /maplibre-gl-worker\.mjs\?worker&url/);
+    assert.match(view, /setWorkerUrl\(/);
+    assert.match(view, /mapLib=\{maplibreLib\}/);
+  });
+
+  it('has no default import of maplibre-gl (removed in v6)', () => {
+    for (const f of ['web/src/App.tsx', 'web/src/components/ParkingMapView.tsx']) {
+      assert.doesNotMatch(read(join(ROOT, f)), /import (type )?maplibregl from "maplibre-gl"/);
+    }
+  });
+});
