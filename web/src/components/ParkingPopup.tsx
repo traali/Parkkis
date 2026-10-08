@@ -150,7 +150,8 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
             )}
           </div>
 
-          {/* Parking Risk & Violation count */}
+          {/* Fine-based risk: only parking spaces have it (signs/works do not) */}
+          {hoverInfo.layerId === "parking-lines" && hoverInfo.properties.risk_score !== undefined && hoverInfo.properties.risk_score !== null && (
           <div className="flex items-center justify-between mb-4 bg-nc-text/5 rounded-xl p-3 border border-nc-border">
             <div className="flex flex-col">
               <span className="text-[10px] text-nc-text-dim uppercase font-black tracking-wider">
@@ -186,6 +187,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
               </span>
             </div>
           </div>
+          )}
 
           {hoverInfo.isRoadworkConflict && (
             <div className="bg-nc-danger/20 border border-nc-danger/50 rounded p-2 mb-3 animate-pulse">
