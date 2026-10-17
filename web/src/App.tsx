@@ -47,6 +47,8 @@ interface SearchResult {
 const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 };
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
+/** Must match interactiveLayerIds in ParkingMapView. */
+const TAP_LAYERS = ["parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points"];
 
 /**
  * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
@@ -226,17 +228,30 @@ export default function App() {
   }, []);
 
   const onMouseMove = useCallback((event: MapLayerMouseEvent) => {
-    const { features } = event;
+    let features = event.features;
+    // A finger is not a mouse pointer: on a tap, look ±14 px around the touch point.
+    if (event.type === "click" && !features?.length && mapRef.current) {
+      const { x, y } = event.point;
+      const map = mapRef.current.getMap();
+      const layers = TAP_LAYERS.filter((id) => map.getLayer(id));
+      features = map.queryRenderedFeatures(
+        [
+          [x - 14, y - 14],
+          [x + 14, y + 14],
+        ],
+        { layers },
+      ) as typeof event.features;
+    }
     const hoveredFeature = features?.[0];
 
     if (hoveredFeature) {
       // Aggregate all signs at this location
-      const signs = features
+      const signs = (features ?? [])
         .filter((f) => f.layer.id === "sign-points")
         .map((f) => f.properties);
 
       // Find if we have roadwork in the stack
-      const roadwork = features.find(
+      const roadwork = (features ?? []).find(
         (f) => f.layer.id === "roadwork-fill" || f.layer.id === "reservation-fill",
       );
 
@@ -289,7 +304,7 @@ export default function App() {
       helsinki: riskData,
       espoo: espooData,
       osm: osmData,
-    });
+    }, regionalStatus === "error");
   }, [venueFromLink, riskData, espooData, osmData, regionalStatus]);
   const venueOutsideData = coverage !== null && !coverage.helsinki;
 
@@ -498,7 +513,7 @@ export default function App() {
                   type="button"
                   key={cat.id}
                   onClick={() => setActiveFilter(cat.id)}
-                  className={`px-4 py-2 rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
+                  className={`px-4 py-2 min-h-[44px] rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
                     activeFilter === cat.id
                       ? "bg-nc-neon-teal text-nc-deep shadow-[0_0_15px_rgba(0,242,255,0.4)]"
                       : "text-nc-text-dim hover:bg-nc-text/5"
@@ -513,7 +528,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowNewTraps(!showNewTraps)}
-                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showNewTraps
                     ? "border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10 shadow-[0_0_15px_rgba(0,242,255,0.2)]"
                     : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
@@ -528,7 +543,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowViolations(!showViolations)}
-                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showViolations
                     ? "border-nc-danger text-nc-danger bg-nc-danger/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
                     : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
@@ -543,7 +558,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowSigns(!showSigns)}
-                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showSigns
                     ? "border-nc-text text-nc-text bg-nc-text/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                     : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
@@ -558,7 +573,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowRoadworks(!showRoadworks)}
-                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showRoadworks
                     ? "border-nc-gold text-nc-gold bg-nc-gold/10 shadow-[0_0_15px_rgba(255,207,75,0.2)]"
                     : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
@@ -573,7 +588,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowReservations(!showReservations)}
-                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showReservations
                     ? "border-orange-400 text-orange-400 bg-orange-400/10 shadow-[0_0_15px_rgba(251,146,60,0.2)]"
                     : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
@@ -588,7 +603,7 @@ export default function App() {
               <button
                 type="button"
                 onClick={() => setShowResList(!showResList)}
-                className={`nv-glass rounded-3xl px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
+                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
                   showResList
                     ? "border-orange-400 text-orange-400 bg-orange-400/20 shadow-[0_0_15px_rgba(251,146,60,0.3)] font-black"
                     : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
@@ -650,7 +665,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setShowMetadataModal(true)}
-              className="nv-glass rounded-full px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
+              className="nv-glass rounded-full min-h-[44px] px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
             >
               <Database className="w-3.5 h-3.5 text-nc-neon-teal" />
               <span>Tietolähteet</span>
@@ -659,7 +674,7 @@ export default function App() {
           <button
             type="button"
             onClick={() => setIsFooterCollapsed(!isFooterCollapsed)}
-            className="nv-glass rounded-full px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
+            className="nv-glass rounded-full min-h-[44px] px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
           >
             {isFooterCollapsed ? (
               <>

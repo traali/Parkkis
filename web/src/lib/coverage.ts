@@ -10,6 +10,8 @@ export interface VenueCoverage {
   helsinki: boolean;
   espoo: number;
   osm: number;
+  /** Espoo/OSM data did not load, so "nothing nearby" cannot be claimed. */
+  failed?: boolean;
 }
 
 export function metersBetween(a: LatLon, b: LatLon): number {
@@ -42,8 +44,10 @@ export function venueCoverage(
   venue: LatLon,
   radius: number,
   data: { helsinki: FeatureCollection | null; espoo: FeatureCollection | null; osm: FeatureCollection | null },
+  failed = false,
 ): VenueCoverage {
   return {
+    failed,
     helsinki: countNear(data.helsinki, venue, radius) > 0,
     espoo: countNear(data.espoo, venue, radius),
     osm: countNear(data.osm, venue, radius),
@@ -54,6 +58,8 @@ export function venueCoverage(
 export function coverageNoteText(c: VenueCoverage | null): string {
   const base = "Helsingin katupysäköinnin tiedot eivät ulotu tänne.";
   if (!c) return base;
+  if (c.failed && c.espoo === 0 && c.osm === 0)
+    return `${base} Tietojen lataus epäonnistui, joten emme tiedä lähialueen pysäköinnistä. Päivitä sivu tai tarkista kyltit.`;
   if (c.espoo > 0)
     return `${base} Lähellä on ${c.espoo} Espoon kaupungin pysäköintialuetta (sininen). Vapaista paikoista, hinnoista ja rajoituksista ei ole tietoa, tarkista kyltit.`;
   if (c.osm > 0)

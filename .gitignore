@@ -6,7 +6,6 @@ public/data/*.json
 !public/data/meta.json
 dist
 web/dist
-web/public/data/*.parquet
 *.log
 .agent/visitations/neighbors-*.json
 .ua/intermediate/

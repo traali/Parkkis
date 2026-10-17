@@ -17,7 +17,7 @@ const espoonlahti = { latitude: 60.1485, longitude: 24.653 };
 describe('venue coverage note', () => {
   it('counts Espoo areas near an Espoo venue and says Helsinki data does not reach', () => {
     const c = venueCoverage(espoonlahti, 600, { helsinki: fc(pt(24.94, 60.17)), espoo: fc(pt(24.654, 60.149), pt(24.70, 60.20)), osm: fc() });
-    assert.deepEqual(c, { helsinki: false, espoo: 1, osm: 0 });
+    assert.deepEqual(c, { failed: false, helsinki: false, espoo: 1, osm: 0 });
     const t = coverageNoteText(c);
     assert.match(t, /1 Espoon kaupungin pysäköintialuetta/);
     assert.match(t, /Vapaista paikoista, hinnoista ja rajoituksista ei ole tietoa/);
@@ -29,5 +29,13 @@ describe('venue coverage note', () => {
   it('never invents numbers it was not given', () => {
     for (const t of [coverageNoteText(null), coverageNoteText({ helsinki: false, espoo: 0, osm: 0 })])
       assert.doesNotMatch(t, /\d|€|min/);
+  });
+});
+
+describe('failed data load is never reported as "no data nearby"', () => {
+  it('says the load failed instead', () => {
+    const t = coverageNoteText({ helsinki: false, espoo: 0, osm: 0, failed: true });
+    assert.match(t, /Tietojen lataus epäonnistui/);
+    assert.doesNotMatch(t, /ei ole pysäköintitietoja/);
   });
 });

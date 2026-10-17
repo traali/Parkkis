@@ -54,7 +54,9 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-nc-text/10 rounded-full border border-nc-border transition-colors group cursor-pointer"
+            aria-label="Sulje lista"
+            title="Sulje lista"
+            className="p-1.5 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-nc-text/10 rounded-full border border-nc-border transition-colors group cursor-pointer"
           >
             <X className="w-4 h-4 text-nc-text-muted group-hover:text-nc-neon-red transition-colors" />
           </button>
@@ -68,7 +70,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
             <input
               type="text"
               placeholder="Hae varausta, hakijaa tai tunnusta"
-              className="w-full pl-9 pr-8 py-2 bg-nc-void/60 border border-nc-border/60 rounded-2xl text-xs text-nc-text placeholder:text-nc-text-dim focus:outline-none focus:border-nc-neon-teal transition-colors"
+              className="w-full pl-9 pr-8 py-2 min-h-[44px] bg-nc-void/60 border border-nc-border/60 rounded-2xl text-xs text-nc-text placeholder:text-nc-text-dim focus:outline-none focus:border-nc-neon-teal transition-colors"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
             />
@@ -95,7 +97,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => onCategoryChange(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap border cursor-pointer ${
+                className={`px-3 py-1.5 min-h-[44px] rounded-xl text-[10px] font-black uppercase transition-all whitespace-nowrap border cursor-pointer ${
                   category === tab.id
                     ? "border-orange-400 text-orange-400 bg-orange-400/10 shadow-[0_0_10px_rgba(251,146,60,0.1)]"
                     : "border-nc-border/40 text-nc-text-dim hover:bg-nc-text/5"
@@ -108,7 +110,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
 
           {/* Sorting controls */}
           <div className="flex items-center justify-between text-[10px] uppercase font-bold text-nc-text-dim">
-            <span>Sort by</span>
+            <span>Järjestä</span>
             <div className="flex gap-1.5">
               {[
                 { id: "start", label: "Uusimmat" },
@@ -119,7 +121,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
                   key={s.id}
                   type="button"
                   onClick={() => onSortByChange(s.id)}
-                  className={`px-2 py-0.5 rounded-lg border text-[9px] transition-all cursor-pointer ${
+                  className={`px-2 py-0.5 min-h-[44px] rounded-lg border text-[9px] transition-all cursor-pointer ${
                     sortBy === s.id
                       ? "border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10 font-black"
                       : "border-transparent text-nc-text-dim hover:text-nc-text"
@@ -187,7 +189,7 @@ export const ReservationsDrawer: React.FC<ReservationsDrawerProps> = ({
                         href={`https://paatokset.hel.fi/fi/asia/${caseDetails.caseCode}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
+                        className={`inline-flex items-center gap-1.5 min-h-[44px] px-2.5 py-0.5 border rounded-xl text-[9px] font-black uppercase tracking-wider transition-all ${
                           caseDetails.hasTypo
                             ? "bg-nc-gold/10 hover:bg-nc-gold/20 border-nc-gold/40 text-nc-gold"
                             : "bg-nc-neon-teal/10 hover:bg-nc-neon-teal/20 border-nc-neon-teal/30 text-nc-neon-teal hover:border-nc-neon-teal/50"

@@ -111,6 +111,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
           "osm-points",
         ]}
         onMouseMove={onMouseMove}
+        onClick={onMouseMove}
         onMouseLeave={onMouseLeave}
         onLoad={onMapLoad}
         attributionControl={{
@@ -372,6 +373,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             longitude={hoverInfo.longitude}
             latitude={hoverInfo.latitude}
             closeButton={false}
+            closeOnClick={false}
             maxWidth="320px"
             className="nv-popup"
           >
