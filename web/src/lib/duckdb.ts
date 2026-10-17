@@ -1,4 +1,5 @@
 import * as duckdb from "@duckdb/duckdb-wasm";
+import { fetchParquet } from "./dataFile";
 
 let db: duckdb.AsyncDuckDB | null = null;
 let dbPromise: Promise<duckdb.AsyncDuckDB> | null = null;
@@ -61,7 +62,8 @@ export async function loadParquet(name: string, url: string) {
   console.log(`🦆 DuckDB: Registering ${name} from ${url}...`);
 
   try {
-    await db.registerFileURL(name, url, duckdb.DuckDBDataProtocol.HTTP, false);
+    // Fetch and verify first: a missing file comes back as the HTML app, not data.
+    await db.registerFileBuffer(name, await fetchParquet(url));
 
     // MATERIALIZE as a table
     await conn.query(
