@@ -21,6 +21,8 @@ import {
   Database,
 } from "lucide-react";
 import { useParkingLayers } from "./hooks/useParkingLayers";
+import { useRegionalParking } from "./hooks/useRegionalParking";
+import { coverageNoteText, venueCoverage } from "./lib/coverage";
 import {
   CATEGORIES,
   getCentroid,
@@ -97,14 +99,6 @@ function metersBetween(
   const lat2 = b.latitude * rad;
   const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
   return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
-
-function firstCoordinate(geometry: unknown): [number, number] | null {
-  let c: unknown = (geometry as { coordinates?: unknown } | null)?.coordinates;
-  while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
-  return Array.isArray(c) && typeof c[0] === "number" && typeof c[1] === "number"
-    ? [c[0], c[1]]
-    : null;
 }
 
 const INITIAL_VIEW_STATE = {
@@ -281,23 +275,23 @@ export default function App() {
     return metersBetween(selectedAddress, hoverInfo).toFixed(0);
   };
 
-  const walkTime = (meters: string) => {
-    return Math.ceil(parseInt(meters, 10) / 80); // ~5km/h = 80m/min
-  };
 
   const distance = calculateDistance();
 
-  // Is the deep-linked venue inside the area the Helsinki data covers?
-  const venueOutsideData = useMemo(() => {
-    if (!venueFromLink || !riskData) return false;
-    for (const f of riskData.features) {
-      const c = firstCoordinate(f.geometry);
-      if (c && metersBetween(venueFromLink, { longitude: c[0], latitude: c[1] }) <= COVERAGE_RADIUS_M) {
-        return false;
-      }
-    }
-    return true;
-  }, [venueFromLink, riskData]);
+  // Espoo parking areas and OSM parking load after the Helsinki layers.
+  const { espooData, osmData, regionalStatus } = useRegionalParking(dbReady);
+
+  // Which real data covers the deep-linked venue? (null = still loading)
+  const coverage = useMemo(() => {
+    if (!venueFromLink || !riskData) return null;
+    if (regionalStatus === "loading") return null;
+    return venueCoverage(venueFromLink, COVERAGE_RADIUS_M, {
+      helsinki: riskData,
+      espoo: espooData,
+      osm: osmData,
+    });
+  }, [venueFromLink, riskData, espooData, osmData, regionalStatus]);
+  const venueOutsideData = coverage !== null && !coverage.helsinki;
 
   const visibleSearchResults = searchQuery.length >= 3 ? searchResults : [];
 
@@ -390,9 +384,9 @@ export default function App() {
       <div className="absolute top-6 right-6 z-50 pointer-events-auto flex items-center gap-2">
         <div className="nv-glass rounded-full p-1.5 flex items-center gap-1 shadow-2xl">
           {[
-            { id: "dark", label: "Night Captain", icon: Moon, activeColor: "text-nc-neon-teal" },
-            { id: "light", label: "Day Patrol", icon: Sun, activeColor: "text-nc-gold" },
-            { id: "forest", label: "Nordic Forest", icon: TreePine, activeColor: "text-emerald-400" },
+            { id: "dark", label: "Yöteema", icon: Moon, activeColor: "text-nc-neon-teal" },
+            { id: "light", label: "Päiväteema", icon: Sun, activeColor: "text-nc-gold" },
+            { id: "forest", label: "Metsäteema", icon: TreePine, activeColor: "text-emerald-400" },
           ].map((themeOpt) => {
             const Icon = themeOpt.icon;
             const isActive = theme === themeOpt.id;
@@ -401,12 +395,13 @@ export default function App() {
                 type="button"
                 key={themeOpt.id}
                 onClick={() => setTheme(themeOpt.id as ThemeType)}
-                className={`p-2 rounded-full transition-all duration-300 flex items-center justify-center relative group ${
+                className={`p-2 min-w-[44px] min-h-[44px] rounded-full transition-all duration-300 flex items-center justify-center relative group ${
                   isActive
                     ? "bg-nc-text/15 shadow-inner scale-110"
                     : "hover:bg-nc-text/5 text-nc-text-dim hover:text-nc-text"
                 }`}
                 title={themeOpt.label}
+                aria-label={themeOpt.label}
               >
                 <Icon className={`w-4 h-4 ${isActive ? themeOpt.activeColor : "text-current"}`} />
                 <span className="absolute right-full mr-2 bg-nc-void border border-nc-border text-nc-text text-[10px] font-bold px-2 py-1 rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-lg">
@@ -475,8 +470,7 @@ export default function App() {
               data-testid="venue-coverage-note"
               className="nv-glass rounded-3xl px-5 py-3 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-nc-gold/40"
             >
-              <b className="text-nc-gold">{venueFromLink.name}:</b> ParkkiS-aineisto kattaa Helsingin kantakaupungin ja asukasvyöhykkeiden kadut.
-              Tämän paikan lähellä ei ole Helsingin pysäköintitietoja, joten katso pysäköinti paikan omista ohjeista ja kylteistä.
+              <b className="text-nc-gold">{venueFromLink.name}:</b> {coverageNoteText(coverage)}
             </div>
           )}
 
@@ -619,7 +613,6 @@ export default function App() {
         onMapLoad={onMapLoad}
         hoverInfo={hoverInfo}
         distance={distance}
-        walkTime={walkTime}
         selectedAddress={selectedAddress}
         riskData={riskData}
         violationData={violationData}
@@ -628,6 +621,8 @@ export default function App() {
         reservationData={reservationData}
         liipiData={liipiData}
         hubiData={hubiData}
+        espooData={espooData}
+        osmData={osmData}
         showViolations={showViolations}
         showSigns={showSigns}
         showNewTraps={showNewTraps}
