@@ -1,0 +1,1 @@
+{"slots":[],"espoo":[],"osm":[{"type":"Feature","geometry":{"type":"Point","coordinates":[24.752428,60.365967]},"properties":{"osm_id":"way/30670422","fee":"no","parking":"surface","maxstay":"4 hours","surface":"asphalt"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[24.742091,60.366237]},"properties":{"osm_id":"node/5451457142"}}]}

@@ -111,7 +111,9 @@ const INITIAL_VIEW_STATE = {
 };
 
 export default function App() {
+  const [venueFromLink] = useState<Address | null>(() => readVenueFromUrl());
   const {
+    venueTiles,
     dbReady,
     loadFailed,
     loadingMsg,
@@ -137,12 +139,11 @@ export default function App() {
     setShowReservations,
     showSigns,
     setShowSigns,
-  } = useParkingLayers();
+  } = useParkingLayers(venueFromLink);
 
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [venueFromLink] = useState<Address | null>(() => readVenueFromUrl());
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(venueFromLink);
   const [theme, setTheme] = useState<ThemeType>(() => readThemeFromUrl());
   const [isFooterCollapsed, setIsFooterCollapsed] = useState(
@@ -269,20 +270,44 @@ export default function App() {
     }
   }, []);
 
-  const onMapLoad = useCallback(() => {
-    if (venueFromLink && mapRef.current) {
+  // Keep the venue pin in the part of the map the overlays do not cover.
+  const userMovedMap = useRef(false);
+  const visiblePadding = useCallback(() => {
+    const top = document.querySelector("[data-testid=top-hud]")?.getBoundingClientRect().bottom ?? 0;
+    const bottomEl = document.querySelector("[data-testid=bottom-hud]")?.getBoundingClientRect();
+    const h = window.innerHeight;
+    const bottom = bottomEl ? Math.max(0, h - bottomEl.top) : 0;
+    // Never squeeze the visible map below a third of the screen.
+    const room = h - top - bottom;
+    return room < h / 3 ? { top: h / 3, bottom: 0, left: 0, right: 0 } : { top, bottom, left: 0, right: 0 };
+  }, []);
+  const centerVenue = useCallback(
+    (duration: number) => {
+      if (!venueFromLink || !mapRef.current || userMovedMap.current) return;
       mapRef.current.flyTo({
         center: [venueFromLink.longitude, venueFromLink.latitude],
         zoom: 16,
         pitch: 50,
-        duration: 1500,
+        padding: visiblePadding(),
+        duration,
       });
+    },
+    [venueFromLink, visiblePadding],
+  );
+
+  const onMapLoad = useCallback(() => {
+    performance.mark("parkkis:map-load");
+    if (venueFromLink && mapRef.current) {
+      mapRef.current.getMap().on("dragstart", () => {
+        userMovedMap.current = true;
+      });
+      centerVenue(1500);
       return;
     }
     if (geoControlRef.current) {
       geoControlRef.current.trigger();
     }
-  }, [venueFromLink]);
+  }, [venueFromLink, centerVenue]);
 
 
   const calculateDistance = () => {
@@ -296,17 +321,26 @@ export default function App() {
   // Espoo parking areas and OSM parking load after the Helsinki layers.
   const { espooData, osmData, regionalStatus } = useRegionalParking(dbReady);
 
+  // Until the full Espoo/OSM snapshot is in, the venue tiles hold the same rows nearby.
+  const espooShown = espooData ?? venueTiles?.espoo ?? null;
+  const osmShown = osmData ?? venueTiles?.osm ?? null;
+
   // Which real data covers the deep-linked venue? (null = still loading)
   const coverage = useMemo(() => {
     if (!venueFromLink || !riskData) return null;
-    if (regionalStatus === "loading") return null;
+    if (regionalStatus === "loading" && !venueTiles) return null;
     return venueCoverage(venueFromLink, COVERAGE_RADIUS_M, {
       helsinki: riskData,
-      espoo: espooData,
-      osm: osmData,
-    }, regionalStatus === "error");
-  }, [venueFromLink, riskData, espooData, osmData, regionalStatus]);
+      espoo: espooShown,
+      osm: osmShown,
+    }, regionalStatus === "error" && !venueTiles);
+  }, [venueFromLink, riskData, espooShown, osmShown, regionalStatus, venueTiles]);
   const venueOutsideData = coverage !== null && !coverage.helsinki;
+
+  // The coverage note changes the overlay height; re-center once it appears.
+  useEffect(() => {
+    if (coverage) requestAnimationFrame(() => centerVenue(600));
+  }, [coverage, centerVenue]);
 
   const visibleSearchResults = searchQuery.length >= 3 ? searchResults : [];
 
@@ -429,7 +463,7 @@ export default function App() {
       </div>
 
       {/* Nova HUD */}
-      <div className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none">
+      <div data-testid="top-hud" className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none">
         <div className="flex flex-col gap-2 w-full pr-16 sm:pr-0 sm:flex-row sm:justify-between sm:items-start">
           <div className="flex flex-col gap-4 w-full max-w-md pointer-events-auto">
             {/* Search Bar */}
@@ -496,7 +530,7 @@ export default function App() {
             >
               <div className={`w-2 h-2 rounded-full ${loadFailed ? "bg-nc-danger" : "bg-nc-neon-teal shadow-[0_0_10px_#00f2ff]"}`} />
               <span className="text-nv-text-sm font-medium text-nc-text">
-                {loadingMsg}
+                {venueTiles && !loadFailed ? "Lähialueen pysäköinti näkyy. Ladataan koko kaupungin aineistoa..." : loadingMsg}
               </span>
             </div>
           )}
@@ -636,8 +670,8 @@ export default function App() {
         reservationData={reservationData}
         liipiData={liipiData}
         hubiData={hubiData}
-        espooData={espooData}
-        osmData={osmData}
+        espooData={espooShown}
+        osmData={osmShown}
         showViolations={showViolations}
         showSigns={showSigns}
         showNewTraps={showNewTraps}
@@ -648,7 +682,7 @@ export default function App() {
       />
 
       {/* Bento Stats Footer */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 flex flex-col gap-2 pointer-events-none transition-all duration-300">
+      <div data-testid="bottom-hud" className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 flex flex-col gap-2 pointer-events-none transition-all duration-300">
         {/* Toggle Expand / Collapse Buttons & Version Badge */}
         <div className="flex items-center justify-between w-full pointer-events-auto pr-2 gap-2 flex-wrap">
           <div

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
-import { getDuckDB, loadParquet } from "../lib/duckdb";
+import { inTileRegion, loadVenueTiles, type VenueTileData } from "../lib/venueTiles";
 import { getCentroid, safeGeoJSON } from "../lib/mapThemes";
 
 /** Facts about the bundled snapshot, read from the data itself. */
@@ -73,7 +73,14 @@ function rowsToCollection(rows: Row[]): FeatureCollection {
   }) as FeatureCollection;
 }
 
-export function useParkingLayers() {
+/** Loads the in-browser DB engine only when it is needed (it is large). */
+const duckdb = () => import("../lib/duckdb");
+
+export function useParkingLayers(venue?: { latitude: number; longitude: number } | null) {
+  const useFastPath = !!venue && inTileRegion(venue.latitude, venue.longitude);
+  // Venue links: nearby parking from pre-split tiles first, then everything else.
+  const [venueTiles, setVenueTiles] = useState<VenueTileData | null>(null);
+  const [fastDone, setFastDone] = useState(!useFastPath);
   const [dbReady, setDbReady] = useState(false);
   const [riskData, setRiskData] = useState<FeatureCollection | null>(null);
   const [violationData, setViolationData] = useState<FeatureCollection | null>(null);
@@ -96,8 +103,22 @@ export function useParkingLayers() {
   const [showReservations, setShowReservations] = useState(true);
   const [showSigns, setShowSigns] = useState(true);
 
-  // Live layers: fetched straight from the City of Helsinki, never from a stale copy.
   useEffect(() => {
+    if (!useFastPath || !venue) return;
+    loadVenueTiles(venue.latitude, venue.longitude)
+      .then((t) => {
+        setVenueTiles(t);
+        setRiskData((cur) => cur ?? t.slots);
+        performance.mark("parkkis:venue-parking");
+      })
+      .catch((err) => console.warn("Venue tiles unavailable, waiting for full data:", err))
+      .finally(() => setFastDone(true));
+  }, [useFastPath, venue]);
+
+  // Live layers: fetched straight from the City of Helsinki, never from a stale copy.
+  // On venue links they wait for the nearby parking so they do not compete for bandwidth.
+  useEffect(() => {
+    if (!fastDone) return;
     const today = helsinkiToday();
 
     // Street works. Winkki_works only holds two records from 2010 and 2013, so
@@ -171,12 +192,14 @@ export function useParkingLayers() {
         console.error("Street-area lease fetch failed:", err);
         setReservationStatus("error");
       });
-  }, []);
+  }, [fastDone]);
 
   useEffect(() => {
+    if (!fastDone) return;
     const initData = async () => {
       try {
         setLoadingMsg("Ladataan pysäköintipaikkoja...");
+        const { getDuckDB, loadParquet } = await duckdb();
         const dataUrl = (file: string) =>
           new URL(`${import.meta.env.BASE_URL}data/${file}`, window.location.origin).href;
 
@@ -329,6 +352,7 @@ export function useParkingLayers() {
 
         await conn.close();
         setDbReady(true);
+        performance.mark("parkkis:full");
       } catch (e) {
         console.error("Data Engine Failure:", e);
         setLoadFailed(true);
@@ -336,9 +360,10 @@ export function useParkingLayers() {
       }
     };
     initData();
-  }, []);
+  }, [fastDone]);
 
   return {
+    venueTiles,
     dbReady,
     loadFailed,
     loadingMsg,
