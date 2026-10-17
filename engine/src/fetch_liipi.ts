@@ -1,34 +1,18 @@
-import path from "node:path";
-import axios from "axios";
-import fs from "fs-extra";
+// Fintraffic park-and-ride facilities (CC BY 4.0). The facility id is kept so the
+// web app can join live utilizations (/api/v1/utilizations) to each facility.
+import { writeDataset, runMain } from "./lib/cache";
+import { getWithRetry, USER_AGENT } from "./lib/http";
 
 const LIIPI_API = "https://parking.fintraffic.fi/api/v1/facilities.geojson";
-const CACHE_DIR = path.join(process.cwd(), ".cache");
 
-async function fetchLiipi() {
-  console.log("[LIIPI] Fetching Park & Ride facilities from Fintraffic...");
-  try {
-    const response = await axios.get(LIIPI_API, {
-      headers: {
-        "Digitraffic-User":
-          "Parkkis/2.4 (Transit Synergy Engine; arto.oinonen@gmail.com)",
-      },
-    });
-
-    const data = response.data;
-    if (data.type !== "FeatureCollection") {
-      throw new Error("Invalid GeoJSON response from LiiPi");
-    }
-
-    console.log(`[LIIPI] Received ${data.features.length} facilities.`);
-
-    await fs.ensureDir(CACHE_DIR);
-    await fs.writeJson(path.join(CACHE_DIR, "liipi.json"), data);
-    console.log("✅ LiiPi Harvest Complete.");
-  } catch (err: any) {
-    console.error("❌ LiiPi Harvest Failed:", err.message);
-    process.exit(1);
+runMain("Fintraffic facilities harvest", async () => {
+  const data: any = await getWithRetry(LIIPI_API, { headers: { "Digitraffic-User": USER_AGENT } });
+  if (data?.type !== "FeatureCollection" || !Array.isArray(data.features)) {
+    throw new Error("Fintraffic: invalid GeoJSON response");
   }
-}
-
-fetchLiipi();
+  const features = data.features.map((f: any) => ({
+    ...f,
+    properties: { ...f.properties, facility_id: f.id ?? f.properties?.id ?? null },
+  }));
+  await writeDataset("liipi", features, { source: LIIPI_API, licence: "CC BY 4.0, Fintraffic" });
+});

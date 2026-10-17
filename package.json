@@ -1,22 +1,23 @@
 {
   "name": "parkkis",
   "version": "2.6.0",
-  "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"\u2014they need to know *safe* spots.",
+  "description": "Parking in Helsinki is a cognitive minefield. Complex zone rules, resident-only restrictions, and \"trap\" spots with confusing signage lead to avoidable fines. Drivers need more than just \"free spots\"—they need to know *safe* spots.",
   "main": "index.js",
   "scripts": {
-    "fetch": "cd engine && npx ts-node src/fetch.ts && npx ts-node src/fetch_signs.ts && npx ts-node src/fetch_liipi.ts",
+    "fetch": "cd engine && npx ts-node src/fetch.ts && npx ts-node src/fetch_signs.ts && npx ts-node src/fetch_liipi.ts && npx ts-node src/fetch_osm.ts",
     "process": "cd engine && node src/process.js",
-    "ingest": "npm run fetch && npm run process",
+    "ingest": "npm run fetch && npm run process && npm run validate",
     "dev": "cd web && npm run dev",
     "build": "cd web && npm run build",
     "lint": "npx @biomejs/biome lint .",
     "typecheck": "tsc -b web/tsconfig.json && npx tsc --noEmit src/contracts.ts src/mcp-app.ts",
     "check:types": "npm run typecheck",
-    "test": "node --test tests/domain-invariants.test.mjs tests/real-data.test.mjs",
+    "test": "node --test tests/domain-invariants.test.mjs tests/real-data.test.mjs tests/coverage.test.mjs",
     "check": "npm run lint && npm run typecheck && npm test",
     "visit": "node scripts/monastery-visitor.mjs",
     "check:neighbors": "node scripts/check-neighbors.mjs",
-    "understand": "node scripts/understand.mjs"
+    "understand": "node scripts/understand.mjs",
+    "validate": "cd engine && node src/validate.js"
   },
   "keywords": [],
   "author": "",

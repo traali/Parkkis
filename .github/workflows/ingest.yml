@@ -1,34 +1,54 @@
 name: Ingest Parking Data
 
+# Daily refresh of the bundled open-data snapshot (web/public/data).
+# Every fetcher and the validation step exit non-zero on failure, so a broken
+# or empty source fails this job loudly and nothing is committed.
+# Production picks up the commit on the next pelipaiva "Deploy neighbor Pages" run.
+
 on:
   schedule:
-    - cron: '0 4 * * *' # Run at 04:00 every day
-  workflow_dispatch: # Allow manual trigger
+    - cron: '15 3 * * *' # 06:15 Helsinki (summer time)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-          
-      - name: Install dependencies
-        run: |
-          npm install
-          cd engine && npm install
-        
-      - name: Run Ingestion Pipeline
+          cache-dependency-path: engine/package-lock.json
+
+      - name: Install engine dependencies
+        run: npm ci --prefix engine
+
+      - name: Fetch, convert and validate
         run: npm run ingest
-        
-      - name: Commit and Push Data
+
+      - name: Repository invariants
+        run: npm test
+
+      - name: Commit and push data
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add web/public/data/*.parquet
-          git commit -m "chore: automated data ingestion [$(date +'%Y-%m-%d')]" || echo "No changes to commit"
-          git push
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/public/data/*.parquet web/public/data/manifest.json
+          if git diff --cached --quiet; then
+            echo "No data changes"
+            exit 0
+          fi
+          git commit -m "chore(data): daily open-data refresh [$(TZ=Europe/Helsinki date +'%Y-%m-%d')]"
+          git pull --rebase origin master
+          git push origin HEAD:master
