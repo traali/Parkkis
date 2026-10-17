@@ -1,0 +1,1 @@
+{"slots":[],"espoo":[],"osm":[{"type":"Feature","geometry":{"type":"Point","coordinates":[25.015434,60.340273]},"properties":{"osm_id":"way/176814154","parking":"surface"}},{"type":"Feature","geometry":{"type":"Point","coordinates":[25.00493,60.340456]},"properties":{"osm_id":"way/136017713","parking":"surface","operator":"Koiramäen pajutalli","surface":"unpaved"}}]}

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import type { Feature, FeatureCollection } from "geojson";
-import { getDuckDB, loadParquet } from "../lib/duckdb";
 import { safeGeoJSON } from "../lib/mapThemes";
 import type { LiveStatus } from "./useParkingLayers";
 
@@ -73,6 +72,7 @@ export function useRegionalParking(start: boolean) {
     let cancelled = false;
     (async () => {
       try {
+        const { getDuckDB, loadParquet } = await import("../lib/duckdb");
         await Promise.all([loadParquet("espoo", dataUrl("espoo.parquet")), loadParquet("osm", dataUrl("osm.parquet"))]);
         const db = await getDuckDB();
         const conn = await db.connect();
