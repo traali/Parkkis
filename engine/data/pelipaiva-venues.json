@@ -1,0 +1,981 @@
+{
+ "source": "https://raw.githubusercontent.com/traali/pelipaiva/main/src/lib/geo/sportsGeocoder.ts",
+ "synced_at": "2026-10-08",
+ "venues": [
+  {
+   "name": "Ahvenisjärven Tekonurmi Hervanta",
+   "lat": 61.4481,
+   "lon": 23.8481
+  },
+  {
+   "name": "Arena Center Hakaniemi",
+   "lat": 60.1795,
+   "lon": 24.9512
+  },
+  {
+   "name": "Arena Center Kaarela",
+   "lat": 60.2512,
+   "lon": 24.8812
+  },
+  {
+   "name": "Arena Center Myllypuro",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myllypuro (Kenttä 1)",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myllypuro (Kenttä 2)",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myllypuro (Kenttä 3)",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myllypuro (Kenttä 4)",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myllypuro (Kenttä 5)",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myllypuro (Kenttä 6)",
+   "lat": 60.2245,
+   "lon": 25.0435
+  },
+  {
+   "name": "Arena Center Myyrmäki",
+   "lat": 60.261,
+   "lon": 24.854
+  },
+  {
+   "name": "Arena Center Ruskeasuo",
+   "lat": 60.2012,
+   "lon": 24.9012
+  },
+  {
+   "name": "Brahenkenttä (Braku)",
+   "lat": 60.1878,
+   "lon": 24.9518
+  },
+  {
+   "name": "EBK Park Keski-Espoo",
+   "lat": 60.2081,
+   "lon": 24.6612
+  },
+  {
+   "name": "Eerikkilän Urheiluopisto",
+   "lat": 60.7785,
+   "lon": 23.7541
+  },
+  {
+   "name": "Eerikkilän Urheiluopisto TN 1",
+   "lat": 60.7785,
+   "lon": 23.7541
+  },
+  {
+   "name": "Espoonlahden lukio",
+   "lat": 60.149,
+   "lon": 24.656
+  },
+  {
+   "name": "Espoonlahden tekonurmi",
+   "lat": 60.1485,
+   "lon": 24.653
+  },
+  {
+   "name": "Espoonlahti 1 TN A",
+   "lat": 60.1485,
+   "lon": 24.653
+  },
+  {
+   "name": "Esport Arena Tapiola",
+   "lat": 60.1775,
+   "lon": 24.785
+  },
+  {
+   "name": "Esport Center 2",
+   "lat": 60.1756,
+   "lon": 24.8054
+  },
+  {
+   "name": "Esport Center Tapiola",
+   "lat": 60.1756,
+   "lon": 24.8054
+  },
+  {
+   "name": "Esport Rink Tapiola",
+   "lat": 60.1775,
+   "lon": 24.785
+  },
+  {
+   "name": "Garam Masala Areena Oulu",
+   "lat": 65.0038,
+   "lon": 25.4548
+  },
+  {
+   "name": "Haagan palloiluhalli",
+   "lat": 60.2156,
+   "lon": 24.9004
+  },
+  {
+   "name": "Hansavalkama TN",
+   "lat": 60.19083,
+   "lon": 24.58667
+  },
+  {
+   "name": "Hansavalkama TN A",
+   "lat": 60.19083,
+   "lon": 24.58667
+  },
+  {
+   "name": "Harjun Stadion Jyväskylä",
+   "lat": 62.2441,
+   "lon": 25.7381
+  },
+  {
+   "name": "Haukilahden lukio",
+   "lat": 60.16,
+   "lon": 24.77
+  },
+  {
+   "name": "Havukosken Tekonurmi",
+   "lat": 60.3141,
+   "lon": 25.0612
+  },
+  {
+   "name": "Heinäpään Jalkapallohalli Oulu",
+   "lat": 65.0035,
+   "lon": 25.455
+  },
+  {
+   "name": "Helsingin Jäähalli",
+   "lat": 60.1892,
+   "lon": 24.9225
+  },
+  {
+   "name": "Helsingin Jäähalli (Nordis)",
+   "lat": 60.1892,
+   "lon": 24.9225
+  },
+  {
+   "name": "Helsingin Urheilutalo (Kallio)",
+   "lat": 60.1873,
+   "lon": 24.9525
+  },
+  {
+   "name": "Hernesaaren Kuplahalli",
+   "lat": 60.1512,
+   "lon": 24.9241
+  },
+  {
+   "name": "Herttoniemenrannan Liikuntahalli",
+   "lat": 60.1912,
+   "lon": 25.0341
+  },
+  {
+   "name": "Herttoniemenrannan Tekonurmi",
+   "lat": 60.1912,
+   "lon": 25.0341
+  },
+  {
+   "name": "Hervannan Tekonurmi",
+   "lat": 61.4481,
+   "lon": 23.8481
+  },
+  {
+   "name": "Hiekkaharjun Tekonurmi",
+   "lat": 60.3012,
+   "lon": 25.0512
+  },
+  {
+   "name": "Hipposhalli Jyväskylä",
+   "lat": 62.2341,
+   "lon": 25.7212
+  },
+  {
+   "name": "Honkahalli 1",
+   "lat": 60.1792,
+   "lon": 24.788
+  },
+  {
+   "name": "Honkahalli 2",
+   "lat": 60.1792,
+   "lon": 24.788
+  },
+  {
+   "name": "Honkahalli Tapiola",
+   "lat": 60.1792,
+   "lon": 24.788
+  },
+  {
+   "name": "Huhtasuon Tekonurmi Jyväskylä",
+   "lat": 62.2641,
+   "lon": 25.7941
+  },
+  {
+   "name": "Ikurin Liikuntahalli Tampere",
+   "lat": 61.5112,
+   "lon": 23.6141
+  },
+  {
+   "name": "Impivaaran Jalkapallohalli",
+   "lat": 60.4781,
+   "lon": 22.2841
+  },
+  {
+   "name": "Jakomäen Tekonurmi",
+   "lat": 60.2612,
+   "lon": 25.0781
+  },
+  {
+   "name": "Johanneksenkenttä",
+   "lat": 60.1612,
+   "lon": 24.9441
+  },
+  {
+   "name": "Jokivarren Tekonurmi",
+   "lat": 60.3612,
+   "lon": 25.1241
+  },
+  {
+   "name": "Jyväskylän Vehkalammen Tekonurmi",
+   "lat": 62.2355,
+   "lon": 25.7198
+  },
+  {
+   "name": "Jätkäsaaren Tekonurmi",
+   "lat": 60.1581,
+   "lon": 24.9181
+  },
+  {
+   "name": "Kaitaa TN",
+   "lat": 60.14863,
+   "lon": 24.69589
+  },
+  {
+   "name": "Kaitaa TN A",
+   "lat": 60.14863,
+   "lon": 24.69589
+  },
+  {
+   "name": "Kallio TN B",
+   "lat": 60.1878,
+   "lon": 24.9518
+  },
+  {
+   "name": "Kallion tekonurmi",
+   "lat": 60.1878,
+   "lon": 24.9518
+  },
+  {
+   "name": "Kameleonten Areena Leppävaara",
+   "lat": 60.226,
+   "lon": 24.812
+  },
+  {
+   "name": "Karakallion koulu",
+   "lat": 60.2356,
+   "lon": 24.7735
+  },
+  {
+   "name": "Karakallion Tekonurmi",
+   "lat": 60.2351,
+   "lon": 24.7741
+  },
+  {
+   "name": "Kauniaisten Keskuskenttä TN",
+   "lat": 60.2112,
+   "lon": 24.7241
+  },
+  {
+   "name": "Kauniaisten Keskuskenttä TN (Grani)",
+   "lat": 60.2112,
+   "lon": 24.7241
+  },
+  {
+   "name": "Keski-Espoo 2 TN B",
+   "lat": 60.20927,
+   "lon": 24.67705
+  },
+  {
+   "name": "Keski-Espoon Tekonurmi (EBK Park)",
+   "lat": 60.2081,
+   "lon": 24.6612
+  },
+  {
+   "name": "Kivenlahden Tekonurmi",
+   "lat": 60.1512,
+   "lon": 24.6412
+  },
+  {
+   "name": "Kontulan Rannikkotien TN",
+   "lat": 60.2372,
+   "lon": 25.0841
+  },
+  {
+   "name": "Kontulan Tekonurmi",
+   "lat": 60.2372,
+   "lon": 25.0841
+  },
+  {
+   "name": "Korian Monitoimitalo",
+   "lat": 60.8541,
+   "lon": 26.6112
+  },
+  {
+   "name": "Koskelantie nap TN",
+   "lat": 60.20193,
+   "lon": 24.94491
+  },
+  {
+   "name": "Kouvolan Keskuskenttä",
+   "lat": 60.8712,
+   "lon": 26.7052
+  },
+  {
+   "name": "Kuortaneen Urheiluopisto",
+   "lat": 62.8112,
+   "lon": 23.5112
+  },
+  {
+   "name": "Kupittaan Palloiluhalli Turku",
+   "lat": 60.442,
+   "lon": 22.289
+  },
+  {
+   "name": "Kuusankosken Urheilupuisto",
+   "lat": 60.9082,
+   "lon": 26.6212
+  },
+  {
+   "name": "Käpylän Kuplahalli",
+   "lat": 60.214,
+   "lon": 24.946
+  },
+  {
+   "name": "Käpylän Urheilupuisto TN 1",
+   "lat": 60.2135,
+   "lon": 24.9452
+  },
+  {
+   "name": "Käpylän Urheilupuisto TN 2",
+   "lat": 60.2142,
+   "lon": 24.9445
+  },
+  {
+   "name": "Laajasalon Tekonurmi",
+   "lat": 60.1781,
+   "lon": 25.0412
+  },
+  {
+   "name": "Laaksolahden Tekonurmi",
+   "lat": 60.2412,
+   "lon": 24.7612
+  },
+  {
+   "name": "Lahden Kisapuisto",
+   "lat": 60.985,
+   "lon": 25.654
+  },
+  {
+   "name": "Lahden Kisapuiston Tekonurmi",
+   "lat": 60.985,
+   "lon": 25.654
+  },
+  {
+   "name": "Lahden Stadion",
+   "lat": 60.9812,
+   "lon": 25.6381
+  },
+  {
+   "name": "Lahden Suurhalli",
+   "lat": 60.9825,
+   "lon": 25.6412
+  },
+  {
+   "name": "Lauttasaaren tekonurmi",
+   "lat": 60.16357,
+   "lon": 24.8675
+  },
+  {
+   "name": "Lauttasaaren urheilukenttä",
+   "lat": 60.16357,
+   "lon": 24.8675
+  },
+  {
+   "name": "Lauttasaaren urheilupuisto \"Pyrkkä\"",
+   "lat": 60.16357,
+   "lon": 24.8675
+  },
+  {
+   "name": "Lauttasaaren yhteiskoulu (LYK)",
+   "lat": 60.1601,
+   "lon": 24.8785
+  },
+  {
+   "name": "Lauttasaaren yhteiskoulu Uusi (LYK)",
+   "lat": 60.1601,
+   "lon": 24.8785
+  },
+  {
+   "name": "Lauttasaaren yhteiskoulu Vanha (LYK)",
+   "lat": 60.1601,
+   "lon": 24.8785
+  },
+  {
+   "name": "Lauttasaari TN A",
+   "lat": 60.16357,
+   "lon": 24.8675
+  },
+  {
+   "name": "Lauttasaari TN B",
+   "lat": 60.16357,
+   "lon": 24.8675
+  },
+  {
+   "name": "Lehto Areena 1",
+   "lat": 60.2412,
+   "lon": 25.0112
+  },
+  {
+   "name": "Lehto Areena PuMa",
+   "lat": 60.2412,
+   "lon": 25.0112
+  },
+  {
+   "name": "Lehtomäen Tekonurmi Kouvola",
+   "lat": 60.8841,
+   "lon": 26.7321
+  },
+  {
+   "name": "Leppävaaran liikuntahalli",
+   "lat": 60.2194,
+   "lon": 24.8135
+  },
+  {
+   "name": "Leppävaaran Liikuntahalli",
+   "lat": 60.2225,
+   "lon": 24.8085
+  },
+  {
+   "name": "Leppävaaran lukio",
+   "lat": 60.221,
+   "lon": 24.814
+  },
+  {
+   "name": "Leppävaaran Tekonurmi (Lepuski)",
+   "lat": 60.224,
+   "lon": 24.8105
+  },
+  {
+   "name": "Leppävaaran Urheilupuisto TN",
+   "lat": 60.224,
+   "lon": 24.8105
+  },
+  {
+   "name": "Lippumäen Tekonurmi",
+   "lat": 62.8485,
+   "lon": 27.635
+  },
+  {
+   "name": "Lippumäen Ylipainehalli Kuopio",
+   "lat": 62.8481,
+   "lon": 27.6341
+  },
+  {
+   "name": "Lumon Areena / Jatke Areena Kouvola",
+   "lat": 60.8695,
+   "lon": 26.7112
+  },
+  {
+   "name": "Lumon Areena Kouvola",
+   "lat": 60.8695,
+   "lon": 26.7112
+  },
+  {
+   "name": "Malmin Palloiluhalli",
+   "lat": 60.2525,
+   "lon": 25.0125
+  },
+  {
+   "name": "Matinkylän lukio",
+   "lat": 60.159,
+   "lon": 24.752
+  },
+  {
+   "name": "Matinkylän Tekonurmi (Matinari)",
+   "lat": 60.1582,
+   "lon": 24.7505
+  },
+  {
+   "name": "Matinkylän Urheilupuisto TN 1",
+   "lat": 60.1582,
+   "lon": 24.7505
+  },
+  {
+   "name": "Matinkylän Urheilupuisto TN 2",
+   "lat": 60.1578,
+   "lon": 24.7512
+  },
+  {
+   "name": "Matinkylän Urheilupuisto TN 2 B",
+   "lat": 60.15859,
+   "lon": 24.75067
+  },
+  {
+   "name": "Meilahden liikuntahalli",
+   "lat": 60.1908,
+   "lon": 24.9075
+  },
+  {
+   "name": "Mukkulan Kuplahalli Lahti",
+   "lat": 61.0112,
+   "lon": 25.6612
+  },
+  {
+   "name": "Munkkiniemen yhteiskoulu",
+   "lat": 60.1965,
+   "lon": 24.8758
+  },
+  {
+   "name": "Munkkiniemen yhteiskoulu (MYK)",
+   "lat": 60.1965,
+   "lon": 24.8758
+  },
+  {
+   "name": "Mustapekka Areena Oulunkylä",
+   "lat": 60.2285,
+   "lon": 24.9654
+  },
+  {
+   "name": "Myllypuron palloiluhalli",
+   "lat": 60.2238,
+   "lon": 25.0774
+  },
+  {
+   "name": "Myllypuron Tekonurmi",
+   "lat": 60.2251,
+   "lon": 25.0441
+  },
+  {
+   "name": "Myyrmäen Jalkapallostadion",
+   "lat": 60.2625,
+   "lon": 24.851
+  },
+  {
+   "name": "Namika Areena Pakila",
+   "lat": 60.245,
+   "lon": 24.935
+  },
+  {
+   "name": "Otahalli Otaniemi",
+   "lat": 60.185,
+   "lon": 24.832
+  },
+  {
+   "name": "Otaniemen lukio",
+   "lat": 60.1865,
+   "lon": 24.8285
+  },
+  {
+   "name": "Otaniemen Tekonurmi (Otaranta)",
+   "lat": 60.1841,
+   "lon": 24.8312
+  },
+  {
+   "name": "Ouluhalli",
+   "lat": 65.0091,
+   "lon": 25.4981
+  },
+  {
+   "name": "Oulun Castrenin Tekonurmi",
+   "lat": 65.018,
+   "lon": 25.485
+  },
+  {
+   "name": "Oulun Heinäpään Tekonurmi",
+   "lat": 65.0032,
+   "lon": 25.4542
+  },
+  {
+   "name": "Oulun Heinäpään Tekonurmi (Heinis)",
+   "lat": 65.0032,
+   "lon": 25.4542
+  },
+  {
+   "name": "Oulunkylän Tekonurmi",
+   "lat": 60.2285,
+   "lon": 24.9654
+  },
+  {
+   "name": "Ounashalli Rovaniemi",
+   "lat": 66.5141,
+   "lon": 25.7612
+  },
+  {
+   "name": "Pajulahden Urheiluopisto",
+   "lat": 60.9612,
+   "lon": 25.9341
+  },
+  {
+   "name": "Paradice-jäähalli Vuosaari",
+   "lat": 60.2075,
+   "lon": 25.1441
+  },
+  {
+   "name": "Parkinkenttä Turku",
+   "lat": 60.4561,
+   "lon": 22.2681
+  },
+  {
+   "name": "Peakfin Areena Vantaa",
+   "lat": 60.2812,
+   "lon": 24.8641
+  },
+  {
+   "name": "Pirkkola TN B",
+   "lat": 60.2342,
+   "lon": 24.9205
+  },
+  {
+   "name": "Pirkkolan jäähalli",
+   "lat": 60.2348,
+   "lon": 24.9201
+  },
+  {
+   "name": "Pirkkolan tekonurmi",
+   "lat": 60.2342,
+   "lon": 24.9205
+  },
+  {
+   "name": "Pispalan Tekonurmi",
+   "lat": 61.5012,
+   "lon": 23.7141
+  },
+  {
+   "name": "Pitäjänmäen Tekonurmi",
+   "lat": 60.2241,
+   "lon": 24.8612
+  },
+  {
+   "name": "Pohjois-Haagan yhteiskoulu (PHYK)",
+   "lat": 60.2235,
+   "lon": 24.8967
+  },
+  {
+   "name": "Pohjois-Tapiolan lukio",
+   "lat": 60.186,
+   "lon": 24.795
+  },
+  {
+   "name": "Puistolan Tekonurmi",
+   "lat": 60.2781,
+   "lon": 25.0412
+  },
+  {
+   "name": "Pukinmäen Tekonurmi",
+   "lat": 60.2481,
+   "lon": 24.9981
+  },
+  {
+   "name": "Puotilan Tekonurmi",
+   "lat": 60.2132,
+   "lon": 25.1098
+  },
+  {
+   "name": "Puotilan Tekonurmi (Bubu)",
+   "lat": 60.2132,
+   "lon": 25.1098
+  },
+  {
+   "name": "Pyynikin Urheilukenttä",
+   "lat": 61.4941,
+   "lon": 23.7381
+  },
+  {
+   "name": "Raatin Stadion Oulu",
+   "lat": 65.0185,
+   "lon": 25.4612
+  },
+  {
+   "name": "Ratinan Stadion Tampere",
+   "lat": 61.4932,
+   "lon": 23.7645
+  },
+  {
+   "name": "Rovaniemen Keskuskenttä",
+   "lat": 66.4981,
+   "lon": 25.7241
+  },
+  {
+   "name": "Rovaniemen Keskuskenttä (Suskun TN)",
+   "lat": 66.4981,
+   "lon": 25.7241
+  },
+  {
+   "name": "Ruukinlahden tekonurmi",
+   "lat": 60.16197,
+   "lon": 24.86975
+  },
+  {
+   "name": "Ruukinlahdentie 3",
+   "lat": 60.1619,
+   "lon": 24.8695
+  },
+  {
+   "name": "Sarkolan Tekonurmi Kouvola",
+   "lat": 60.8612,
+   "lon": 26.6912
+  },
+  {
+   "name": "Siltamäen Tekonurmi",
+   "lat": 60.2741,
+   "lon": 24.9812
+  },
+  {
+   "name": "Suomalainen yhteiskoulu (SYK)",
+   "lat": 60.1925,
+   "lon": 24.8968
+  },
+  {
+   "name": "Talin Jalkapallohalli",
+   "lat": 60.2141,
+   "lon": 24.8612
+  },
+  {
+   "name": "Talin Tekonurmi",
+   "lat": 60.2145,
+   "lon": 24.8625
+  },
+  {
+   "name": "Talin Urheilupuisto",
+   "lat": 60.2141,
+   "lon": 24.8612
+  },
+  {
+   "name": "Tammelan Stadion Tampere",
+   "lat": 61.4985,
+   "lon": 23.7812
+  },
+  {
+   "name": "Tampereen Kaupin Urheilupuisto",
+   "lat": 61.5034,
+   "lon": 23.8052
+  },
+  {
+   "name": "Tampereen Kaupin Urheilupuisto TN 1",
+   "lat": 61.5034,
+   "lon": 23.8052
+  },
+  {
+   "name": "Tampereen Kaupin Urheilupuisto TN 2",
+   "lat": 61.504,
+   "lon": 23.806
+  },
+  {
+   "name": "Tampereen Unihalli",
+   "lat": 61.4985,
+   "lon": 23.7612
+  },
+  {
+   "name": "Tapanilan Mosahalli",
+   "lat": 60.2612,
+   "lon": 25.0234
+  },
+  {
+   "name": "Tapanilan Mosahalli 1",
+   "lat": 60.2612,
+   "lon": 25.0234
+  },
+  {
+   "name": "Tapanilan Mosahalli 2",
+   "lat": 60.2612,
+   "lon": 25.0234
+  },
+  {
+   "name": "Tapiolan lukio",
+   "lat": 60.177,
+   "lon": 24.805
+  },
+  {
+   "name": "Tapiolan urheiluhalli",
+   "lat": 60.1778,
+   "lon": 24.8062
+  },
+  {
+   "name": "Tapiolan Urheilupuisto TN 1",
+   "lat": 60.1785,
+   "lon": 24.7865
+  },
+  {
+   "name": "Tapiolan Urheilupuisto TN 2",
+   "lat": 60.179,
+   "lon": 24.7872
+  },
+  {
+   "name": "Tapulin tekonurmi",
+   "lat": 60.2751,
+   "lon": 25.0312
+  },
+  {
+   "name": "Tapulin Tekonurmi",
+   "lat": 60.2751,
+   "lon": 25.0312
+  },
+  {
+   "name": "Tikkurilan jäähalli",
+   "lat": 60.2984,
+   "lon": 25.0372
+  },
+  {
+   "name": "Tikkurilan Kuplahalli",
+   "lat": 60.2985,
+   "lon": 25.0425
+  },
+  {
+   "name": "Tikkurilan Urheilupuisto TN",
+   "lat": 60.2981,
+   "lon": 25.0412
+  },
+  {
+   "name": "Turun Kupittaan Tekonurmi",
+   "lat": 60.443,
+   "lon": 22.2885
+  },
+  {
+   "name": "Turun Kupittaan Tekonurmi 1",
+   "lat": 60.4435,
+   "lon": 22.287
+  },
+  {
+   "name": "Turun Kupittaan Tekonurmi 2",
+   "lat": 60.4438,
+   "lon": 22.2875
+  },
+  {
+   "name": "Turun Kupittaan Tekonurmi 5",
+   "lat": 60.443,
+   "lon": 22.2885
+  },
+  {
+   "name": "Turun Urheilupuiston Yläkenttä",
+   "lat": 60.4475,
+   "lon": 22.2612
+  },
+  {
+   "name": "Tuusulan Salibandyhalli",
+   "lat": 60.4042,
+   "lon": 25.0275
+  },
+  {
+   "name": "Töölön Kisahalli (Kisis)",
+   "lat": 60.1835,
+   "lon": 24.9282
+  },
+  {
+   "name": "Töölön Pallokenttä 1",
+   "lat": 60.1872,
+   "lon": 24.9248
+  },
+  {
+   "name": "Töölön Pallokenttä 1 (Bollis)",
+   "lat": 60.1872,
+   "lon": 24.9248
+  },
+  {
+   "name": "Töölön Pallokenttä 2",
+   "lat": 60.1878,
+   "lon": 24.9242
+  },
+  {
+   "name": "Töölön Pallokenttä 3",
+   "lat": 60.1878,
+   "lon": 24.9242
+  },
+  {
+   "name": "Töölön Pallokenttä 6",
+   "lat": 60.1891,
+   "lon": 24.9231
+  },
+  {
+   "name": "Töölön Pallokenttä 7",
+   "lat": 60.1895,
+   "lon": 24.9225
+  },
+  {
+   "name": "Töölön Sahara Tekonurmi",
+   "lat": 60.1882,
+   "lon": 24.9254
+  },
+  {
+   "name": "Urhea-halli Vallila",
+   "lat": 60.1981,
+   "lon": 24.9541
+  },
+  {
+   "name": "Utti-halli Kouvola",
+   "lat": 60.8941,
+   "lon": 26.9158
+  },
+  {
+   "name": "Vantaan Energia Areena",
+   "lat": 60.2642,
+   "lon": 24.8528
+  },
+  {
+   "name": "Veritas Stadion Turku",
+   "lat": 60.4428,
+   "lon": 22.2905
+  },
+  {
+   "name": "Vierumäen Urheiluopisto",
+   "lat": 61.1141,
+   "lon": 26.0112
+  },
+  {
+   "name": "Viitaniemen Tekonurmi Jyväskylä",
+   "lat": 62.2481,
+   "lon": 25.7312
+  },
+  {
+   "name": "Vuosaaren Heteniitty (Hetari)",
+   "lat": 60.2112,
+   "lon": 25.1412
+  },
+  {
+   "name": "Vuosaaren Kartanon Tekonurmi",
+   "lat": 60.2185,
+   "lon": 25.1491
+  },
+  {
+   "name": "Väinämöisen kenttä",
+   "lat": 60.1741,
+   "lon": 24.9192
+  },
+  {
+   "name": "Väinämöisen kenttä (Väiski)",
+   "lat": 60.1741,
+   "lon": 24.9192
+  },
+  {
+   "name": "Väre Areena Kuopio",
+   "lat": 62.8875,
+   "lon": 27.6712
+  },
+  {
+   "name": "Väre Areena Kuopio (Keskuskenttä)",
+   "lat": 62.8875,
+   "lon": 27.6712
+  }
+ ]
+}

@@ -1,109 +1,56 @@
-const duckdb = require("duckdb");
+// Convert engine/.cache/*.json (GeoJSON from the fetchers) into GeoParquet files
+// in web/public/data, read in the browser by DuckDB-WASM.
+const { DuckDBInstance } = require("@duckdb/node-api");
 const fs = require("fs-extra");
 const path = require("node:path");
-
-const db = new duckdb.Database(":memory:");
-const con = db.connect();
 
 const CACHE_DIR = path.join(__dirname, "../.cache");
 const OUTPUT_DIR = path.join(__dirname, "../../web/public/data");
 
-async function runQuery(query) {
-  return new Promise((resolve, reject) => {
-    con.run(query, (err) => {
-      if (err) reject(err);
-      else resolve();
-    });
-  });
-}
+/** All datasets the app reads. A missing source is an error, never a silent skip. */
+const DATASETS = ["slots", "violations", "hubi", "signs", "liipi", "espoo", "osm"];
 
-async function getColumns(filePath) {
-  return new Promise((resolve, reject) => {
-    con.all(`DESCRIBE SELECT * FROM ST_Read('${filePath.replace(/\\/g, "/")}')`, (err, res) => {
-      if (err) reject(err);
-      else resolve(res.map(c => c.column_name));
-    });
-  });
-}
+const posix = (p) => p.replace(/\\/g, "/");
 
-async function main() {
-  console.log("🦆 DuckDB: Converting GeoJSON to optimized Parquet...");
-  await fs.ensureDir(OUTPUT_DIR);
-
-  try {
-    // Install and load spatial extension
-    await runQuery("INSTALL spatial; LOAD spatial;");
-
-    const files = [
-      { name: "slots", path: path.join(CACHE_DIR, "slots.json") },
-      { name: "violations", path: path.join(CACHE_DIR, "violations.json") },
-      { name: "hubi", path: path.join(CACHE_DIR, "hubi.json") },
-      { name: "signs", path: path.join(CACHE_DIR, "signs.json") },
-      { name: "liipi", path: path.join(CACHE_DIR, "liipi.json") },
-    ];
-
-    for (const file of files) {
-      if (!(await fs.pathExists(file.path))) {
-        console.warn(`[WARN] Skipping ${file.name}, source not found.`);
-        continue;
-      }
-
-      console.log(`[PROCESS] ${file.name} -> Parquet...`);
-
-      const parquetPath = path.join(OUTPUT_DIR, `${file.name}.parquet`);
-
-      // Clean up old file
-      if (await fs.pathExists(parquetPath)) await fs.remove(parquetPath);
-
-      // Inspect schema to find geometry column
-      const cols = await getColumns(file.path);
-      const geomCol = cols.find(c => c === 'geom' || c === 'geometry');
-      
-      if (!geomCol) {
-        console.warn(`[WARN] No geometry column found in ${file.name}, skipping spatial optimization.`);
-      }
-
-      let sourceQuery = `SELECT * FROM ST_Read('${file.path.replace(/\\/g, "/")}')`;
-
-      if (file.name === "signs") {
-        sourceQuery = `
-          SELECT 
-            *,
-            strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') as mod_ts,
-            (current_date - strptime(muokkauspv, '%d.%m.%Y %H:%M:%S')::DATE) <= 60 as is_new
-          FROM ST_Read('${file.path.replace(/\\/g, "/")}')
-        `;
-      } else if (file.name === "slots") {
-        sourceQuery = `
-          SELECT 
-            *,
-            COALESCE(luokka_nimi, 'Other') as luokka_nimi,
-            COALESCE(asukaspysakointitunnus, '') as asukaspysakointitunnus,
-            COALESCE(kesto, 'Unlimited') as kesto
-          FROM ST_Read('${file.path.replace(/\\/g, "/")}')
-        `;
-      }
-
-      // Final normalization: Force geometry column to be 'geom'
-      const finalQuery = geomCol 
-        ? `SELECT * EXCLUDE ${geomCol}, ${geomCol} as geom FROM (${sourceQuery}) sub`
-        : sourceQuery;
-
-      await runQuery(`
-        COPY (${finalQuery}) TO '${parquetPath.replace(/\\/g, "/")}' (FORMAT 'PARQUET');
-      `);
-
-      const stats = await fs.stat(parquetPath);
-      console.log(
-        `✅ ${file.name}.parquet created (${(stats.size / 1024 / 1024).toFixed(2)} MB)`,
-      );
-    }
-
-    console.log("🚀 All spatial assets optimized for DuckDB-Wasm.");
-  } catch (e) {
-    console.error("❌ DuckDB Process Failed:", e);
-    process.exit(1);
+function sourceQuery(name, file) {
+  const read = `ST_Read('${posix(file)}')`;
+  switch (name) {
+    case "signs":
+      // `mod_ts` lets the app decide what is "new" at view time.
+      return `SELECT *, strptime(muokkauspv, '%d.%m.%Y %H:%M:%S') AS mod_ts FROM ${read}`;
+    case "osm":
+      // Sorted so nearby lots share row groups (smaller file, faster scans).
+      return `SELECT * FROM ${read} ORDER BY ST_Y(geom), ST_X(geom)`;
+    default:
+      return `SELECT * FROM ${read}`;
   }
 }
 
-main();
+async function main() {
+  const instance = await DuckDBInstance.create(":memory:");
+  const con = await instance.connect();
+  await con.run("INSTALL spatial; LOAD spatial;");
+  await fs.ensureDir(OUTPUT_DIR);
+
+  for (const name of DATASETS) {
+    const file = path.join(CACHE_DIR, `${name}.json`);
+    if (!(await fs.pathExists(file))) throw new Error(`${name}: ${file} missing; run the fetchers first`);
+
+    const cols = (await con.runAndReadAll(`DESCRIBE ${sourceQuery(name, file)}`)).getRowObjectsJson().map((c) => c.column_name);
+    const geomCol = cols.find((c) => c === "geom" || c === "geometry");
+    if (!geomCol) throw new Error(`${name}: no geometry column`);
+    const q = geomCol === "geom" ? sourceQuery(name, file) : `SELECT * EXCLUDE ${geomCol}, ${geomCol} AS geom FROM (${sourceQuery(name, file)})`;
+
+    const out = path.join(OUTPUT_DIR, `${name}.parquet`);
+    const tmp = `${out}.tmp`;
+    await con.run(`COPY (${q}) TO '${posix(tmp)}' (FORMAT PARQUET, COMPRESSION ZSTD)`);
+    await fs.move(tmp, out, { overwrite: true });
+    const { size } = await fs.stat(out);
+    console.log(`✅ ${name}.parquet (${(size / 1024 / 1024).toFixed(2)} MB)`);
+  }
+}
+
+main().catch((e) => {
+  console.error("❌ DuckDB process failed:", e.message ?? e);
+  process.exit(1);
+});

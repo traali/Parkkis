@@ -32,18 +32,39 @@ interface ParkingPopupProps {
   hoverInfo: HoverInfo;
   selectedAddress: { name: string } | null;
   distance: string | null;
-  walkTime: (meters: string) => number;
 }
 
 export const ParkingPopup: React.FC<ParkingPopupProps> = ({
   hoverInfo,
   selectedAddress,
   distance,
-  walkTime,
 }) => {
   return (
     <div className="p-3 bg-nc-void text-nc-text rounded-lg border border-nc-border shadow-xl min-w-[240px]">
-      {hoverInfo.layerId === "liipi-points" ? (
+      {hoverInfo.layerId === "espoo-points" ? (
+        <RegionalPopup
+          title={String(hoverInfo.properties.name_fi || "Pysäköintialue")}
+          badge="Espoo"
+          rows={[
+            ["Tyyppi", hoverInfo.properties.class_fi],
+            ["Paikkoja (Espoon kaupunki)", hoverInfo.properties.parking_spaces],
+            ["Osoite", hoverInfo.properties.street_address_fi],
+          ]}
+          source="Lähde: Espoon kaupunki, pysäköintialueet (CC BY 4.0). Ei tietoa vapaista paikoista."
+        />
+      ) : hoverInfo.layerId === "osm-points" ? (
+        <RegionalPopup
+          title={String(hoverInfo.properties.name || "Pysäköintipaikka")}
+          badge="OSM"
+          rows={[
+            ["Paikkoja (OSM-merkintä)", hoverInfo.properties.capacity],
+            ["Maksullinen", hoverInfo.properties.fee === "yes" ? "kyllä" : hoverInfo.properties.fee === "no" ? "ei" : null],
+            ["Pääsy", hoverInfo.properties.access],
+            ["Enimmäisaika", hoverInfo.properties.maxstay],
+          ]}
+          source="Lähde: OpenStreetMap-avustajat (ODbL). Vapaaehtoisten merkintä, tarkista kyltit."
+        />
+      ) : hoverInfo.layerId === "liipi-points" ? (
         <>
           <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
             <h3 className="font-bold text-nc-neon-teal leading-tight flex items-center gap-1.5">
@@ -386,7 +407,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
               {distance}m
             </div>
             <div className="text-[10px] text-nc-text-dim uppercase">
-              ~{walkTime(distance)} min kävellen (linnuntietä)
+              linnuntietä, ei kävelyreitti
             </div>
           </div>
         </div>
@@ -394,3 +415,27 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
     </div>
   );
 };
+
+/** Popup for Espoo / OSM points: only fields the source actually has; empty ones are left out. */
+function RegionalPopup({ title, badge, rows, source }: { title: string; badge: string; rows: [string, unknown][]; source: string }) {
+  const shown = rows.filter(([, v]) => v !== null && v !== undefined && String(v) !== "");
+  return (
+    <div className="space-y-2">
+      <div className="flex justify-between items-start gap-2 border-b border-nc-border pb-2">
+        <h3 className="font-bold text-nc-neon-teal leading-tight">🅿️ {title}</h3>
+        <span className="bg-nc-neon-teal/20 text-nc-neon-teal font-black px-2 py-0.5 rounded text-[10px] uppercase">{badge}</span>
+      </div>
+      {shown.length > 0 ? (
+        shown.map(([k, v]) => (
+          <div key={k} className="flex justify-between gap-3 text-xs">
+            <span className="text-nc-text-muted">{k}</span>
+            <span className="font-bold text-nc-text text-right">{String(v)}</span>
+          </div>
+        ))
+      ) : (
+        <p className="text-xs text-nc-text-muted italic">Lähteessä ei lisätietoja.</p>
+      )}
+      <p className="text-[9px] text-nc-text-dim leading-tight">{source}</p>
+    </div>
+  );
+}

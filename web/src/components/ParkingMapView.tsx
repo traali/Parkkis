@@ -39,7 +39,6 @@ export interface ParkingMapViewProps {
   onMapLoad: () => void;
   hoverInfo: HoverInfo | null;
   distance: string | null;
-  walkTime: (meters: string) => number;
   selectedAddress: Address | null;
   riskData: FeatureCollection | null;
   violationData: FeatureCollection | null;
@@ -48,6 +47,8 @@ export interface ParkingMapViewProps {
   reservationData: FeatureCollection | null;
   liipiData: FeatureCollection | null;
   hubiData: FeatureCollection | null;
+  espooData?: FeatureCollection | null;
+  osmData?: FeatureCollection | null;
   showViolations: boolean;
   showSigns: boolean;
   showNewTraps: boolean;
@@ -67,7 +68,6 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
   onMapLoad,
   hoverInfo,
   distance,
-  walkTime,
   selectedAddress,
   riskData,
   violationData,
@@ -76,6 +76,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
   reservationData,
   liipiData,
   hubiData,
+  espooData,
+  osmData,
   showViolations,
   showSigns,
   showNewTraps,
@@ -105,6 +107,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
           "roadwork-fill",
           "reservation-fill",
           "liipi-points",
+          "espoo-points",
+          "osm-points",
         ]}
         onMouseMove={onMouseMove}
         onMouseLeave={onMouseLeave}
@@ -117,6 +121,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             "Liikennemerkit: Väylävirasto / Digiroad (CC BY 4.0)",
             "Liityntäpysäköinti: Fintraffic (CC BY 4.0)",
             "Pysäköintialueet: Parkkihubi / Helsingin kaupunki",
+            "Espoon pysäköintialueet: Espoon kaupunki (CC BY 4.0)",
+            "Pysäköinti muualla: © OpenStreetMap-avustajat (ODbL)",
           ],
         }}
       >
@@ -373,7 +379,6 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
               hoverInfo={hoverInfo}
               selectedAddress={selectedAddress}
               distance={distance}
-              walkTime={walkTime}
             />
           </Popup>
         )}
@@ -384,6 +389,35 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             anchor="bottom"
             color="#00f2ff"
           />
+        )}
+        {osmData && (
+          <Source id="osm-parking" type="geojson" data={osmData}>
+            <Layer
+              id="osm-points"
+              type="circle"
+              minzoom={12}
+              paint={{
+                "circle-radius": 5,
+                "circle-color": "#9aa4ad",
+                "circle-stroke-width": 1.5,
+                "circle-stroke-color": "#ffffff",
+              }}
+            />
+          </Source>
+        )}
+        {espooData && (
+          <Source id="espoo-parking" type="geojson" data={espooData}>
+            <Layer
+              id="espoo-points"
+              type="circle"
+              paint={{
+                "circle-radius": 7,
+                "circle-color": "#3b82f6",
+                "circle-stroke-width": 2,
+                "circle-stroke-color": "#ffffff",
+              }}
+            />
+          </Source>
         )}
         {liipiData && (
           <Source id="liipi-hubs" type="geojson" data={liipiData}>

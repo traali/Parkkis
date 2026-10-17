@@ -83,3 +83,29 @@ describe('MapLibre 6', () => {
     }
   });
 });
+
+describe('Oct 17 live check: honest venue coverage and no guessed walk times', () => {
+  const app = read(join(ROOT, 'web/src/App.tsx'));
+  const popup = read(join(ROOT, 'web/src/components/ParkingPopup.tsx'));
+  it('does not turn straight-line distance into walking minutes', () => {
+    assert.doesNotMatch(app + popup, /min kävellen|\/\s*80\)/);
+    assert.match(popup, /linnuntietä/);
+  });
+  it('loads Espoo parking areas and OSM parking into the map', () => {
+    assert.match(app, /useRegionalParking\(/);
+    const map = read(join(ROOT, 'web/src/components/ParkingMapView.tsx'));
+    assert.match(map, /espoo-points/);
+    assert.match(map, /osm-points/);
+    assert.match(map, /Espoon kaupunki/);
+  });
+  it('ships the Espoo and OSM snapshots with a manifest', () => {
+    const m = JSON.parse(read(join(ROOT, 'web/public/data/manifest.json')));
+    assert.ok(m.datasets.espoo.rows >= 400, 'espoo rows');
+    assert.ok(m.datasets.osm.rows >= 10000, 'osm rows');
+    for (const d of Object.values(m.datasets)) assert.ok(d.fetched_at, 'every dataset has a fetch time');
+  });
+  it('map controls and theme buttons are at least 44px', () => {
+    assert.match(read(join(ROOT, 'web/src/index.css')), /maplibregl-ctrl-group button\s*{[^}]*44px/);
+    assert.match(app, /min-w-\[44px\] min-h-\[44px\]/);
+  });
+});
