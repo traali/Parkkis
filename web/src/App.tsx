@@ -668,7 +668,9 @@ export default function App() {
               🗺️ {showCityPanel ? "Piilota lisätiedot" : venueFromLink ? "Kohteen lisätiedot ja karttatasot" : "Lisää karttatasoja"}
               {venueFromLink && busy.length > 0 && !showCityPanel && <span className="text-pink-300"> · ⚠️ vilkas päivä</span>}
             </button>
-            {showCityPanel && venueFromLink && (
+            {showCityPanel && (
+              <div data-testid="city-panel-body" className="max-h-[38vh] overflow-y-auto overscroll-contain flex flex-col gap-2 pr-1">
+            {venueFromLink && (
               <VenueInfo
                 name={venueFromLink.name}
                 date={match.date}
@@ -685,8 +687,8 @@ export default function App() {
                 forecastFor={matchAt.label}
               />
             )}
-            {showCityPanel && (
               <CityLayerToggles layers={cityLayers} shown={cityShown} onToggle={toggleCity} date={match.date} dateFromLink={match.fromLink} />
+              </div>
             )}
           </div>
           {!dbReady && (
