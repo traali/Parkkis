@@ -67,7 +67,28 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
 }) => {
   return (
     <div className="p-3 bg-nc-void text-nc-text rounded-lg border border-nc-border shadow-xl min-w-[240px]">
-      {hoverInfo.layerId === "hel-winter-lines" ? (
+      {String(hoverInfo.layerId ?? "").startsWith("city-") ? (
+        <RegionalPopup
+          title={String(hoverInfo.properties.title || "Kohde")}
+          badge={({ event: "Tapahtuma", lease: "Vuokraus", coach: "Bussit", cycling: "Pyörä", access: "Esteetön", payzone: "Maksu", resident: "Asukas" } as Record<string, string>)[String(hoverInfo.properties.city_kind)] ?? "HKI"}
+          rows={[
+            ["Vaihe", hoverInfo.properties.phase],
+            ["Tapahtuma", hoverInfo.properties.event_period],
+            ["Alueen käyttö", hoverInfo.properties.site_period],
+            ["Vuokrausaika", hoverInfo.properties.period],
+            ["Osoite", hoverInfo.properties.address],
+            ["Kaupunginosa", hoverInfo.properties.district],
+            ["Enimmäisaika", hoverInfo.properties.limit],
+            ["Kausi", hoverInfo.properties.season],
+            ["Suunta", hoverInfo.properties.oneway],
+            ["Ääniopastus suojatiellä", hoverInfo.properties.sound],
+            ["Lisätieto", hoverInfo.properties.info],
+            ["Tila", hoverInfo.properties.status],
+            ["Päivitetty", hoverInfo.properties.updated],
+          ]}
+          source="Lähde: Helsingin kaupunki (CC BY 4.0)."
+        />
+      ) : hoverInfo.layerId === "hel-winter-lines" ? (
         <RegionalPopup
           title={String(hoverInfo.properties.nimi || "Talvihoitoreitti")}
           badge="Helsinki"
