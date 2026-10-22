@@ -20,6 +20,8 @@ concurrency:
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    outputs:
+      committed: ${{ steps.commit.outputs.committed }}
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -44,14 +46,28 @@ jobs:
         run: npm test
 
       - name: Commit and push data
+        id: commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A web/public/data
           if git diff --cached --quiet; then
             echo "No data changes"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "chore(data): daily open-data refresh [$(TZ=Europe/Helsinki date +'%Y-%m-%d')]"
           git pull --rebase origin master
           git push origin HEAD:master
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+
+  # A GITHUB_TOKEN push does not start cd.yml, and Cloudflare's own git build
+  # publishes an empty site, so deploy the new data explicitly.
+  deploy:
+    needs: ingest
+    if: needs.ingest.outputs.committed == 'true'
+    permissions:
+      contents: read
+      deployments: write
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit

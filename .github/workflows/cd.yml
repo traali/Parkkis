@@ -1,9 +1,22 @@
 name: Cloudflare Pages CD
 
+# The only way Parkkis reaches production: build web/ (with its data check) and
+# wrangler-deploy dist. Called on push, by ingest.yml after a data commit (bot pushes
+# do not trigger push workflows) and by health.yml when prod is down.
 on:
   workflow_dispatch:
   push:
     branches: [master]
+  workflow_call:
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+
+concurrency:
+  group: parkkis-prod-deploy
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -29,6 +42,8 @@ jobs:
       - name: Checkout Code
         if: steps.token.outputs.present == 'true'
         uses: actions/checkout@v4
+        with:
+          ref: master
 
       - name: Setup Node.js
         if: steps.token.outputs.present == 'true'
@@ -48,6 +63,15 @@ jobs:
         working-directory: web
         run: npm run build
 
+      - name: Refuse to publish an empty site
+        if: steps.token.outputs.present == 'true'
+        working-directory: web
+        run: |
+          test -s dist/index.html && grep -q 'id="root"' dist/index.html
+          ls dist/assets/*.js >/dev/null
+          test -s dist/data/manifest.json
+          echo "dist ok: $(find dist -type f | wc -l) files"
+
       - name: Deploy Cloudflare Pages production alias
         if: steps.token.outputs.present == 'true'
         uses: cloudflare/wrangler-action@v3
@@ -56,3 +80,13 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: web
           command: pages deploy dist --project-name=parkkis --commit-dirty=true
+
+      - name: Verify production
+        if: steps.token.outputs.present == 'true'
+        run: |
+          sleep 20
+          for u in "https://parkkis.pages.dev/" "https://parkkis.pages.dev/venue/Lauttasaari%20TN%20B?lat=60.16357&lon=24.8675"; do
+            body=$(curl -fsS --retry 5 --retry-delay 10 "$u")
+            echo "$body" | grep -q 'id="root"' || { echo "::error::$u has no app shell"; exit 1; }
+          done
+          echo "prod ok"
