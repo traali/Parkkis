@@ -2,6 +2,32 @@ import React from "react";
 import { Navigation, Shield } from "lucide-react";
 import { parseJsonSafe, getCategoryLabel, getSignVisuals, getSignLabel } from "../lib/mapThemes";
 import { renderTextWithLinks } from "../lib/helsinkiCaseParser";
+import { navLinks } from "../lib/navigate";
+
+const NAV_LAYERS = new Set(["parking-lines", "hubi-lines", "liipi-points", "espoo-points", "osm-points"]);
+
+function NavigateButtons({ lat, lon }: { lat: number; lon: number }) {
+  const links = navLinks(lat, lon);
+  if (!links.length) return null;
+  return (
+    <div data-testid="navigate-buttons" className="mt-3 pt-2 border-t border-nc-border">
+      <span className="block text-[10px] text-nc-text-dim uppercase font-black tracking-wider mb-1">Navigoi</span>
+      <div className="grid grid-cols-3 gap-1.5">
+        {links.map((l) => (
+          <a
+            key={l.label}
+            href={l.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-center rounded-xl bg-nc-neon-teal/15 border border-nc-neon-teal/40 text-nc-neon-teal text-xs font-bold px-1"
+          >
+            {l.label}
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const LIIPI_STATUS: Record<string, string> = {
   IN_OPERATION: "Käytössä",
@@ -41,7 +67,28 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
 }) => {
   return (
     <div className="p-3 bg-nc-void text-nc-text rounded-lg border border-nc-border shadow-xl min-w-[240px]">
-      {hoverInfo.layerId === "espoo-points" ? (
+      {hoverInfo.layerId === "hel-winter-lines" ? (
+        <RegionalPopup
+          title={String(hoverInfo.properties.nimi || "Talvihoitoreitti")}
+          badge="Helsinki"
+          rows={[
+            ["Hoitotapa", hoverInfo.properties.hoitotapa],
+            ["Urakoitsija", hoverInfo.properties.urakoitsija],
+            ["Tieto päivitetty", hoverInfo.properties.paivitetty],
+          ]}
+          source="Talvihoidon ensisijaiset reitit (ei reaaliaikainen): suunnitelma siitä, mitkä reitit hoidetaan ensin, ei tieto tehdystä työstä. Lähde: Helsingin kaupunki (CC BY 4.0)."
+        />
+      ) : hoverInfo.layerId === "plough-lines" ? (
+        <RegionalPopup
+          title={`${String(hoverInfo.properties.tasksFi || "Kunnossapito")} ${String(hoverInfo.properties.timeFi || "")}`}
+          badge={hoverInfo.properties.source === "espoo" ? "Espoo" : "Fintraffic"}
+          rows={[
+            ["Katu", hoverInfo.properties.street],
+            ["Aikaa kulunut", typeof hoverInfo.properties.ageMin === "number" ? (hoverInfo.properties.ageMin < 60 ? `${hoverInfo.properties.ageMin} min` : `${Math.floor(hoverInfo.properties.ageMin / 60)} h ${hoverInfo.properties.ageMin % 60} min`) : null],
+          ]}
+          source={hoverInfo.properties.source === "espoo" ? "Lähde: Espoon kaupunki, talvikunnossapitokaluston toimenpiteet (CC BY 4.0). Toteutunut työ, ei ennuste." : "Lähde: Fintraffic / digitraffic.fi (CC BY 4.0). Valtion tie, toteutunut ajo, ei ennuste."}
+        />
+      ) : hoverInfo.layerId === "espoo-points" ? (
         <RegionalPopup
           title={String(hoverInfo.properties.name_fi || "Pysäköintialue")}
           badge="Espoo"
@@ -412,6 +459,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
           </div>
         </div>
       )}
+      {NAV_LAYERS.has(hoverInfo.layerId ?? "") && <NavigateButtons lat={hoverInfo.latitude} lon={hoverInfo.longitude} />}
     </div>
   );
 };
