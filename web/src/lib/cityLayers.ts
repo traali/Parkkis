@@ -6,7 +6,6 @@ import type { Feature, FeatureCollection, Geometry, Position } from "geojson";
 export interface Bbox { minLon: number; minLat: number; maxLon: number; maxLat: number }
 
 export const HEL_WFS = "https://kartta.hel.fi/ws/geoserver/avoindata/wfs";
-export const HEL_PROXY = "/api/hel-wfs";
 export const HEL_CREDIT = "Helsingin kaupunki (CC BY 4.0)";
 export const FMI_CREDIT = "Ilmatieteen laitos (CC BY 4.0)";
 /** Events within this distance of the venue make the match date a "busy day". */
@@ -55,12 +54,16 @@ export function wfsQuery(typeName: string, cql?: string, propertyName?: string[]
 
 type Fetch = typeof fetch;
 
-/** Same-origin cached proxy first; the city's own server directly if the proxy is missing (dev) or fails. */
+/**
+ * Fetches straight from the city's server (CORS open). A Cloudflare proxy was tried and dropped:
+ * kartta.hel.fi times out (522) from Cloudflare's network. One retry after a short pause.
+ */
 export async function helFetch(query: string, f: Fetch = fetch): Promise<Feature[]> {
   let lastErr: unknown;
-  for (const base of [HEL_PROXY, HEL_WFS]) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt) await new Promise((r) => setTimeout(r, 800));
     try {
-      const r = await f(`${base}?${query}`);
+      const r = await f(`${HEL_WFS}?${query}`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const ct = r.headers?.get?.("content-type") ?? "application/json";
       if (!ct.includes("json")) throw new Error(`not JSON (${ct})`);
