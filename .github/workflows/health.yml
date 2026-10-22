@@ -1,0 +1,40 @@
+name: Prod health
+
+# Hourly: / and a venue deep link must serve the app shell and its JS.
+# If not (e.g. an empty deployment), redeploy from master via cd.yml.
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      healthy: ${{ steps.probe.outputs.healthy }}
+    steps:
+      - id: probe
+        run: |
+          ok=true
+          for u in "https://parkkis.pages.dev/" \
+                   "https://parkkis.pages.dev/venue/Lauttasaari%20TN%20B?lat=60.16357&lon=24.8675" \
+                   "https://parkkis.pages.dev/venue/Espoonlahti%201%20TN%20A?lat=60.1485&lon=24.653"; do
+            code=$(curl -s -o page.html -w '%{http_code}' --retry 3 --retry-delay 5 "$u")
+            js=$(grep -o '/assets/index-[^"]*\.js' page.html | head -1)
+            jscode=$( [ -n "$js" ] && curl -s -o /dev/null -w '%{http_code}' "https://parkkis.pages.dev$js" || echo none)
+            data=$(curl -s https://parkkis.pages.dev/data/espoo.parquet | head -c 4)
+            echo "$u -> $code, js $js $jscode, espoo.parquet magic '$data'"
+            if [ "$code" != 200 ] || ! grep -q 'id="root"' page.html || [ "$jscode" != 200 ] || [ "$data" != PAR1 ]; then ok=false; fi
+          done
+          echo "healthy=$ok" >> "$GITHUB_OUTPUT"
+          [ "$ok" = true ] || echo "::warning::Parkkis prod unhealthy, redeploying"
+
+  redeploy:
+    needs: check
+    if: needs.check.outputs.healthy != 'true'
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit

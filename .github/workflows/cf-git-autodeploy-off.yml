@@ -1,0 +1,22 @@
+name: Turn off Cloudflare git auto-deploys (one-off)
+
+# Cloudflare Pages' own GitHub build publishes an empty site for every push to
+# master (no build command/output set), which 404s prod. Production must come
+# only from cd.yml (wrangler). This disables the git-linked automatic deployments.
+on:
+  workflow_dispatch:
+
+jobs:
+  disable:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT/pages/projects/parkkis"
+          echo "Before:"; curl -s -H "Authorization: Bearer $CF_TOKEN" "$api" | jq '{success, errors, source: .result.source, build: .result.build_config, prod_branch: .result.production_branch}'
+          curl -s -X PATCH -H "Authorization: Bearer $CF_TOKEN" -H 'Content-Type: application/json' "$api" \
+            --data '{"source":{"config":{"deployments_enabled":false,"production_deployments_enabled":false,"preview_deployment_setting":"none"}}}' \
+            | jq '{success, errors, source: .result.source}'
+          echo "Recent deployments:"; curl -s -H "Authorization: Bearer $CF_TOKEN" "$api/deployments?per_page=10" | jq -r '.result[]? | [.created_on, .short_id, .environment, .deployment_trigger.type, .deployment_trigger.metadata.commit_hash[0:7], .latest_stage.status] | @tsv'
