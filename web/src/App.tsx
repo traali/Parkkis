@@ -23,6 +23,8 @@ import {
 import { useParkingLayers } from "./hooks/useParkingLayers";
 import { useRegionalParking } from "./hooks/useRegionalParking";
 import { coverageNoteText, venueCoverage } from "./lib/coverage";
+import { usePlough } from "./hooks/usePlough";
+import { AGE_COLORS, AGE_LABELS, EMPTY_TEXT, HEL_PRIORITY_LABEL, ERROR_TEXT, STATE_ROADS_NOTE, bboxAround, venueBanner, type Bbox } from "./lib/plough";
 import {
   CATEGORIES,
   getCentroid,
@@ -48,7 +50,7 @@ const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
 /** Must match interactiveLayerIds in ParkingMapView. */
-const TAP_LAYERS = ["parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points"];
+const TAP_LAYERS = ["parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
 
 /**
  * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
@@ -322,6 +324,39 @@ export default function App() {
   const { espooData, osmData, regionalStatus } = useRegionalParking(dbReady);
 
   // Until the full Espoo/OSM snapshot is in, the venue tiles hold the same rows nearby.
+  // Winter maintenance (Digitraffic): fetched only when the toggle is on or a venue's fast path is done.
+  const [showPlough, setShowPlough] = useState(false);
+  const { ploughData, ploughStatus, ploughFailed, loadPlough, helPriority, helStatus, loadHel } = usePlough();
+  const ploughBbox = useCallback((): Bbox => {
+    const b = mapRef.current?.getBounds();
+    const v = venueFromLink ? bboxAround(venueFromLink.latitude, venueFromLink.longitude, 2500) : null;
+    // Keep requests to the capital region so a zoomed-out map does not pull all of Finland.
+    let box: Bbox = b
+      ? { minLon: Math.max(b.getWest(), 24.3), minLat: Math.max(b.getSouth(), 60.0), maxLon: Math.min(b.getEast(), 25.5), maxLat: Math.min(b.getNorth(), 60.5) }
+      : (v ?? { minLon: 24.45, minLat: 60.08, maxLon: 25.3, maxLat: 60.42 });
+    if (box.minLon >= box.maxLon || box.minLat >= box.maxLat) box = v ?? { minLon: 24.45, minLat: 60.08, maxLon: 25.3, maxLat: 60.42 };
+    if (v) box = { minLon: Math.min(box.minLon, v.minLon), minLat: Math.min(box.minLat, v.minLat), maxLon: Math.max(box.maxLon, v.maxLon), maxLat: Math.max(box.maxLat, v.maxLat) };
+    return box;
+  }, [venueFromLink]);
+  const venueFastDone = !!venueTiles || dbReady;
+  useEffect(() => {
+    if (venueFromLink && venueFastDone && ploughStatus === "idle") {
+      const t = setTimeout(() => loadPlough(ploughBbox()), 500);
+      return () => clearTimeout(t);
+    }
+  }, [venueFromLink, venueFastDone, ploughStatus, loadPlough, ploughBbox]);
+  const togglePlough = useCallback(() => {
+    if (!showPlough) {
+      loadPlough(ploughBbox());
+      loadHel();
+    }
+    setShowPlough(!showPlough);
+  }, [showPlough, loadPlough, ploughBbox, loadHel]);
+  const ploughBanner = useMemo(
+    () => (venueFromLink && ploughData ? venueBanner(ploughData, venueFromLink.latitude, venueFromLink.longitude) : null),
+    [venueFromLink, ploughData],
+  );
+
   const espooShown = espooData ?? venueTiles?.espoo ?? null;
   const osmShown = osmData ?? venueTiles?.osm ?? null;
 
@@ -523,6 +558,62 @@ export default function App() {
             </div>
           )}
 
+          {
+            <div
+              data-testid="plough-panel"
+              className="nv-glass rounded-3xl px-4 py-2 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-sky-400/40 flex flex-col gap-1"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  data-testid="plough-toggle"
+                  aria-pressed={showPlough}
+                  onClick={togglePlough}
+                  className={`min-h-[44px] px-4 rounded-2xl font-bold border ${showPlough ? "border-sky-400 text-sky-300 bg-sky-400/15" : "border-nc-border text-nc-text-dim"}`}
+                >
+                  ❄️ {showPlough ? "Piilota auraus" : "Aurattu / hiekoitettu viime tunteina"}
+                </button>
+                {showPlough && ploughStatus === "ready" && (
+                  <span className="flex items-center gap-2 text-[10px]">
+                    {(Object.keys(AGE_LABELS) as (keyof typeof AGE_LABELS)[]).map((k) => (
+                      <span key={k} className="flex items-center gap-1">
+                        <span className="inline-block w-4 h-1.5 rounded" style={{ background: AGE_COLORS[k] }} />
+                        {AGE_LABELS[k]}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </div>
+              {(venueFromLink || showPlough) && (<>
+              <div data-testid="plough-status" role="status">
+                {ploughFailed.length === 1 && ploughStatus !== "loading" && (
+                  <span className="block text-nc-danger">
+                    {ploughFailed[0] === "espoo" ? "Espoon katutietojen lataus epäonnistui." : "Valtion teiden tietojen lataus epäonnistui."}{" "}
+                  </span>
+                )}
+                {ploughStatus === "loading" && "Ladataan auraustietoja…"}
+                {ploughStatus === "error" && <span className="text-nc-danger font-bold">{ERROR_TEXT}. Yritä myöhemmin uudelleen.</span>}
+                {ploughStatus === "empty" && EMPTY_TEXT}
+                {ploughStatus === "ready" &&
+                  (ploughBanner ? (
+                    <b data-testid="plough-banner" className="text-sky-300">{ploughBanner.text}</b>
+                  ) : venueFromLink ? (
+                    "Ei auraus-, hiekoitus- tai harjausajoja 2 km säteellä viime tunteina."
+                  ) : (
+                    `${ploughData?.features.length ?? 0} kunnossapitoajoa näkyvällä alueella (valtion tiet 12 h, Espoon kadut 48 h).`
+                  ))}
+              </div>
+              </>)}
+              {showPlough && (
+                <div data-testid="hel-priority-status" className="text-[10px] flex items-center gap-1">
+                  <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" />
+                  Helsinki: {HEL_PRIORITY_LABEL}
+                  {helStatus === "loading" ? " – ladataan…" : helStatus === "error" ? " – lataus epäonnistui" : helStatus === "ready" ? ` – ${helPriority?.features.length ?? 0} reittiä` : ""}
+                </div>
+              )}
+              <div className="text-[10px] text-nc-text-dim">{STATE_ROADS_NOTE}</div>
+            </div>
+          }
           {!dbReady && (
             <div
               data-testid="loading-status"
@@ -679,6 +770,9 @@ export default function App() {
         showReservations={showReservations}
         activeFilter={activeFilter}
         pulseOpacity={pulseOpacity}
+        ploughData={ploughData}
+        helPriority={helPriority}
+        showPlough={showPlough}
       />
 
       {/* Bento Stats Footer */}

@@ -12,6 +12,7 @@ import ReactMap, {
 import type * as maplibregl from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import { THEME_CONFIGS, type ThemeType } from "../lib/mapThemes";
+import { AGE_COLORS, type PloughFC } from "../lib/plough";
 import { ParkingPopup, type HoverInfo } from "./ParkingPopup";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
@@ -56,6 +57,9 @@ export interface ParkingMapViewProps {
   showReservations: boolean;
   activeFilter: string;
   pulseOpacity: number;
+  ploughData?: PloughFC | null;
+  showPlough?: boolean;
+  helPriority?: FeatureCollection | null;
 }
 
 export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
@@ -85,6 +89,9 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
   showReservations,
   activeFilter,
   pulseOpacity,
+  ploughData = null,
+  showPlough = false,
+  helPriority = null,
 }) => {
   const mapFilter: import("maplibre-gl").FilterSpecification =
     activeFilter === "all"
@@ -109,6 +116,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
           "liipi-points",
           "espoo-points",
           "osm-points",
+          "plough-lines",
+          "hel-winter-lines",
         ]}
         onMouseMove={onMouseMove}
         onClick={onMouseMove}
@@ -124,6 +133,9 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             "Pysäköintialueet: Parkkihubi / Helsingin kaupunki",
             "Espoon pysäköintialueet: Espoon kaupunki (CC BY 4.0)",
             "Pysäköinti muualla: © OpenStreetMap-avustajat (ODbL)",
+            "Auraus ja hiekoitus (valtion tiet): Fintraffic / digitraffic.fi (CC BY 4.0)",
+            "Espoon katujen kunnossapito: Espoon kaupunki (CC BY 4.0)",
+            "Talvihoidon ensisijaiset reitit: Helsingin kaupunki (CC BY 4.0)",
           ],
         }}
       >
@@ -309,6 +321,32 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                 "circle-color": THEME_CONFIGS[theme].colors.glowLow,
                 "circle-opacity": pulseOpacity,
                 "circle-blur": 1,
+              }}
+            />
+          </Source>
+        )}
+
+        {helPriority && (
+          <Source id="hel-winter" type="geojson" data={helPriority}>
+            <Layer
+              id="hel-winter-lines"
+              type="line"
+              layout={{ visibility: showPlough ? "visible" : "none" }}
+              paint={{ "line-color": "#6ee7b7", "line-width": 4, "line-opacity": 0.7, "line-dasharray": [2, 1.5] }}
+            />
+          </Source>
+        )}
+
+        {ploughData && (
+          <Source id="plough-data" type="geojson" data={ploughData}>
+            <Layer
+              id="plough-lines"
+              type="line"
+              layout={{ visibility: showPlough ? "visible" : "none", "line-cap": "round", "line-join": "round" }}
+              paint={{
+                "line-color": ["match", ["get", "age"], "lt1h", AGE_COLORS.lt1h, "1to3h", AGE_COLORS["1to3h"], "3to12h", AGE_COLORS["3to12h"], AGE_COLORS["12to48h"]],
+                "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 7],
+                "line-opacity": 0.9,
               }}
             />
           </Source>
