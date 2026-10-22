@@ -24,10 +24,10 @@ describe('city layer queries', () => {
 });
 
 describe('helFetch', () => {
-  it('falls back to the city server when the proxy fails, and throws when both fail', async () => {
+  it('retries the city server once, and throws when both attempts fail', async () => {
     const calls = [];
     const ok = { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ type: 'FeatureCollection', features: [{ type: 'Feature' }] }) };
-    const f = async (u) => { calls.push(u); return u.startsWith('/api') ? { ok: false, status: 502 } : ok; };
+    const f = async (u) => { calls.push(u); assert.ok(u.startsWith('https://kartta.hel.fi/')); return calls.length === 1 ? { ok: false, status: 503 } : ok; };
     assert.equal((await C.helFetch('a=1', f)).length, 1);
     assert.equal(calls.length, 2);
     await assert.rejects(C.helFetch('a=1', async () => ({ ok: false, status: 500 })));
