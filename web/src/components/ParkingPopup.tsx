@@ -3,6 +3,7 @@ import { Navigation, Shield } from "lucide-react";
 import { parseJsonSafe, getCategoryLabel, getSignVisuals, getSignLabel } from "../lib/mapThemes";
 import { renderTextWithLinks } from "../lib/helsinkiCaseParser";
 import { navLinks } from "../lib/navigate";
+import { LiipiLive } from "./LiipiLive";
 
 const NAV_LAYERS = new Set(["parking-lines", "hubi-lines", "liipi-points", "espoo-points", "osm-points"]);
 
@@ -170,6 +171,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                 );
               })()}
             </div>
+            {(() => { const fid = Number(hoverInfo.properties.facility_id ?? hoverInfo.properties.id); return Number.isFinite(fid) && fid > 0 ? <LiipiLive facilityId={fid} /> : null; })()}
             <p className="text-[9px] text-nc-text-dim leading-tight">
               Lähde: Fintraffic (tallenne). Tarkista ajantasainen tila paikan päältä.
             </p>
