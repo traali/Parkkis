@@ -386,8 +386,7 @@ export default function App() {
       }
     }, 800);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [venueFromLink, venueFastDone, venueInHelsinki]);
+  }, [venueFromLink, venueFastDone, venueInHelsinki, loadForecast, loadCity, loadContractors, ploughBbox]);
   const busy = useMemo(
     () => (venueFromLink ? busyDay(cityLayers.events.data, venueFromLink.latitude, venueFromLink.longitude) : []),
     [venueFromLink, cityLayers.events.data],
