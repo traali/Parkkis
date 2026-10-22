@@ -24,6 +24,9 @@ const maplibreLib = import("maplibre-gl").then((lib) => {
   return lib;
 });
 
+import { CITY_LAYERS, type CityLayerId } from "../lib/cityLayers";
+import type { LayerState } from "../hooks/useCityLayers";
+
 export interface Address {
   longitude: number;
   latitude: number;
@@ -60,6 +63,8 @@ export interface ParkingMapViewProps {
   ploughData?: PloughFC | null;
   showPlough?: boolean;
   helPriority?: FeatureCollection | null;
+  cityLayers?: Record<CityLayerId, LayerState>;
+  cityShown?: Set<CityLayerId>;
 }
 
 export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
@@ -92,7 +97,12 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
   ploughData = null,
   showPlough = false,
   helPriority = null,
+  cityLayers,
+  cityShown,
 }) => {
+  const vis = (id: CityLayerId) => (cityShown?.has(id) ? "visible" : "none") as "visible" | "none";
+  const cityData = (id: CityLayerId) => cityLayers?.[id]?.data ?? null;
+  const colorOf = (id: CityLayerId) => CITY_LAYERS.find((l) => l.id === id)!.color;
   const mapFilter: import("maplibre-gl").FilterSpecification =
     activeFilter === "all"
       ? ["has", "category"]
@@ -108,6 +118,13 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         style={{ width: "100%", height: "100%" }}
         mapStyle={THEME_CONFIGS[theme].mapStyle}
         interactiveLayerIds={[
+          "city-events-fill",
+          "city-leases-fill",
+          "city-leases-points",
+          "city-coach-points",
+          "city-cycling-lines",
+          "city-access-lines",
+          "city-zones-fill",
           "parking-lines",
           "hubi-lines",
           "sign-points",
@@ -136,6 +153,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             "Auraus ja hiekoitus (valtion tiet): Fintraffic / digitraffic.fi (CC BY 4.0)",
             "Espoon katujen kunnossapito: Espoon kaupunki (CC BY 4.0)",
             "Talvihoidon ensisijaiset reitit: Helsingin kaupunki (CC BY 4.0)",
+            "Tapahtumat, maanvuokraukset, turistibussit, pyörä- ja esteettömät reitit, vyöhykkeet ja urakat: Helsingin kaupunki (CC BY 4.0)",
+            "Sääennuste: Ilmatieteen laitos (CC BY 4.0)",
           ],
         }}
       >
@@ -326,6 +345,47 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
           </Source>
         )}
 
+
+        {cityData("zones") && (
+          <Source id="city-zones" type="geojson" data={cityData("zones")!}>
+            <Layer id="city-zones-fill" type="fill" layout={{ visibility: vis("zones") }}
+              paint={{ "fill-color": ["match", ["get", "city_kind"], "payzone", "#64748b", "#a3e635"], "fill-opacity": 0.12 }} />
+            <Layer id="city-zones-line" type="line" layout={{ visibility: vis("zones") }}
+              paint={{ "line-color": ["match", ["get", "city_kind"], "payzone", colorOf("zones"), "#a3e635"], "line-width": 1.5, "line-dasharray": [3, 2] }} />
+          </Source>
+        )}
+        {cityData("cycling") && (
+          <Source id="city-cycling" type="geojson" data={cityData("cycling")!}>
+            <Layer id="city-cycling-lines" type="line" layout={{ visibility: vis("cycling"), "line-cap": "round" }}
+              paint={{ "line-color": colorOf("cycling"), "line-width": ["case", ["get", "main"], 3, 1.5], "line-opacity": 0.8 }} />
+          </Source>
+        )}
+        {cityData("access") && (
+          <Source id="city-access" type="geojson" data={cityData("access")!}>
+            <Layer id="city-access-lines" type="line" layout={{ visibility: vis("access"), "line-cap": "round" }}
+              paint={{ "line-color": colorOf("access"), "line-width": 3, "line-opacity": 0.85 }} />
+          </Source>
+        )}
+        {cityData("events") && (
+          <Source id="city-events" type="geojson" data={cityData("events")!}>
+            <Layer id="city-events-fill" type="fill" layout={{ visibility: vis("events") }}
+              paint={{ "fill-color": colorOf("events"), "fill-opacity": 0.25, "fill-outline-color": colorOf("events") }} />
+          </Source>
+        )}
+        {cityData("leases") && (
+          <Source id="city-leases" type="geojson" data={cityData("leases")!}>
+            <Layer id="city-leases-fill" type="fill" filter={["==", ["geometry-type"], "Polygon"]} layout={{ visibility: vis("leases") }}
+              paint={{ "fill-color": colorOf("leases"), "fill-opacity": 0.3, "fill-outline-color": colorOf("leases") }} />
+            <Layer id="city-leases-points" type="circle" filter={["==", ["geometry-type"], "Point"]} layout={{ visibility: vis("leases") }}
+              paint={{ "circle-radius": 6, "circle-color": colorOf("leases"), "circle-stroke-width": 2, "circle-stroke-color": "#fff" }} />
+          </Source>
+        )}
+        {cityData("coach") && (
+          <Source id="city-coach" type="geojson" data={cityData("coach")!}>
+            <Layer id="city-coach-points" type="circle" layout={{ visibility: vis("coach") }}
+              paint={{ "circle-radius": 8, "circle-color": colorOf("coach"), "circle-stroke-width": 2, "circle-stroke-color": "#fff" }} />
+          </Source>
+        )}
         {helPriority && (
           <Source id="hel-winter" type="geojson" data={helPriority}>
             <Layer

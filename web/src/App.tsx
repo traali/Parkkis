@@ -24,6 +24,9 @@ import { useParkingLayers } from "./hooks/useParkingLayers";
 import { useRegionalParking } from "./hooks/useRegionalParking";
 import { coverageNoteText, venueCoverage } from "./lib/coverage";
 import { usePlough } from "./hooks/usePlough";
+import { useCityLayers } from "./hooks/useCityLayers";
+import { CityLayerToggles, VenueInfo } from "./components/CityPanel";
+import { busyDay, helsinkiDate, matchDateFrom, matchTarget, pickForecast, zonesAt, type CityLayerId } from "./lib/cityLayers";
 import { AGE_COLORS, AGE_LABELS, EMPTY_TEXT, HEL_PRIORITY_LABEL, ERROR_TEXT, STATE_ROADS_NOTE, bboxAround, venueBanner, type Bbox } from "./lib/plough";
 import {
   CATEGORIES,
@@ -50,7 +53,7 @@ const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
 /** Must match interactiveLayerIds in ParkingMapView. */
-const TAP_LAYERS = ["parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
+const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
 
 /**
  * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
@@ -357,6 +360,44 @@ export default function App() {
     [venueFromLink, ploughData],
   );
 
+  // Optional city layers + venue info (events, zones, contractor, FMI forecast). All lazy.
+  const match = useMemo(() => matchDateFrom(window.location.search, new Date()), []);
+  const matchAt = useMemo(() => matchTarget(window.location.search, new Date()), []);
+  const { layers: cityLayers, load: loadCity, contractors, loadContractors, forecast, loadForecast } = useCityLayers(match.date);
+  const [cityShown, setCityShown] = useState<Set<CityLayerId>>(new Set());
+  const [showCityPanel, setShowCityPanel] = useState(false);
+  const toggleCity = useCallback((id: CityLayerId) => {
+    setCityShown((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else { next.add(id); loadCity(id, ploughBbox()); }
+      return next;
+    });
+  }, [loadCity, ploughBbox]);
+  const venueInHelsinki = !!venueFromLink && venueFromLink.longitude > 24.78 && venueFromLink.longitude < 25.27 && venueFromLink.latitude > 60.10 && venueFromLink.latitude < 60.30;
+  useEffect(() => {
+    if (!venueFromLink || !venueFastDone) return;
+    const t = setTimeout(() => {
+      loadForecast(venueFromLink.latitude, venueFromLink.longitude);
+      if (venueInHelsinki) {
+        loadCity("events", ploughBbox());
+        loadCity("zones", ploughBbox());
+        loadContractors(venueFromLink.latitude, venueFromLink.longitude, helsinkiDate(new Date()));
+      }
+    }, 800);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [venueFromLink, venueFastDone, venueInHelsinki]);
+  const busy = useMemo(
+    () => (venueFromLink ? busyDay(cityLayers.events.data, venueFromLink.latitude, venueFromLink.longitude) : []),
+    [venueFromLink, cityLayers.events.data],
+  );
+  const venueZones = useMemo(
+    () => (venueFromLink ? zonesAt(cityLayers.zones.data, venueFromLink.latitude, venueFromLink.longitude) : []),
+    [venueFromLink, cityLayers.zones.data],
+  );
+  const matchForecast = useMemo(() => pickForecast(forecast.hours, matchAt.at), [forecast.hours, matchAt]);
+
   const espooShown = espooData ?? venueTiles?.espoo ?? null;
   const osmShown = osmData ?? venueTiles?.osm ?? null;
 
@@ -614,6 +655,41 @@ export default function App() {
               <div className="text-[10px] text-nc-text-dim">{STATE_ROADS_NOTE}</div>
             </div>
           }
+          <div
+            data-testid="city-panel"
+            className="nv-glass rounded-3xl px-4 py-2 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-pink-400/30 flex flex-col gap-1"
+          >
+            <button
+              type="button"
+              data-testid="city-panel-toggle"
+              aria-expanded={showCityPanel}
+              onClick={() => setShowCityPanel((v) => !v)}
+              className="min-h-[44px] px-4 rounded-2xl font-bold border border-nc-border text-left"
+            >
+              🗺️ {showCityPanel ? "Piilota lisätiedot" : venueFromLink ? "Kohteen lisätiedot ja karttatasot" : "Lisää karttatasoja"}
+              {venueFromLink && busy.length > 0 && !showCityPanel && <span className="text-pink-300"> · ⚠️ vilkas päivä</span>}
+            </button>
+            {showCityPanel && venueFromLink && (
+              <VenueInfo
+                name={venueFromLink.name}
+                date={match.date}
+                dateFromLink={match.fromLink}
+                inHelsinki={venueInHelsinki}
+                events={busy}
+                eventsStatus={cityLayers.events.status}
+                zones={venueZones}
+                zonesStatus={cityLayers.zones.status}
+                contractors={contractors.list}
+                contractorStatus={contractors.status}
+                forecast={matchForecast}
+                forecastStatus={forecast.status}
+                forecastFor={matchAt.label}
+              />
+            )}
+            {showCityPanel && (
+              <CityLayerToggles layers={cityLayers} shown={cityShown} onToggle={toggleCity} date={match.date} dateFromLink={match.fromLink} />
+            )}
+          </div>
           {!dbReady && (
             <div
               data-testid="loading-status"
@@ -772,6 +848,8 @@ export default function App() {
         pulseOpacity={pulseOpacity}
         ploughData={ploughData}
         helPriority={helPriority}
+        cityLayers={cityLayers}
+        cityShown={cityShown}
         showPlough={showPlough}
       />
 
