@@ -153,8 +153,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             "Auraus ja hiekoitus (valtion tiet): Fintraffic / digitraffic.fi (CC BY 4.0)",
             "Espoon katujen kunnossapito: Espoon kaupunki (CC BY 4.0)",
             "Talvihoidon ensisijaiset reitit: Helsingin kaupunki (CC BY 4.0)",
-            "Tapahtumat, maanvuokraukset, turistibussit, pyörä- ja esteettömät reitit, vyöhykkeet ja urakat: Helsingin kaupunki (CC BY 4.0)",
-            "Sääennuste: Ilmatieteen laitos (CC BY 4.0)",
+            "Lisätasot: Helsingin kaupunki (CC BY 4.0)",
+            "Sää: Ilmatieteen laitos (CC BY 4.0)",
           ],
         }}
       >

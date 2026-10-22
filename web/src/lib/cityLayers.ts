@@ -63,7 +63,7 @@ export async function helFetch(query: string, f: Fetch = fetch): Promise<Feature
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt) await new Promise((r) => setTimeout(r, 800));
     try {
-      const r = await f(`${HEL_WFS}?${query}`);
+      const r = await f(`${HEL_WFS}?${query}`, { signal: AbortSignal.timeout(20000) });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const ct = r.headers?.get?.("content-type") ?? "application/json";
       if (!ct.includes("json")) throw new Error(`not JSON (${ct})`);
