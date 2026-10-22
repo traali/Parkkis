@@ -302,6 +302,12 @@ export default function App() {
 
   const onMapLoad = useCallback(() => {
     performance.mark("parkkis:map-load");
+    // MapLibre opens the compact attribution on load; on phones it covers the map. Keep credits one tap away (ⓘ).
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      const attrib = mapRef.current?.getMap().getContainer().querySelector(".maplibregl-ctrl-attrib");
+      attrib?.classList.remove("maplibregl-compact-show");
+      attrib?.removeAttribute("open");
+    }
     if (venueFromLink && mapRef.current) {
       mapRef.current.getMap().on("dragstart", () => {
         userMovedMap.current = true;
@@ -538,7 +544,7 @@ export default function App() {
       </div>
 
       {/* Nova HUD */}
-      <div data-testid="top-hud" className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none">
+      <div data-testid="top-hud" className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none max-h-[50vh] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible">
         <div className="flex flex-col gap-2 w-full pr-16 sm:pr-0 sm:flex-row sm:justify-between sm:items-start">
           <div className="flex flex-col gap-4 w-full max-w-md pointer-events-auto">
             {/* Search Bar */}
