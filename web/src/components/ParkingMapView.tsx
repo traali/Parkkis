@@ -14,6 +14,8 @@ import type * as maplibregl from "maplibre-gl";
 import type { FeatureCollection } from "geojson";
 import { THEME_CONFIGS, type ThemeType } from "../lib/mapThemes";
 import { AGE_COLORS, type PloughFC } from "../lib/plough";
+import { FINE_OPACITY } from "../lib/fines";
+import { LAYER_COLORS } from "./LayerSheet";
 import { ParkingPopup, type HoverInfo } from "./ParkingPopup";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 
@@ -147,6 +149,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
           "city-cycling-lines",
           "city-access-lines",
           "city-zones-fill",
+          "violation-cells",
           "parking-lines",
           "hubi-lines",
           "sign-points",
@@ -192,26 +195,38 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         />
 
         {violationData && (
-          <Source id="violation-heat" type="geojson" data={violationData}>
+          // ~100 m squares shaded by the real number of fines (address-level data, so no single spots).
+          <Source id="violation-cells-src" type="geojson" data={violationData}>
             <Layer
-              id="violation-points"
-              type="circle"
+              id="violation-cells"
+              type="fill"
               layout={{ visibility: showViolations ? "visible" : "none" }}
               paint={{
-                "circle-radius": [
-                  "interpolate", ["linear"], ["zoom"],
-                  11, 2.5,
-                  14, 6,
-                  17, 12,
-                ],
-                "circle-color": THEME_CONFIGS[theme].colors.glowHigh,
-                "circle-opacity": [
-                  "interpolate", ["linear"], ["zoom"],
-                  11, 0.25,
-                  14, 0.35,
-                  17, 0.5,
-                ],
-                "circle-blur": 1.2,
+                "fill-color": LAYER_COLORS.violations,
+                "fill-opacity": FINE_OPACITY,
+              }}
+            />
+            <Layer
+              id="violation-cells-outline"
+              type="line"
+              layout={{ visibility: showViolations ? "visible" : "none" }}
+              paint={{ "line-color": LAYER_COLORS.violations, "line-opacity": 0.55, "line-width": 0.75 }}
+            />
+            <Layer
+              id="violation-cells-count"
+              type="symbol"
+              minzoom={15}
+              layout={{
+                visibility: showViolations ? "visible" : "none",
+                "text-field": ["to-string", ["get", "fines"]],
+                "text-font": ["Open Sans Bold"],
+                "text-size": 12,
+                "text-allow-overlap": false,
+              }}
+              paint={{
+                "text-color": theme === "light" ? "#7f1d1d" : "#fecaca",
+                "text-halo-color": theme === "light" ? "#ffffff" : "#000000",
+                "text-halo-width": 1.2,
               }}
             />
           </Source>

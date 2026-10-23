@@ -46,6 +46,30 @@ const LIIPI_CAPACITY: Record<string, string> = {
   MOTORCYCLE: "🏍️ Moottoripyöräpaikat",
 };
 
+/** Tap on a ~100 m fines square: only real counts, the period and the source. */
+function FineCellPopup({ properties: p }: { properties: HoverInfo["properties"] }) {
+  const fines = Number(p.fines) || 0;
+  const notices = Number(p.notices) || 0;
+  const period = p.period ? ` (ajalta ${String(p.period)})` : "";
+  return (
+    <div data-testid="fine-cell-popup" className="flex flex-col gap-1.5 max-w-[260px]">
+      <span className="text-[10px] text-nc-text-dim uppercase font-black tracking-wider">Noin 100 × 100 m alue</span>
+      <p className="text-sm font-bold leading-snug">
+        Pysäköintivirhemaksuja tällä alueella: {fines.toLocaleString("fi-FI")}{period}
+      </p>
+      {notices > 0 && (
+        <p className="text-xs text-nc-text-muted">Lisäksi huomautuksia: {notices.toLocaleString("fi-FI")}</p>
+      )}
+      {p.top_reason && (
+        <p className="text-xs text-nc-text-muted leading-snug">Yleisin syy: {String(p.top_reason)}</p>
+      )}
+      <p className="text-[10px] text-nc-text-dim leading-snug">
+        Sijainti on osoitteen tarkkuudella, ei tarkka paikka. Lähde: Helsingin kaupunki, pysäköintivirheet (CC BY 4.0).
+      </p>
+    </div>
+  );
+}
+
 export interface HoverInfo {
   longitude: number;
   latitude: number;
@@ -110,6 +134,8 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
           ]}
           source={hoverInfo.properties.source === "espoo" ? "Lähde: Espoon kaupunki, talvikunnossapitokaluston toimenpiteet (CC BY 4.0). Toteutunut työ, ei ennuste." : "Lähde: Fintraffic / digitraffic.fi (CC BY 4.0). Valtion tie, toteutunut ajo, ei ennuste."}
         />
+      ) : hoverInfo.layerId === "violation-cells" ? (
+        <FineCellPopup properties={hoverInfo.properties} />
       ) : hoverInfo.layerId === "espoo-points" ? (
         <RegionalPopup
           title={String(hoverInfo.properties.name_fi || "Pysäköintialue")}

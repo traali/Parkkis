@@ -21,6 +21,7 @@ import { THEME_CONFIGS, getCentroid, type ThemeType } from "./lib/mapThemes";
 import { MetadataCatalogueModal } from "./components/MetadataCatalogueModal";
 import { ReservationsDrawer } from "./components/ReservationsDrawer";
 import type { HoverInfo } from "./components/ParkingPopup";
+import { fineCellsNear, FINES_NEAR_M } from "./lib/fines";
 
 
 
@@ -38,7 +39,7 @@ const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
 /** Must match interactiveLayerIds in ParkingMapView. */
-const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
+const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "violation-cells", "parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
 
 /**
  * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
@@ -426,6 +427,14 @@ export default function App() {
     }, regionalStatus === "error" && !venueTiles);
   }, [venueFromLink, riskData, espooShown, osmShown, regionalStatus, venueTiles]);
   const venueOutsideData = coverage !== null && !coverage.helsinki;
+  // Only claim "no fines nearby" once the fine cells have loaded and none lie near the venue.
+  const finesOutside = useMemo(
+    () =>
+      !!venueFromLink &&
+      !!violationData &&
+      !fineCellsNear(violationData, venueFromLink.latitude, venueFromLink.longitude, FINES_NEAR_M),
+    [venueFromLink, violationData],
+  );
   // OSM points only where there is no city data at all near the venue (see lib/banner.ts).
   const showOsm = showOsmFor(coverage);
 
@@ -668,6 +677,8 @@ export default function App() {
             setShowNewTraps={setShowNewTraps}
             dataReady={dbReady}
             fineYears={dataFacts?.fineYears}
+            finePeriod={dataFacts?.finePeriod}
+            finesOutside={finesOutside}
             showRoadworks={showRoadworks}
             setShowRoadworks={setShowRoadworks}
             roadworkStatus={roadworkStatus}
