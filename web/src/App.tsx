@@ -778,7 +778,7 @@ export default function App() {
                     className="inline-block w-4 h-3 rounded-full blur-[1px]"
                     style={{ background: `linear-gradient(90deg, ${colors.glowMid}, ${colors.glowHigh})` }}
                   />
-                  Paljon sakkoja
+                  5+ sakkoa lähellä (2023)
                 </li>
               )}
               <li data-testid="legend-no-line" className="text-nc-text-muted">Ei viivaa: ei tietoa</li>

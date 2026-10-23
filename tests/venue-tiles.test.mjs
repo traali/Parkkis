@@ -32,8 +32,8 @@ describe('venue fast path tiles', () => {
   it('tile features carry only source fields plus the measured fine count', () => {
     const t = JSON.parse(read(`${DIR}/${index.tiles.find((k) => k === '1246_6016') ?? index.tiles[0]}.json`));
     for (const f of t.slots) {
-      assert.equal(f.properties.risk_score, Math.min(10, Math.ceil(1 + f.properties.fine_count * 0.5)));
-      for (const k of Object.keys(f.properties)) assert.doesNotMatch(k, /walk|free_spots|price|occupancy/);
+      assert.ok(Number.isInteger(f.properties.fine_count) && f.properties.fine_count >= 0);
+      for (const k of Object.keys(f.properties)) assert.doesNotMatch(k, /walk|free_spots|price|occupancy|risk/);
     }
   });
   it('a ±1 km box touches a handful of tiles, not the whole city', () => {

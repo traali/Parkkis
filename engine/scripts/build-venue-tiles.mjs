@@ -59,7 +59,7 @@ for (const r of slots) {
   g.coordinates = round(g.coordinates);
   const n = Number(fine_count);
   put(Number(cx), Number(cy), 'slots', { type: 'Feature', geometry: g,
-    properties: clean({ ...p, fine_count: n, risk_score: Math.min(10, Math.ceil(1 + n * 0.5)) }) });
+    properties: clean({ ...p, fine_count: n }) });
 }
 for (const [layer, rows] of [['espoo', espoo], ['osm', osm]])
   for (const r of rows) {

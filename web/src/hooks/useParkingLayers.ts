@@ -267,7 +267,6 @@ export function useParkingLayers(venue?: { latitude: number; longitude: number }
                 fine_count: Number(row.fine_count),
                 top_violation_reason: row.top_violation_reason,
                 // Deterministic 1-10 scale from the fines counted above.
-                risk_score: Math.min(10, Math.ceil(1 + Number(row.fine_count) * 0.5)),
               },
             })),
           }),
