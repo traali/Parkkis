@@ -97,11 +97,12 @@ export function useParkingLayers(venue?: { latitude: number; longitude: number }
 
   // Layer visibility toggles
   const [activeFilter, setActiveFilter] = useState("all");
-  const [showNewTraps, setShowNewTraps] = useState(true);
-  const [showViolations, setShowViolations] = useState(true);
-  const [showRoadworks, setShowRoadworks] = useState(true);
-  const [showReservations, setShowReservations] = useState(true);
-  const [showSigns, setShowSigns] = useState(true);
+  // Secondary layers start hidden; the parent opens them from "Tasot".
+  const [showNewTraps, setShowNewTraps] = useState(false);
+  const [showViolations, setShowViolations] = useState(false);
+  const [showRoadworks, setShowRoadworks] = useState(false);
+  const [showReservations, setShowReservations] = useState(false);
+  const [showSigns, setShowSigns] = useState(false);
 
   useEffect(() => {
     if (!useFastPath || !venue) return;

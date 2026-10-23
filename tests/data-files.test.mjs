@@ -49,9 +49,12 @@ describe('phone tap targets and touch popups', () => {
     assert.match(drawer, /px-2 py-0\.5 min-h-\[44px\]/);
     assert.doesNotMatch(drawer, /Sort by/);
   });
-  it('filter chips and footer buttons are 44 px', () => {
-    assert.match(app, /min-h-\[44px\] rounded-2xl text-nv-text-xs/);
-    assert.match(app, /rounded-full min-h-\[44px\] px-4 py-1\.5 text-\[11px\]/);
+  it('filter chips, layer toggles and card buttons are 44 px', () => {
+    const sheet = readFileSync(join(ROOT, 'web/src/components/LayerSheet.tsx'), 'utf8');
+    assert.match(sheet, /min-h-\[44px\] px-3 rounded-full/); // category chips
+    assert.match(sheet, /w-full min-h-\[44px\] px-3 rounded-xl/); // layer toggles
+    assert.match(app, /data-testid="layers-button"[\s\S]{0,300}min-h-\[44px\] min-w-\[44px\]/);
+    assert.match(app, /rounded-full min-h-\[44px\] px-4[^\n]*\n[\s\S]{0,120}Tietolähteet/);
   });
   it('a tap opens the popup (touch has no mousemove) with a finger-sized hit box', () => {
     assert.match(map, /onClick=\{onMouseMove\}/);

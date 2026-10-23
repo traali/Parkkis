@@ -1,5 +1,6 @@
 import React from "react";
 import ReactMap, {
+  AttributionControl,
   GeolocateControl,
   Layer,
   Marker,
@@ -25,6 +26,7 @@ const maplibreLib = import("maplibre-gl").then((lib) => {
 });
 
 import { CITY_LAYERS, type CityLayerId } from "../lib/cityLayers";
+import { OSM_MIN_ZOOM, timeLimitLabel } from "../lib/banner";
 import type { LayerState } from "../hooks/useCityLayers";
 
 export interface Address {
@@ -59,7 +61,9 @@ export interface ParkingMapViewProps {
   showRoadworks: boolean;
   showReservations: boolean;
   activeFilter: string;
-  pulseOpacity: number;
+  /** OSM points only for venues with no city data nearby (see lib/banner.ts). */
+  showOsm?: boolean;
+  showLiipi?: boolean;
   ploughData?: PloughFC | null;
   showPlough?: boolean;
   helPriority?: FeatureCollection | null;
@@ -93,7 +97,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
   showRoadworks,
   showReservations,
   activeFilter,
-  pulseOpacity,
+  showOsm = false,
+  showLiipi = false,
   ploughData = null,
   showPlough = false,
   helPriority = null,
@@ -102,6 +107,23 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
 }) => {
   const vis = (id: CityLayerId) => (cityShown?.has(id) ? "visible" : "none") as "visible" | "none";
   const cityData = (id: CityLayerId) => cityLayers?.[id]?.data ?? null;
+  const c = THEME_CONFIGS[theme].colors;
+  const isPhone = typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches;
+  const darkMap = theme !== "light";
+  // Pin contrasts with the basemap and with every parking colour.
+  const pinColor = darkMap ? "#f8fafc" : "#0f172a";
+  const haloColor = darkMap ? "rgba(5, 8, 10, 0.85)" : "rgba(255, 255, 255, 0.9)";
+  // Time limit as the city wrote it ("4 h", "60 min"), shown along the line when zoomed in.
+  const riskWithLimits = React.useMemo(() => {
+    if (!riskData) return null;
+    return {
+      ...riskData,
+      features: riskData.features.map((f) => {
+        const limit = timeLimitLabel(f.properties?.kesto);
+        return limit ? { ...f, properties: { ...f.properties, time_limit: limit } } : f;
+      }),
+    } as FeatureCollection;
+  }, [riskData]);
   const colorOf = (id: CityLayerId) => CITY_LAYERS.find((l) => l.id === id)!.color;
   const mapFilter: import("maplibre-gl").FilterSpecification =
     activeFilter === "all"
@@ -140,9 +162,20 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         onClick={onMouseMove}
         onMouseLeave={onMouseLeave}
         onLoad={onMapLoad}
-        attributionControl={{
-          compact: true,
-          customAttribution: [
+        attributionControl={false}
+      >
+        {/* Top-right column under the theme button: locate me, zoom (desktop only; phones pinch), credits ⓘ. */}
+        <GeolocateControl
+          ref={geoControlRef}
+          position="top-right"
+          trackUserLocation={true}
+          showAccuracyCircle={false}
+        />
+        {!isPhone && <NavigationControl position="top-right" showCompass={false} />}
+        <AttributionControl
+          position="top-right"
+          compact={true}
+          customAttribution={[
             '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
             "Pysäköintipaikat, sakot, työmaat ja vuokra-alueet: Helsingin kaupunki (CC BY 4.0)",
             "Liikennemerkit: Väylävirasto / Digiroad (CC BY 4.0)",
@@ -155,15 +188,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
             "Talvihoidon ensisijaiset reitit: Helsingin kaupunki (CC BY 4.0)",
             "Lisätasot: Helsingin kaupunki (CC BY 4.0)",
             "Sää: Ilmatieteen laitos (CC BY 4.0)",
-          ],
-        }}
-      >
-        <NavigationControl position="bottom-right" />
-        <GeolocateControl
-          ref={geoControlRef}
-          position="bottom-right"
-          trackUserLocation={true}
-          showAccuracyCircle={false}
+          ]}
         />
 
         {violationData && (
@@ -193,65 +218,68 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         )}
 
 
-        {riskData && (
-          <Source id="risk-data" type="geojson" data={riskData}>
+        {riskWithLimits && (
+          <Source id="risk-data" type="geojson" data={riskWithLimits}>
+            {/* Fine risk: a warm halo UNDER the line, only where at least 5 fines were given nearby. */}
+            <Layer
+              id="parking-glow"
+              type="line"
+              filter={["all", mapFilter, [">=", ["coalesce", ["get", "fine_count"], 0], 5]]}
+              layout={{ "line-cap": "round" }}
+              paint={{
+                "line-color": [
+                  "interpolate",
+                  ["linear"],
+                  ["get", "fine_count"],
+                  5,
+                  c.glowMid,
+                  20,
+                  c.glowHigh,
+                ],
+                "line-width": ["interpolate", ["linear"], ["zoom"], 12, 6, 18, 18],
+                "line-blur": 3,
+                "line-opacity": 0.55,
+              }}
+            />
             <Layer
               id="parking-lines"
               type="line"
               filter={mapFilter}
+              layout={{ "line-cap": "round" }}
               paint={{
                 "line-color": [
                   "match",
                   ["get", "category"],
                   "paid",
-                  THEME_CONFIGS[theme].colors.paid,
+                  c.paid,
                   "restricted",
-                  THEME_CONFIGS[theme].colors.restricted,
+                  c.restricted,
                   "free",
-                  THEME_CONFIGS[theme].colors.free,
+                  c.free,
                   "special",
-                  THEME_CONFIGS[theme].colors.special,
-                  THEME_CONFIGS[theme].colors.other,
+                  c.special,
+                  c.other,
                 ],
-                "line-width": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  10,
-                  2,
-                  18,
-                  8,
-                ],
-                "line-opacity": 0.8,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 18, 7],
+                "line-opacity": 0.95,
               }}
             />
             <Layer
-              id="parking-glow"
-              type="line"
-              filter={mapFilter}
+              id="parking-time-limits"
+              type="symbol"
+              minzoom={16}
+              filter={["all", mapFilter, ["has", "time_limit"]]}
+              layout={{
+                "symbol-placement": "line-center",
+                "text-field": ["get", "time_limit"],
+                "text-font": ["Open Sans Bold"],
+                "text-size": 12,
+                "text-allow-overlap": false,
+              }}
               paint={{
-                "line-color": [
-                  "interpolate",
-                  ["linear"],
-                  ["get", "risk_score"],
-                  1,
-                  THEME_CONFIGS[theme].colors.glowLow,
-                  5,
-                  THEME_CONFIGS[theme].colors.glowMid,
-                  10,
-                  THEME_CONFIGS[theme].colors.glowHigh,
-                ],
-                "line-width": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  10,
-                  4,
-                  18,
-                  15,
-                ],
-                "line-blur": 5,
-                "line-opacity": 0.5,
+                "text-color": darkMap ? "#ffffff" : "#0f172a",
+                "text-halo-color": haloColor,
+                "text-halo-width": 2,
               }}
             />
           </Source>
@@ -263,18 +291,18 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
               id="hubi-lines"
               type="line"
               paint={{
-                "line-color": THEME_CONFIGS[theme].colors.glowLow,
+                "line-color": c.area,
                 "line-width": [
                   "interpolate",
                   ["linear"],
                   ["zoom"],
                   10,
-                  2,
+                  1,
                   18,
-                  6,
+                  2.5,
                 ],
-                "line-opacity": 0.8,
-                "line-dasharray": [2, 2],
+                "line-opacity": 0.7,
+                "line-dasharray": [3, 2],
               }}
             />
           </Source>
@@ -306,10 +334,10 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                   THEME_CONFIGS[theme].colors.paid,
                   ["E24", "E26", "E28"],
                   THEME_CONFIGS[theme].colors.glowMid,
-                  "#ffffff",
+                  darkMap ? "#e2e8f0" : "#334155",
                 ],
                 "circle-stroke-width": 1.5,
-                "circle-stroke-color": "#0a0f14",
+                "circle-stroke-color": darkMap ? "#0a0f14" : "#ffffff",
                 "circle-opacity": [
                   "interpolate",
                   ["linear"],
@@ -338,7 +366,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                   25,
                 ],
                 "circle-color": THEME_CONFIGS[theme].colors.glowLow,
-                "circle-opacity": pulseOpacity,
+                "circle-opacity": 0.45,
                 "circle-blur": 1,
               }}
             />
@@ -484,23 +512,26 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         )}
         {selectedAddress && (
           <Marker
+            // MapLibre reads the colour only when the marker is created; remount on theme change.
+            key={pinColor}
             longitude={selectedAddress.longitude}
             latitude={selectedAddress.latitude}
             anchor="bottom"
-            color="#00f2ff"
+            color={pinColor}
+            scale={1.25}
           />
         )}
-        {osmData && (
+        {osmData && showOsm && (
           <Source id="osm-parking" type="geojson" data={osmData}>
             <Layer
               id="osm-points"
               type="circle"
-              minzoom={12}
+              minzoom={OSM_MIN_ZOOM}
               paint={{
                 "circle-radius": 5,
                 "circle-color": "#9aa4ad",
                 "circle-stroke-width": 1.5,
-                "circle-stroke-color": "#ffffff",
+                "circle-stroke-color": darkMap ? "#ffffff" : "#0f172a",
               }}
             />
           </Source>
@@ -511,22 +542,22 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
               id="espoo-points"
               type="circle"
               paint={{
-                "circle-radius": 7,
-                "circle-color": "#3b82f6",
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 4, 16, 8],
+                "circle-color": c.area,
                 "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
+                "circle-stroke-color": darkMap ? "#ffffff" : "#0f172a",
               }}
             />
           </Source>
         )}
-        {liipiData && (
+        {liipiData && showLiipi && (
           <Source id="liipi-hubs" type="geojson" data={liipiData}>
             <Layer
               id="liipi-glow"
               type="circle"
               paint={{
                 "circle-radius": 15,
-                "circle-color": THEME_CONFIGS[theme].colors.glowLow,
+                "circle-color": c.area,
                 "circle-opacity": 0.2,
                 "circle-blur": 1,
               }}
@@ -536,9 +567,9 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
               type="circle"
               paint={{
                 "circle-radius": 6,
-                "circle-color": THEME_CONFIGS[theme].colors.glowLow,
+                "circle-color": c.area,
                 "circle-stroke-width": 2,
-                "circle-stroke-color": "#ffffff",
+                "circle-stroke-color": darkMap ? "#ffffff" : "#0f172a",
               }}
             />
             <Layer
@@ -554,8 +585,8 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                 "text-size": 10,
               }}
               paint={{
-                "text-color": THEME_CONFIGS[theme].colors.glowLow,
-                "text-halo-color": "rgba(5, 8, 10, 0.8)",
+                "text-color": c.area,
+                "text-halo-color": haloColor,
                 "text-halo-width": 2,
               }}
             />
