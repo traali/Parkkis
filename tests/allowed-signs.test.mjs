@@ -84,6 +84,33 @@ describe('allowed parking comes only from city data', () => {
     assert.deepEqual(a, { paid: 1, free: 1, spaces: 10, espoo: 1 });
     assert.match(A.allowedNearText(a), /1 maksullista ja 1 maksutonta katupysäköintialuetta \(10 paikkaa\) Helsingin kaupungin aineistossa, 1 yleinen pysäköintialue Espoon/);
   });
+  it('measures to the whole polygon, not its first vertex', () => {
+    const at = { latitude: 60.2035, longitude: 24.955 };
+    const dLon = 0.001 / (111.32 * Math.cos((60.2035 * Math.PI) / 180)); // 1 m in longitude
+    const m = (x, y) => [24.955 + x * dLon, 60.2035 + y / 110540];
+    // A long, thin area whose corners are all ~400 m away but whose edge passes 50 m from the venue.
+    const ring = [m(-400, 50), m(400, 50), m(400, 60), m(-400, 60), m(-400, 50)];
+    const feat = (r) => ({ type: 'Feature', properties: { category: 'paid' }, geometry: { type: 'Polygon', coordinates: [r] } });
+    assert.ok(Math.abs(A.distanceTo(feat(ring).geometry, at) - 50) < 1);
+    assert.equal(A.allowedNear({ type: 'FeatureCollection', features: [feat(ring)] }, null, at, 300).paid, 1);
+    // Rotating the ring does not change the result.
+    for (let k = 1; k < 4; k++) {
+      const open = ring.slice(0, -1);
+      const rot = [...open.slice(k), ...open.slice(0, k)];
+      rot.push(rot[0]);
+      assert.equal(A.allowedNear({ type: 'FeatureCollection', features: [feat(rot)] }, null, at, 300).paid, 1);
+    }
+    // A venue inside a large area is at distance 0 even though every vertex is 500 m away.
+    const big = [m(-500, -500), m(500, -500), m(500, 500), m(-500, 500), m(-500, -500)];
+    assert.equal(A.distanceTo(feat(big).geometry, at), 0);
+    assert.equal(A.allowedNear({ type: 'FeatureCollection', features: [feat(big)] }, null, at, 300).paid, 1);
+    // A venue in a hole of the area is not inside it.
+    const hole = [m(-100, -100), m(100, -100), m(100, 100), m(-100, 100), m(-100, -100)];
+    assert.ok(A.distanceTo({ type: 'Polygon', coordinates: [big, hole] }, at) > 90);
+    // Espoo points use point distance.
+    assert.ok(Math.abs(A.distanceTo({ type: 'Point', coordinates: m(0, 250) }, at) - 250) < 1);
+    assert.equal(A.allowedNear(null, { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { class: 'yleinenpysakointialue' }, geometry: { type: 'Point', coordinates: m(0, 350) } }] }, at, 300).espoo, 0);
+  });
   it('no data nearby: "Ei tietoa", never "allowed"', () => {
     const t = A.allowedNearText({ paid: 0, free: 0, spaces: 0, espoo: 0 });
     assert.match(t, /Ei tietoa/);

@@ -1,5 +1,5 @@
 import type { FeatureCollection, Geometry } from "geojson";
-import { metersBetween, type LatLon } from "./coverage";
+import type { LatLon } from "./coverage";
 import { fiRange } from "./signs";
 
 /**
@@ -54,13 +54,6 @@ export function parkingFacts(p: Props): FactRow[] {
   ];
 }
 
-function firstCoord(g: Geometry | null | undefined): number[] | null {
-  if (!g || !("coordinates" in g)) return null;
-  let c: unknown = g.coordinates;
-  while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
-  return Array.isArray(c) && typeof c[0] === "number" ? (c as number[]) : null;
-}
-
 export interface AllowedNear {
   paid: number;
   free: number;
@@ -70,10 +63,70 @@ export interface AllowedNear {
   espoo: number;
 }
 
-const near = (f: { geometry: Geometry | null }, at: LatLon, radius: number) => {
-  const c = firstCoord(f.geometry);
-  return !!c && metersBetween(at, { longitude: c[0], latitude: c[1] }) <= radius;
-};
+type XY = [number, number];
+
+/** Rings/lines of a geometry in local metres around `at` (equirectangular; fine at 300 m). */
+function parts(g: Geometry, at: LatLon): { lines: XY[][]; polygons: XY[][][] } {
+  const kx = 111320 * Math.cos((at.latitude * Math.PI) / 180);
+  const ky = 110540;
+  const xy = (c: number[]): XY => [(c[0] - at.longitude) * kx, (c[1] - at.latitude) * ky];
+  const ring = (r: number[][]) => r.map(xy);
+  switch (g.type) {
+    case "Point":
+      return { lines: [[xy(g.coordinates)]], polygons: [] };
+    case "MultiPoint":
+      return { lines: g.coordinates.map((c) => [xy(c)]), polygons: [] };
+    case "LineString":
+      return { lines: [ring(g.coordinates)], polygons: [] };
+    case "MultiLineString":
+      return { lines: g.coordinates.map(ring), polygons: [] };
+    case "Polygon":
+      return { lines: g.coordinates.map(ring), polygons: [g.coordinates.map(ring)] };
+    case "MultiPolygon":
+      return { lines: g.coordinates.flatMap((p) => p.map(ring)), polygons: g.coordinates.map((p) => p.map(ring)) };
+    case "GeometryCollection": {
+      const all = g.geometries.map((x) => parts(x, at));
+      return { lines: all.flatMap((a) => a.lines), polygons: all.flatMap((a) => a.polygons) };
+    }
+    default:
+      return { lines: [], polygons: [] };
+  }
+}
+
+/** Distance from the origin to segment a–b, in metres. */
+function segDist(a: XY, b: XY): number {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / len)) : 0;
+  return Math.hypot(a[0] + t * dx, a[1] + t * dy);
+}
+
+/** Even-odd test: is the origin inside this ring? */
+function inRing(r: XY[]): boolean {
+  let inside = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const [xi, yi] = r[i];
+    const [xj, yj] = r[j];
+    if (yi > 0 !== yj > 0 && 0 < ((xj - xi) * (0 - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Shortest distance from `at` to the whole geometry; 0 when `at` is inside a polygon. */
+export function distanceTo(g: Geometry | null | undefined, at: LatLon): number {
+  if (!g) return Number.POSITIVE_INFINITY;
+  const { lines, polygons } = parts(g, at);
+  for (const p of polygons) if (p.length && inRing(p[0]) && !p.slice(1).some(inRing)) return 0;
+  let best = Number.POSITIVE_INFINITY;
+  for (const l of lines) {
+    if (l.length === 1) best = Math.min(best, Math.hypot(l[0][0], l[0][1]));
+    for (let i = 1; i < l.length; i++) best = Math.min(best, segDist(l[i - 1], l[i]));
+  }
+  return best;
+}
+
+const near = (f: { geometry: Geometry | null }, at: LatLon, radius: number) => distanceTo(f.geometry, at) <= radius;
 
 export function allowedNear(
   helsinki: FeatureCollection | null | undefined,
