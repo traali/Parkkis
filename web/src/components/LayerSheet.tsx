@@ -3,6 +3,7 @@ import { List, X } from "lucide-react";
 import { CITY_LAYERS, fiDate, type CityLayerId } from "../lib/cityLayers";
 import { AGE_COLORS, AGE_LABELS, HEL_PRIORITY_LABEL, STATE_ROADS_NOTE } from "../lib/plough";
 import { CATEGORIES } from "../lib/mapThemes";
+import { FINE_CLASSES } from "../lib/fines";
 import type { LayerState, LoadStatus } from "../hooks/useCityLayers";
 import { EMPTY_HINT } from "./CityPanel";
 
@@ -16,6 +17,12 @@ export const LAYER_COLORS = {
   liipi: "#2dd4bf",
   plough: "#38bdf8",
 } as const;
+
+/** "#f87171" + 0.3 → "rgba(248,113,113,0.3)" for legend swatches that match the map's fill opacity. */
+function hexAlpha(hex: string, a: number): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 
 const CITY_COLOR = (id: CityLayerId) => CITY_LAYERS.find((l) => l.id === id)?.color ?? "#94a3b8";
 const CITY_LABEL = (id: CityLayerId) => CITY_LAYERS.find((l) => l.id === id)?.label ?? id;
@@ -70,12 +77,16 @@ export interface LayerSheetProps {
   venueLink: boolean;
   date: string;
   dateFromLink: boolean;
-  // Sakkoriski
+  // Sakot ja merkit
   showViolations: boolean; setShowViolations: (v: boolean) => void;
   showSigns: boolean; setShowSigns: (v: boolean) => void;
   showNewTraps: boolean; setShowNewTraps: (v: boolean) => void;
   dataReady: boolean;
   fineYears?: string;
+  /** Months the fine data covers, from the data ("tammikuu–joulukuu 2023"). */
+  finePeriod?: string;
+  /** The venue is outside Helsinki, where the open fine data ends. */
+  finesOutside?: boolean;
   // Tänään kadulla
   showRoadworks: boolean; setShowRoadworks: (v: boolean) => void; roadworkStatus: "loading" | "ok" | "error"; roadworkCount?: number;
   showReservations: boolean; setShowReservations: (v: boolean) => void; reservationStatus: "loading" | "ok" | "error"; reservationCount?: number;
@@ -140,8 +151,36 @@ export function LayerSheet(p: LayerSheetProps) {
           {city("zones")}
         </Group>
 
-        <Group title="Sakkoriski" note={`Sakot: Helsingin kaupungin avoin sakkoaineisto${p.fineYears ? ` (${p.fineYears})` : ""}. Uudet merkit: muokattu viimeisen 60 päivän aikana.`}>
-          <ToggleRow id="violations" label="Sakkopaikat" color={LAYER_COLORS.violations} on={p.showViolations} onToggle={() => p.setShowViolations(!p.showViolations)} status={p.showViolations && !p.dataReady ? "ladataan…" : undefined} />
+        <Group
+          title="Sakot ja merkit"
+          note={
+            <>
+              {p.showViolations && (
+                <span data-testid="fine-legend" className="block py-1">
+                  <span className="block">Pysäköintivirhemaksuja noin 100 × 100 m ruudussa{p.finePeriod ? `, ${p.finePeriod}` : p.fineYears ? `, ${p.fineYears}` : ""}:</span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
+                    {FINE_CLASSES.map((c) => (
+                      <span key={c.label} className="flex items-center gap-1">
+                        <span
+                          aria-hidden="true"
+                          className="inline-block w-4 h-4 rounded-sm"
+                          style={{ background: hexAlpha(LAYER_COLORS.violations, c.opacity), border: `1px solid ${hexAlpha(LAYER_COLORS.violations, 0.55)}` }}
+                        />
+                        {c.label}
+                      </span>
+                    ))}
+                  </span>
+                  <span className="block pt-1">Sijainnit ovat osoitteen tarkkuudella, joten kartalla on ruudut, ei tarkkoja paikkoja. Napauta ruutua: määrä ja yleisin syy.</span>
+                  {p.finesOutside && (
+                    <span data-testid="fine-outside-note" className="block pt-1 font-semibold text-nc-text">Tämän kohteen lähellä ei ole sakkotietoja: sijainnillinen avoin sakkoaineisto on vain Helsingistä.</span>
+                  )}
+                </span>
+              )}
+              Sakot: Helsingin kaupungin avoin pysäköintivirheaineisto. Uudet merkit: muokattu viimeisen 60 päivän aikana.
+            </>
+          }
+        >
+          <ToggleRow id="violations" label="Sakot alueittain" color={LAYER_COLORS.violations} on={p.showViolations} onToggle={() => p.setShowViolations(!p.showViolations)} status={p.showViolations && !p.dataReady ? "ladataan…" : undefined} />
           <ToggleRow id="signs" label="Liikennemerkit" color={LAYER_COLORS.signs} on={p.showSigns} onToggle={() => p.setShowSigns(!p.showSigns)} status={p.showSigns && !p.dataReady ? "ladataan…" : undefined} />
           <ToggleRow id="new-signs" label="Uudet merkit" color={LAYER_COLORS.newSigns} on={p.showNewTraps} onToggle={() => p.setShowNewTraps(!p.showNewTraps)} status={p.showNewTraps && !p.dataReady ? "ladataan…" : undefined} />
         </Group>

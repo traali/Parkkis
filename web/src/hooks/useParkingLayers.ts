@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import type { Feature, FeatureCollection, Geometry } from "geojson";
 import { inTileRegion, loadVenueTiles, type VenueTileData } from "../lib/venueTiles";
 import { getCentroid, safeGeoJSON } from "../lib/mapThemes";
+import { cellsToCollection, finePeriod, FINE_CELLS_SQL, type FineCellRow } from "../lib/fines";
 
 /** Facts about the bundled snapshot, read from the data itself. */
 export interface DataFacts {
   /** Fines with a real (not approximated) location. */
   fineCount: number;
   fineYears: string;
+  /** Months the fine records cover, e.g. "tammikuu–joulukuu 2023" (from the data). */
+  finePeriod: string;
   /** Newest `paivitetty_tietopalveluun` in the parking-space snapshot. */
   slotsUpdated: string | null;
   /** Newest sign edit (`muokkauspv`) in the Digiroad snapshot. */
@@ -270,13 +273,12 @@ export function useParkingLayers(venue?: { latitude: number; longitude: number }
         );
 
         setLoadingMsg("Merkitään sakkoja kartalle...");
-        // One point per location with its fine count (no arbitrary LIMIT).
-        const violationResult = await conn.query(`
-          SELECT ST_AsGeoJSON(geom) as geometry, { 'fines': count(*) } as properties
-          FROM real_violations
-          GROUP BY 1
-        `);
-        setViolationData(rowsToCollection(violationResult.toArray() as unknown as Row[]));
+        // Records carry an address-level point, month and year only: draw ~100 m squares
+        // with the real number of fines in each, never single spots.
+        const periodResult = await conn.query(`SELECT DISTINCT vuosi, kuukausi FROM real_violations`);
+        const finePeriodText = finePeriod(periodResult.toArray() as unknown as { vuosi: unknown; kuukausi: unknown }[]);
+        const cellResult = await conn.query(FINE_CELLS_SQL);
+        setViolationData(cellsToCollection(cellResult.toArray() as unknown as FineCellRow[], finePeriodText));
 
         setLoadingMsg("Luetaan pysäköintimerkkejä...");
         // "New" is computed now, not frozen at ingest time.
@@ -347,6 +349,7 @@ export function useParkingLayers(venue?: { latitude: number; longitude: number }
         setDataFacts({
           fineCount: Number(facts.fine_count ?? 0),
           fineYears: String(facts.fine_years ?? ""),
+          finePeriod: finePeriodText,
           slotsUpdated: facts.slots_updated ? String(facts.slots_updated) : null,
           signsUpdated: facts.signs_updated ? String(facts.signs_updated) : null,
         });

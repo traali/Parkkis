@@ -38,7 +38,7 @@ const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
 /** Must match interactiveLayerIds in ParkingMapView. */
-const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
+const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "violation-cells", "parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
 
 /**
  * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
@@ -668,6 +668,8 @@ export default function App() {
             setShowNewTraps={setShowNewTraps}
             dataReady={dbReady}
             fineYears={dataFacts?.fineYears}
+            finePeriod={dataFacts?.finePeriod}
+            finesOutside={!!venueFromLink && venueOutsideData}
             showRoadworks={showRoadworks}
             setShowRoadworks={setShowRoadworks}
             roadworkStatus={roadworkStatus}
