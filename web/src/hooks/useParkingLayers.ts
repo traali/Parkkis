@@ -239,6 +239,7 @@ export function useParkingLayers(venue?: { latitude: number; longitude: number }
               'kesto': s.kesto,
               'voimassaolo': s.voimassaolo,
               'lisatieto': s.lisatieto,
+              'paivitetty': CAST(s.paivitetty_tietopalveluun AS VARCHAR),
               'asukaspysakointitunnus': s.asukaspysakointitunnus,
               'resident_zone': COALESCE(s.asukaspysakointitunnus, '') <> '',
               'category': CASE
@@ -295,6 +296,11 @@ export function useParkingLayers(venue?: { latitude: number; longitude: number }
               'kilpi_txt3': kilpi_txt3,
               'kilpi_txt4': kilpi_txt4,
               'kilpi_txt5': kilpi_txt5,
+              'kilpityyp1': kilpityyp1,
+              'kilpityyp2': kilpityyp2,
+              'kilpityyp3': kilpityyp3,
+              'kilpityyp4': kilpityyp4,
+              'kilpityyp5': kilpityyp5,
               'arvo': arvo
             } as properties
           FROM signs

@@ -15,6 +15,8 @@ import type { FeatureCollection } from "geojson";
 import { THEME_CONFIGS, type ThemeType } from "../lib/mapThemes";
 import { AGE_COLORS, type PloughFC } from "../lib/plough";
 import { FINE_OPACITY } from "../lib/fines";
+import { ALLOWED_CATEGORIES } from "../lib/allowed";
+import { PARKING_SIGNS, PROHIBITION_SIGNS } from "../lib/signs";
 import { LAYER_COLORS } from "./LayerSheet";
 import { ParkingPopup, type HoverInfo } from "./ParkingPopup";
 import maplibreWorkerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
@@ -126,6 +128,22 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
       }),
     } as FeatureCollection;
   }, [riskData]);
+  // Sign colours by type. Muted: prohibitions a dull rose, everything else grey.
+  const signColors = (muted: boolean): import("maplibre-gl").ExpressionSpecification => [
+    "match",
+    ["get", "tyyppi"],
+    PROHIBITION_SIGNS,
+    muted ? (darkMap ? "#a36b6b" : "#b48a8a") : c.glowHigh,
+    PARKING_SIGNS,
+    muted ? (darkMap ? "#6b9a86" : "#7fa595") : c.paid,
+    ["E24", "E26", "E28"],
+    muted ? "#a3916b" : c.glowMid,
+    muted ? "#7c8794" : darkMap ? "#e2e8f0" : "#334155",
+  ];
+  const selectedSignIds = React.useMemo(
+    () => (hoverInfo?.stackedSigns ?? []).map((sg) => sg.id).filter((id) => id !== undefined && id !== null),
+    [hoverInfo],
+  );
   const colorOf = (id: CityLayerId) => CITY_LAYERS.find((l) => l.id === id)!.color;
   const mapFilter: import("maplibre-gl").FilterSpecification =
     activeFilter === "all"
@@ -151,6 +169,7 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
           "city-zones-fill",
           "violation-cells",
           "parking-lines",
+          "allowed-fill",
           "hubi-lines",
           "sign-points",
           "roadwork-fill",
@@ -236,6 +255,16 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         {riskWithLimits && (
           <Source id="risk-data" type="geojson" data={riskWithLimits}>
             {/* Fine risk: a warm halo UNDER the line, only where at least 5 fines were given nearby. */}
+            {/* Allowed per the city's own data (paid or free spaces): a soft green fill under the lines. No data, no fill. */}
+            <Layer
+              id="allowed-fill"
+              type="fill"
+              filter={["all", mapFilter, ["in", ["get", "category"], ["literal", [...ALLOWED_CATEGORIES]]]]}
+              paint={{
+                "fill-color": ["match", ["get", "category"], "paid", c.paid, c.free],
+                "fill-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.12, 17, 0.28],
+              }}
+            />
             <Layer
               id="parking-glow"
               type="line"
@@ -275,8 +304,17 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
                   c.special,
                   c.other,
                 ],
-                "line-width": ["interpolate", ["linear"], ["zoom"], 10, 2, 18, 7],
-                "line-opacity": 0.95,
+                // Prohibitions stay red but thinner and dimmer, so allowed parking reads first.
+                "line-width": [
+                  "interpolate",
+                  ["linear"],
+                  ["zoom"],
+                  10,
+                  ["case", ["==", ["get", "category"], "restricted"], 1, 2],
+                  18,
+                  ["case", ["==", ["get", "category"], "restricted"], 3.5, 7],
+                ],
+                "line-opacity": ["case", ["==", ["get", "category"], "restricted"], 0.6, 0.95],
               }}
             />
             <Layer
@@ -331,37 +369,32 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
               minzoom={13}
               layout={{ visibility: showSigns ? "visible" : "none" }}
               paint={{
-                "circle-radius": [
-                  "interpolate",
-                  ["linear"],
-                  ["zoom"],
-                  12,
-                  2,
-                  18,
-                  8,
-                ],
+                // Small and muted until close zoom; full colour from about zoom 17 or when tapped.
+                "circle-radius": ["interpolate", ["linear"], ["zoom"], 13, 1.5, 16, 3, 18, 6],
                 "circle-color": [
-                  "match",
-                  ["get", "tyyppi"],
-                  ["C37", "C38", "C39", "C44.1", "C44.2"],
-                  THEME_CONFIGS[theme].colors.glowHigh,
-                  ["E2", "E3.1", "E3.2", "E3.3", "E3.4", "E3.5"],
-                  THEME_CONFIGS[theme].colors.paid,
-                  ["E24", "E26", "E28"],
-                  THEME_CONFIGS[theme].colors.glowMid,
-                  darkMap ? "#e2e8f0" : "#334155",
-                ],
-                "circle-stroke-width": 1.5,
-                "circle-stroke-color": darkMap ? "#0a0f14" : "#ffffff",
-                "circle-opacity": [
                   "interpolate",
                   ["linear"],
                   ["zoom"],
-                  13,
-                  0.4,
-                  15,
-                  0.9,
+                  16,
+                  signColors(true),
+                  17.5,
+                  signColors(false),
                 ],
+                "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 16, 0, 17.5, 1],
+                "circle-stroke-color": darkMap ? "#0a0f14" : "#ffffff",
+                "circle-opacity": ["interpolate", ["linear"], ["zoom"], 13, 0.35, 16, 0.6, 17.5, 0.95],
+              }}
+            />
+            <Layer
+              id="sign-selected"
+              type="circle"
+              filter={["in", ["get", "id"], ["literal", selectedSignIds]]}
+              layout={{ visibility: showSigns ? "visible" : "none" }}
+              paint={{
+                "circle-radius": 7,
+                "circle-color": signColors(false),
+                "circle-stroke-width": 2,
+                "circle-stroke-color": darkMap ? "#ffffff" : "#0f172a",
               }}
             />
             <Layer
@@ -392,9 +425,9 @@ export const ParkingMapView: React.FC<ParkingMapViewProps> = ({
         {cityData("zones") && (
           <Source id="city-zones" type="geojson" data={cityData("zones")!}>
             <Layer id="city-zones-fill" type="fill" layout={{ visibility: vis("zones") }}
-              paint={{ "fill-color": ["match", ["get", "city_kind"], "payzone", "#64748b", "#a3e635"], "fill-opacity": 0.12 }} />
+              paint={{ "fill-color": ["match", ["get", "city_kind"], "payzone", "#64748b", c.residential], "fill-opacity": 0.12 }} />
             <Layer id="city-zones-line" type="line" layout={{ visibility: vis("zones") }}
-              paint={{ "line-color": ["match", ["get", "city_kind"], "payzone", colorOf("zones"), "#a3e635"], "line-width": 1.5, "line-dasharray": [3, 2] }} />
+              paint={{ "line-color": ["match", ["get", "city_kind"], "payzone", colorOf("zones"), c.residential], "line-width": 1.5, "line-dasharray": [3, 2] }} />
           </Source>
         )}
         {cityData("cycling") && (
