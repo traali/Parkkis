@@ -160,7 +160,7 @@ export const MetadataCatalogueModal: React.FC<MetadataCatalogueModalProps> = ({
             </div>
           ))}
           <p className="text-[10px] text-nc-text-dim">
-            Sakkoriski (1–10) lasketaan suoraan sakkoaineistosta: paikan lähellä (noin 20 m) annettujen sakkojen määrä.
+            Sakkojen määrä lasketaan suoraan sakkoaineistosta: paikan lähellä (noin 20 m) vuonna 2023 annetut sakot, ilman pisteytystä.
             Se kertoo menneestä, ei takaa mitään tänään.
           </p>
         </div>

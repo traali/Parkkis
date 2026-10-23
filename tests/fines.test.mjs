@@ -54,6 +54,20 @@ describe('fines are drawn as areas, not spots', () => {
   });
 });
 
+describe('no invented risk level', () => {
+  it('parking popup shows the plain 2023 count and the reason, no risk level', () => {
+    const popup = read('web/src/components/ParkingPopup.tsx');
+    assert.match(popup, /Sakkoja lähellä \(2023\):/);
+    assert.match(popup, /Yleisin sakon syy \(2023\)/);
+    assert.match(popup, /fine_count \?\? 0\) >= 3 && hoverInfo\.properties\.top_violation_reason/);
+    for (const f of ['web/src/components/ParkingPopup.tsx', 'web/src/App.tsx', 'web/src/components/MetadataCatalogueModal.tsx', 'web/src/components/LayerSheet.tsx', 'web/src/hooks/useParkingLayers.ts']) {
+      const src = read(f);
+      assert.doesNotMatch(src, /Sakkoriski|risk_score|"Korkea"|"Kohtalainen"|"Matala"|Paljon sakkoja/, f);
+    }
+    assert.match(read('web/src/App.tsx'), /5\+ sakkoa lähellä \(2023\)/);
+  });
+});
+
 describe('fines review fixes', () => {
   it('SQL drops null and out-of-bounds coordinates; near-check uses real cells', () => {
     assert.match(F.FINE_CELLS_SQL, /geom IS NOT NULL/);

@@ -271,43 +271,12 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
             )}
           </div>
 
-          {/* Fine-based risk: only parking spaces have it (signs/works do not) */}
-          {hoverInfo.layerId === "parking-lines" && hoverInfo.properties.risk_score !== undefined && hoverInfo.properties.risk_score !== null && (
-          <div className="flex items-center justify-between mb-4 bg-nc-text/5 rounded-xl p-3 border border-nc-border">
-            <div className="flex flex-col">
-              <span className="text-[10px] text-nc-text-dim uppercase font-black tracking-wider">
-                Sakkoriski
-              </span>
-              <span
-                className={`text-xl font-black ${
-                  hoverInfo.isRoadworkConflict ||
-                  Number(hoverInfo.properties.risk_score ?? 0) > 7
-                    ? "text-nc-danger"
-                    : Number(hoverInfo.properties.risk_score ?? 0) > 3
-                      ? "text-nc-gold"
-                      : "text-nc-neon-teal"
-                }`}
-              >
-                {hoverInfo.isRoadworkConflict
-                  ? "Tarkista"
-                  : Number(hoverInfo.properties.risk_score ?? 0) > 7
-                    ? "Korkea"
-                    : Number(hoverInfo.properties.risk_score ?? 0) > 3
-                      ? "Kohtalainen"
-                      : "Matala"}
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] text-nc-text-dim uppercase font-black block">
-                Sakot lähellä (2023)
-              </span>
-              <span className="text-sm font-bold text-nc-text">
-                {hoverInfo.properties.fine_count !== undefined && hoverInfo.properties.fine_count !== null
-                  ? `${hoverInfo.properties.fine_count} kpl`
-                  : "–"}
-              </span>
-            </div>
-          </div>
+          {/* Plain measured count of 2023 fines near this space. No score or level is derived from it. */}
+          {hoverInfo.layerId === "parking-lines" && hoverInfo.properties.fine_count !== undefined && hoverInfo.properties.fine_count !== null && (
+            <p data-testid="fine-count" className="mb-4 bg-nc-text/5 rounded-xl p-3 border border-nc-border text-sm text-nc-text">
+              <span className="text-nc-text-dim">Sakkoja lähellä (2023):</span>{" "}
+              <b className="font-black">{Number(hoverInfo.properties.fine_count)} kpl</b>
+            </p>
           )}
 
           {hoverInfo.isRoadworkConflict && (
@@ -471,10 +440,10 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                 <p className="text-[10px] text-nc-text-muted leading-tight mt-2">{String(hoverInfo.properties.lisatieto)}</p>
               )}
 
-              {Number(hoverInfo.properties.risk_score ?? 0) >= 3 && hoverInfo.properties.top_violation_reason && (
-                <div className="bg-nc-danger/10 border border-nc-danger/30 rounded p-2 mt-2">
-                  <span className="block text-xs text-nc-danger uppercase mb-1 font-bold">
-                    ⚠️ Yleisin sakon syy (2023)
+              {Number(hoverInfo.properties.fine_count ?? 0) >= 3 && hoverInfo.properties.top_violation_reason && (
+                <div data-testid="top-reason" className="bg-nc-text/5 border border-nc-border rounded p-2 mt-2">
+                  <span className="block text-xs text-nc-text-dim uppercase mb-1 font-bold">
+                    Yleisin sakon syy (2023)
                   </span>
                   <span className="text-xs text-nc-text-muted leading-tight block">
                     {String(hoverInfo.properties.top_violation_reason || "").replace(/^\d+\s+/, "")}
