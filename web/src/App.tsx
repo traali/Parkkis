@@ -6,33 +6,18 @@ import type {
 import "maplibre-gl/dist/maplibre-gl.css";
 import type * as maplibregl from "maplibre-gl";
 import { ParkingMapView, type Address } from "./components/ParkingMapView";
-import {
-  Filter,
-  Info,
-  Map as MapIcon,
-  Navigation,
-  Search,
-  Shield,
-  Sliders,
-  X,
-  Moon,
-  Sun,
-  TreePine,
-  Database,
-} from "lucide-react";
+import { ChevronDown, ChevronUp, Database, Layers, Moon, Navigation, Search, Sun, X } from "lucide-react";
 import { useParkingLayers } from "./hooks/useParkingLayers";
 import { useRegionalParking } from "./hooks/useRegionalParking";
 import { coverageNoteText, venueCoverage } from "./lib/coverage";
 import { usePlough } from "./hooks/usePlough";
 import { useCityLayers } from "./hooks/useCityLayers";
-import { CityLayerToggles, VenueInfo } from "./components/CityPanel";
+import { VenueInfo } from "./components/CityPanel";
+import { LayerSheet } from "./components/LayerSheet";
+import { pickBanner, ploughOnByDefault, showOsmFor, type Banner } from "./lib/banner";
 import { busyDay, helsinkiDate, matchDateFrom, matchTarget, pickForecast, zonesAt, type CityLayerId } from "./lib/cityLayers";
-import { AGE_COLORS, AGE_LABELS, EMPTY_TEXT, HEL_PRIORITY_LABEL, ERROR_TEXT, STATE_ROADS_NOTE, bboxAround, venueBanner, type Bbox } from "./lib/plough";
-import {
-  CATEGORIES,
-  getCentroid,
-  type ThemeType,
-} from "./lib/mapThemes";
+import { EMPTY_TEXT, ERROR_TEXT, bboxAround, venueBanner, type Bbox } from "./lib/plough";
+import { THEME_CONFIGS, getCentroid, type ThemeType } from "./lib/mapThemes";
 import { MetadataCatalogueModal } from "./components/MetadataCatalogueModal";
 import { ReservationsDrawer } from "./components/ReservationsDrawer";
 import type { HoverInfo } from "./components/ParkingPopup";
@@ -112,7 +97,13 @@ const INITIAL_VIEW_STATE = {
   longitude: 24.941,
   latitude: 60.169,
   zoom: 13,
-  pitch: 45,
+  pitch: 0,
+};
+
+const BANNER_STYLE: Record<Banner["tone"], string> = {
+  danger: "border-nc-danger/60 bg-nc-danger/10",
+  warn: "border-nc-gold/60 bg-nc-gold/10",
+  info: "border-sky-400/60 bg-sky-400/10",
 };
 
 export default function App() {
@@ -151,9 +142,9 @@ export default function App() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(venueFromLink);
   const [theme, setTheme] = useState<ThemeType>(() => readThemeFromUrl());
-  const [isFooterCollapsed, setIsFooterCollapsed] = useState(
-    () => typeof window !== "undefined" && window.matchMedia("(max-width: 700px)").matches
-  );
+  const [showDetails, setShowDetails] = useState(false);
+  const [showLayers, setShowLayers] = useState(false);
+  const [showLiipi, setShowLiipi] = useState(false);
   const [showResList, setShowResList] = useState(false);
   const [resSearchQuery, setResSearchQuery] = useState("");
   const [resCategory, setResCategory] = useState("all");
@@ -183,7 +174,6 @@ export default function App() {
 
   const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
   const mapRef = useRef<MapRef>(null);
-  const [pulseOpacity, setPulseOpacity] = useState(0.8);
 
   // Debounced Search Logic
   useEffect(() => {
@@ -219,19 +209,11 @@ export default function App() {
       mapRef.current.flyTo({
         center: [lng, lat],
         zoom: 17,
-        pitch: 60,
+        pitch: 0,
         duration: 2000,
       });
     }
   };
-
-  // Pulse animation for new traps
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPulseOpacity((prev) => (prev === 0.8 ? 0.2 : 0.8));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const onMouseMove = useCallback((event: MapLayerMouseEvent) => {
     let features = event.features;
@@ -282,9 +264,8 @@ export default function App() {
     const bottomEl = document.querySelector("[data-testid=bottom-hud]")?.getBoundingClientRect();
     const h = window.innerHeight;
     const bottom = bottomEl ? Math.max(0, h - bottomEl.top) : 0;
-    // Never squeeze the visible map below a third of the screen.
-    const room = h - top - bottom;
-    return room < h / 3 ? { top: h / 3, bottom: 0, left: 0, right: 0 } : { top, bottom, left: 0, right: 0 };
+    // Centre the venue in the uncovered strip; keep at least 160 px of map for the pin.
+    return { top, bottom: Math.max(0, Math.min(bottom, h - top - 160)), left: 0, right: 0 };
   }, []);
   const centerVenue = useCallback(
     (duration: number) => {
@@ -292,7 +273,7 @@ export default function App() {
       mapRef.current.flyTo({
         center: [venueFromLink.longitude, venueFromLink.latitude],
         zoom: 16,
-        pitch: 50,
+        pitch: 0,
         padding: visiblePadding(),
         duration,
       });
@@ -300,14 +281,19 @@ export default function App() {
     [venueFromLink, visiblePadding],
   );
 
+  // Opening the Tasot sheet or the details grows the bottom overlay: re-centre so the venue pin stays visible.
+  useEffect(() => {
+    if (!showLayers && !showDetails) return;
+    const id = window.setTimeout(() => centerVenue(400), 50);
+    return () => window.clearTimeout(id);
+  }, [showLayers, showDetails, centerVenue]);
+
   const onMapLoad = useCallback(() => {
     performance.mark("parkkis:map-load");
-    // MapLibre opens the compact attribution on load; on phones it covers the map. Keep credits one tap away (ⓘ).
-    if (window.matchMedia("(max-width: 640px)").matches) {
-      const attrib = mapRef.current?.getMap().getContainer().querySelector(".maplibregl-ctrl-attrib");
-      attrib?.classList.remove("maplibregl-compact-show");
-      attrib?.removeAttribute("open");
-    }
+    // MapLibre opens the compact attribution on load; it covers the map. Keep credits and licences one tap away (ⓘ).
+    const attrib = mapRef.current?.getMap().getContainer().querySelector(".maplibregl-ctrl-attrib");
+    attrib?.classList.remove("maplibregl-compact-show");
+    attrib?.removeAttribute("open");
     if (venueFromLink && mapRef.current) {
       mapRef.current.getMap().on("dragstart", () => {
         userMovedMap.current = true;
@@ -354,7 +340,9 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, [venueFromLink, venueFastDone, ploughStatus, loadPlough, ploughBbox]);
+  const ploughTouched = useRef(false);
   const togglePlough = useCallback(() => {
+    ploughTouched.current = true;
     if (!showPlough) {
       loadPlough(ploughBbox());
       loadHel();
@@ -365,13 +353,34 @@ export default function App() {
     () => (venueFromLink && ploughData ? venueBanner(ploughData, venueFromLink.latitude, venueFromLink.longitude) : null),
     [venueFromLink, ploughData],
   );
+  // Plough layer on by default only when there is a recent real run near the venue.
+  useEffect(() => {
+    if (!ploughTouched.current && ploughOnByDefault(ploughBanner)) {
+      ploughTouched.current = true;
+      setShowPlough(true);
+      loadHel();
+    }
+  }, [ploughBanner, loadHel]);
+  const ploughText =
+    ploughStatus === "loading"
+      ? "Ladataan auraustietoja…"
+      : ploughStatus === "error"
+        ? `${ERROR_TEXT}. Yritä myöhemmin uudelleen.`
+        : ploughStatus === "empty"
+          ? EMPTY_TEXT
+          : ploughStatus === "ready"
+            ? ploughBanner
+              ? ploughBanner.text
+              : venueFromLink
+                ? "Ei auraus-, hiekoitus- tai harjausajoja 2 km säteellä viime tunteina."
+                : `${ploughData?.features.length ?? 0} kunnossapitoajoa näkyvällä alueella (valtion tiet 12 h, Espoon kadut 48 h).`
+            : null;
 
   // Optional city layers + venue info (events, zones, contractor, FMI forecast). All lazy.
   const match = useMemo(() => matchDateFrom(window.location.search, new Date()), []);
   const matchAt = useMemo(() => matchTarget(window.location.search, new Date()), []);
   const { layers: cityLayers, load: loadCity, contractors, loadContractors, forecast, loadForecast } = useCityLayers(match.date);
   const [cityShown, setCityShown] = useState<Set<CityLayerId>>(new Set());
-  const [showCityPanel, setShowCityPanel] = useState(false);
   const toggleCity = useCallback((id: CityLayerId) => {
     setCityShown((prev) => {
       const next = new Set(prev);
@@ -417,7 +426,28 @@ export default function App() {
     }, regionalStatus === "error" && !venueTiles);
   }, [venueFromLink, riskData, espooShown, osmShown, regionalStatus, venueTiles]);
   const venueOutsideData = coverage !== null && !coverage.helsinki;
+  // OSM points only where there is no city data at all near the venue (see lib/banner.ts).
+  const showOsm = showOsmFor(coverage);
 
+  // At most one banner, in priority order.
+  const banner = pickBanner({
+    loadError: loadFailed ? loadingMsg : null,
+    coverage: venueFromLink && venueOutsideData ? coverageNoteText(coverage) : null,
+    busyDay:
+      busy.length > 0
+        ? `Vilkas päivä: ${busy.length} ${busy.length === 1 ? "tapahtuma" : "tapahtumaa"} lähellä ${match.fromLink ? "ottelupäivänä" : "tänään"}. Pysäköinti voi olla tavallista vaikeampaa.`
+        : null,
+    plough: ploughBanner && ploughOnByDefault(ploughBanner) ? ploughBanner.text : null,
+    loading: !dbReady ? (venueTiles ? "Lähialueen pysäköinti näkyy. Ladataan koko kaupungin aineistoa…" : loadingMsg) : null,
+  });
+  const colors = THEME_CONFIGS[theme].colors;
+  const legend = [
+    { label: "Maksullinen", color: colors.paid },
+    { label: "Ilmainen", color: colors.free },
+    { label: "Erityispaikka", color: colors.special },
+    { label: "Kielto", color: colors.restricted },
+    { label: "Pysäköintialue", color: colors.area, dashed: true },
+  ];
   // The coverage note changes the overlay height; re-center once it appears.
   useEffect(() => {
     if (coverage) requestAnimationFrame(() => centerVenue(600));
@@ -508,324 +538,80 @@ export default function App() {
     }
   };
 
+  const activeLayerCount =
+    [showViolations, showSigns, showNewTraps, showRoadworks, showReservations, showLiipi, showPlough].filter(Boolean).length +
+    cityShown.size +
+    (activeFilter === "all" ? 0 : 1);
+  const bannerTestId: Record<Banner["kind"], string> = {
+    "load-error": "loading-status",
+    loading: "loading-status",
+    coverage: "venue-coverage-note",
+    "busy-day": "busy-day-banner",
+    plough: "plough-banner",
+  };
+  const isDark = theme !== "light";
+
   return (
     <div className="relative w-full h-screen bg-nc-deep text-nc-text">
-      {/* Floating Theme Selector (Top-Right) */}
-      <div className="absolute top-6 right-6 z-50 pointer-events-auto flex items-center gap-2">
-        <div className="nv-glass rounded-full p-1.5 flex items-center gap-1 shadow-2xl">
-          {[
-            { id: "dark", label: "Yöteema", icon: Moon, activeColor: "text-nc-neon-teal" },
-            { id: "light", label: "Päiväteema", icon: Sun, activeColor: "text-nc-gold" },
-            { id: "forest", label: "Metsäteema", icon: TreePine, activeColor: "text-emerald-400" },
-          ].map((themeOpt) => {
-            const Icon = themeOpt.icon;
-            const isActive = theme === themeOpt.id;
-            return (
+      {/* Theme: one button, top-right. Forest stays available through ?theme=forest. */}
+      <button
+        type="button"
+        data-testid="theme-toggle"
+        onClick={() => setTheme(isDark ? "light" : "dark")}
+        aria-label={isDark ? "Vaihda päiväteemaan" : "Vaihda yöteemaan"}
+        title={isDark ? "Päiväteema" : "Yöteema"}
+        className="nv-sheet absolute top-3 right-3 z-50 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center pointer-events-auto"
+      >
+        {isDark ? <Sun className="w-5 h-5 text-nc-gold" /> : <Moon className="w-5 h-5 text-nc-text" />}
+      </button>
+
+      {/* Search only on the home view; a venue link already says where we are. */}
+      {!venueFromLink && (
+        <div data-testid="top-hud" className="absolute top-3 left-3 right-[68px] sm:right-auto sm:w-[420px] z-40 flex flex-col gap-2 pointer-events-none">
+          <div className="nv-sheet rounded-full pl-4 pr-1 flex items-center pointer-events-auto">
+            <Search className="w-5 h-5 text-nc-text-muted shrink-0" />
+            <input
+              type="search"
+              aria-label="Hae osoite"
+              placeholder="Hae osoite"
+              className="bg-transparent border-none text-nc-text text-base w-full min-h-[44px] px-2 focus:outline-none placeholder:text-nc-text-muted"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
               <button
                 type="button"
-                key={themeOpt.id}
-                onClick={() => setTheme(themeOpt.id as ThemeType)}
-                className={`p-2 min-w-[44px] min-h-[44px] rounded-full transition-all duration-300 flex items-center justify-center relative group ${
-                  isActive
-                    ? "bg-nc-text/15 shadow-inner scale-110"
-                    : "hover:bg-nc-text/5 text-nc-text-dim hover:text-nc-text"
-                }`}
-                title={themeOpt.label}
-                aria-label={themeOpt.label}
+                aria-label="Tyhjennä haku"
+                onClick={() => setSearchQuery("")}
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-nc-text/10 rounded-full"
               >
-                <Icon className={`w-4 h-4 ${isActive ? themeOpt.activeColor : "text-current"}`} />
-                <span className="absolute right-full mr-2 bg-nc-void border border-nc-border text-nc-text text-[10px] font-bold px-2 py-1 rounded-md opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap shadow-lg">
-                  {themeOpt.label}
-                </span>
+                <X className="w-4 h-4 text-nc-text-muted" />
               </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Nova HUD */}
-      <div data-testid="top-hud" className="nv-hud top-0 left-0 w-full flex flex-col gap-4 pointer-events-none max-h-[50vh] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible">
-        <div className="flex flex-col gap-2 w-full pr-16 sm:pr-0 sm:flex-row sm:justify-between sm:items-start">
-          <div className="flex flex-col gap-4 w-full max-w-md pointer-events-auto">
-            {/* Search Bar */}
-            <div className="nv-glass rounded-3xl p-1 flex items-center shadow-2xl border border-nc-border">
-              <div className="pl-4 pr-2">
-                <Search className="w-5 h-5 text-nc-neon-teal" />
-              </div>
-              <input
-                type="text"
-                placeholder="Hae osoite, esim. Mannerheimintie 1"
-                className="bg-transparent border-none text-nc-text text-sm w-full py-3 focus:outline-none placeholder:text-nc-text-dim"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="p-2 hover:bg-nc-text/5 rounded-full mr-1"
-                >
-                  <X className="w-4 h-4 text-nc-text-dim" />
-                </button>
-              )}
-            </div>
-
-            {/* Search Results */}
-            {visibleSearchResults.length > 0 && (
-              <div className="nv-glass rounded-2xl overflow-hidden border border-nc-border shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300">
-                {visibleSearchResults.map((result: SearchResult) => (
-                  <button
-                    type="button"
-                    key={`${result.name.fi}-${result.location.coordinates.join(",")}`}
-                    onClick={() => onSelectAddress(result)}
-                    className="w-full text-left px-4 py-3 hover:bg-nc-neon-teal/10 transition-colors border-b border-nc-border/40 last:border-0 group flex items-center gap-3"
-                  >
-                    <Navigation className="w-4 h-4 text-nc-text-dim group-hover:text-nc-neon-teal transition-colors" />
-                    <div>
-                      <div className="text-sm font-bold text-nc-text">
-                        {result.name.fi || result.name.sv}
-                      </div>
-                      <div className="text-[10px] text-nc-text-dim uppercase tracking-wider">
-                        {result.municipality?.name?.fi || result.municipality?.name?.sv || ""}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
             )}
           </div>
-
-          {venueFromLink && venueOutsideData && (
-            <div
-              data-testid="venue-coverage-note"
-              className="nv-glass rounded-3xl px-5 py-3 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-nc-gold/40"
-            >
-              <b className="text-nc-gold">{venueFromLink.name}:</b> {coverageNoteText(coverage)}
-            </div>
-          )}
-
-          {
-            <div
-              data-testid="plough-panel"
-              className="nv-glass rounded-3xl px-4 py-2 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-sky-400/40 flex flex-col gap-1"
-            >
-              <div className="flex items-center gap-2 flex-wrap">
+          {visibleSearchResults.length > 0 && (
+            <div className="nv-sheet rounded-2xl overflow-hidden pointer-events-auto">
+              {visibleSearchResults.map((result: SearchResult) => (
                 <button
                   type="button"
-                  data-testid="plough-toggle"
-                  aria-pressed={showPlough}
-                  onClick={togglePlough}
-                  className={`min-h-[44px] px-4 rounded-2xl font-bold border ${showPlough ? "border-sky-400 text-sky-300 bg-sky-400/15" : "border-nc-border text-nc-text-dim"}`}
+                  key={`${result.name.fi}-${result.location.coordinates.join(",")}`}
+                  onClick={() => onSelectAddress(result)}
+                  className="w-full min-h-[44px] text-left px-4 py-2 hover:bg-nc-text/10 border-b border-nc-border last:border-0 flex items-center gap-3"
                 >
-                  ❄️ {showPlough ? "Piilota auraus" : "Aurattu / hiekoitettu viime tunteina"}
-                </button>
-                {showPlough && ploughStatus === "ready" && (
-                  <span className="flex items-center gap-2 text-[10px]">
-                    {(Object.keys(AGE_LABELS) as (keyof typeof AGE_LABELS)[]).map((k) => (
-                      <span key={k} className="flex items-center gap-1">
-                        <span className="inline-block w-4 h-1.5 rounded" style={{ background: AGE_COLORS[k] }} />
-                        {AGE_LABELS[k]}
-                      </span>
-                    ))}
+                  <Navigation className="w-4 h-4 text-nc-text-muted" />
+                  <span>
+                    <span className="block text-sm font-bold text-nc-text">{result.name.fi || result.name.sv}</span>
+                    <span className="block text-xs text-nc-text-muted">
+                      {result.municipality?.name?.fi || result.municipality?.name?.sv || ""}
+                    </span>
                   </span>
-                )}
-              </div>
-              {(venueFromLink || showPlough) && (<>
-              <div data-testid="plough-status" role="status">
-                {ploughFailed.length === 1 && ploughStatus !== "loading" && (
-                  <span className="block text-nc-danger">
-                    {ploughFailed[0] === "espoo" ? "Espoon katutietojen lataus epäonnistui." : "Valtion teiden tietojen lataus epäonnistui."}{" "}
-                  </span>
-                )}
-                {ploughStatus === "loading" && "Ladataan auraustietoja…"}
-                {ploughStatus === "error" && <span className="text-nc-danger font-bold">{ERROR_TEXT}. Yritä myöhemmin uudelleen.</span>}
-                {ploughStatus === "empty" && EMPTY_TEXT}
-                {ploughStatus === "ready" &&
-                  (ploughBanner ? (
-                    <b data-testid="plough-banner" className="text-sky-300">{ploughBanner.text}</b>
-                  ) : venueFromLink ? (
-                    "Ei auraus-, hiekoitus- tai harjausajoja 2 km säteellä viime tunteina."
-                  ) : (
-                    `${ploughData?.features.length ?? 0} kunnossapitoajoa näkyvällä alueella (valtion tiet 12 h, Espoon kadut 48 h).`
-                  ))}
-              </div>
-              </>)}
-              {showPlough && (
-                <div data-testid="hel-priority-status" className="text-[10px] flex items-center gap-1">
-                  <span className="inline-block w-4 border-t-2 border-dashed border-emerald-300" />
-                  Helsinki: {HEL_PRIORITY_LABEL}
-                  {helStatus === "loading" ? " – ladataan…" : helStatus === "error" ? " – lataus epäonnistui" : helStatus === "ready" ? ` – ${helPriority?.features.length ?? 0} reittiä` : ""}
-                </div>
-              )}
-              <div className="text-[10px] text-nc-text-dim">{STATE_ROADS_NOTE}</div>
-            </div>
-          }
-          <div
-            data-testid="city-panel"
-            className="nv-glass rounded-3xl px-4 py-2 text-nv-text-xs text-nc-text max-w-md pointer-events-auto border border-pink-400/30 flex flex-col gap-1"
-          >
-            <button
-              type="button"
-              data-testid="city-panel-toggle"
-              aria-expanded={showCityPanel}
-              onClick={() => setShowCityPanel((v) => !v)}
-              className="min-h-[44px] px-4 rounded-2xl font-bold border border-nc-border text-left"
-            >
-              🗺️ {showCityPanel ? "Piilota lisätiedot" : venueFromLink ? "Kohteen lisätiedot ja karttatasot" : "Lisää karttatasoja"}
-              {venueFromLink && busy.length > 0 && !showCityPanel && <span className="text-pink-300"> · ⚠️ vilkas päivä</span>}
-            </button>
-            {showCityPanel && (
-              <div data-testid="city-panel-body" className="max-h-[38vh] overflow-y-auto overscroll-contain flex flex-col gap-2 pr-1">
-            {venueFromLink && (
-              <VenueInfo
-                name={venueFromLink.name}
-                date={match.date}
-                dateFromLink={match.fromLink}
-                inHelsinki={venueInHelsinki}
-                events={busy}
-                eventsStatus={cityLayers.events.status}
-                zones={venueZones}
-                zonesStatus={cityLayers.zones.status}
-                contractors={contractors.list}
-                contractorStatus={contractors.status}
-                forecast={matchForecast}
-                forecastStatus={forecast.status}
-                forecastFor={matchAt.label}
-              />
-            )}
-              <CityLayerToggles layers={cityLayers} shown={cityShown} onToggle={toggleCity} date={match.date} dateFromLink={match.fromLink} />
-              </div>
-            )}
-          </div>
-          {!dbReady && (
-            <div
-              data-testid="loading-status"
-              className={`nv-glass rounded-3xl px-6 py-3 flex items-center gap-3 ${loadFailed ? "border border-nc-danger/50" : "animate-pulse"}`}
-            >
-              <div className={`w-2 h-2 rounded-full ${loadFailed ? "bg-nc-danger" : "bg-nc-neon-teal shadow-[0_0_10px_#00f2ff]"}`} />
-              <span className="text-nv-text-sm font-medium text-nc-text">
-                {venueTiles && !loadFailed ? "Lähialueen pysäköinti näkyy. Ladataan koko kaupungin aineistoa..." : loadingMsg}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {dbReady && (
-          <div className="flex flex-wrap gap-2">
-            <div className="nv-glass rounded-3xl p-2 flex items-center gap-2 pointer-events-auto overflow-x-auto no-scrollbar max-w-fit">
-              <div className="px-3 py-2 border-r border-nc-border mr-1">
-                <Filter className="w-4 h-4 text-nc-text-dim" />
-              </div>
-              {CATEGORIES.map((cat) => (
-                <button
-                  type="button"
-                  key={cat.id}
-                  onClick={() => setActiveFilter(cat.id)}
-                  className={`px-4 py-2 min-h-[44px] rounded-2xl text-nv-text-xs font-bold transition-all whitespace-nowrap ${
-                    activeFilter === cat.id
-                      ? "bg-nc-neon-teal text-nc-deep shadow-[0_0_15px_rgba(0,242,255,0.4)]"
-                      : "text-nc-text-dim hover:bg-nc-text/5"
-                  }`}
-                >
-                  {cat.label}
                 </button>
               ))}
             </div>
+          )}
+        </div>
+      )}
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setShowNewTraps(!showNewTraps)}
-                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                  showNewTraps
-                    ? "border-nc-neon-teal text-nc-neon-teal bg-nc-neon-teal/10 shadow-[0_0_15px_rgba(0,242,255,0.2)]"
-                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${showNewTraps ? "bg-nc-neon-teal animate-pulse" : "bg-nc-text/20"}`}
-                />
-                UUDET MERKIT
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowViolations(!showViolations)}
-                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                  showViolations
-                    ? "border-nc-danger text-nc-danger bg-nc-danger/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]"
-                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${showViolations ? "bg-nc-danger animate-pulse" : "bg-nc-text/20"}`}
-                />
-                SAKOT 2023
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowSigns(!showSigns)}
-                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                  showSigns
-                    ? "border-nc-text text-nc-text bg-nc-text/10 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
-                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${showSigns ? "bg-nc-text animate-pulse" : "bg-nc-text/20"}`}
-                />
-                LIIKENNEMERKIT
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowRoadworks(!showRoadworks)}
-                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                  showRoadworks
-                    ? "border-nc-gold text-nc-gold bg-nc-gold/10 shadow-[0_0_15px_rgba(255,207,75,0.2)]"
-                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${showRoadworks ? "bg-nc-gold animate-pulse" : "bg-nc-text/20"}`}
-                />
-                TYÖMAAT{roadworkStatus === "loading" ? " …" : roadworkStatus === "error" ? " (ei saatu)" : roadworkData ? ` (${roadworkData.features.length})` : ""}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowReservations(!showReservations)}
-                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                  showReservations
-                    ? "border-orange-400 text-orange-400 bg-orange-400/10 shadow-[0_0_15px_rgba(251,146,60,0.2)]"
-                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${showReservations ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
-                />
-                VUOKRA-ALUEET{reservationStatus === "loading" ? " …" : reservationStatus === "error" ? " (ei saatu)" : ""}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShowResList(!showResList)}
-                className={`nv-glass rounded-3xl min-h-[44px] px-6 py-2 text-nv-text-xs font-bold transition-all pointer-events-auto flex items-center gap-2 border ${
-                  showResList
-                    ? "border-orange-400 text-orange-400 bg-orange-400/20 shadow-[0_0_15px_rgba(251,146,60,0.3)] font-black"
-                    : "border-nc-border text-nc-text-dim hover:bg-nc-text/5"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full ${showResList ? "bg-orange-400 animate-pulse" : "bg-nc-text/20"}`}
-                />
-                📋 LISTA
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
       <ParkingMapView
         mapRef={mapRef}
         geoControlRef={geoControlRef}
@@ -846,13 +632,14 @@ export default function App() {
         hubiData={hubiData}
         espooData={espooShown}
         osmData={osmShown}
+        showOsm={showOsm}
+        showLiipi={showLiipi}
         showViolations={showViolations}
         showSigns={showSigns}
         showNewTraps={showNewTraps}
         showRoadworks={showRoadworks}
         showReservations={showReservations}
         activeFilter={activeFilter}
-        pulseOpacity={pulseOpacity}
         ploughData={ploughData}
         helPriority={helPriority}
         cityLayers={cityLayers}
@@ -860,96 +647,178 @@ export default function App() {
         showPlough={showPlough}
       />
 
-      {/* Bento Stats Footer */}
-      <div data-testid="bottom-hud" className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 flex flex-col gap-2 pointer-events-none transition-all duration-300">
-        {/* Toggle Expand / Collapse Buttons & Version Badge */}
-        <div className="flex items-center justify-between w-full pointer-events-auto pr-2 gap-2 flex-wrap">
-          <div
-            data-testid="app-version-badge"
-            className="nv-glass rounded-full px-3 py-1 text-[10px] font-mono text-nc-text-muted flex items-center gap-1.5 shadow-lg pointer-events-auto border border-nc-border/40"
+      {/* One compact card at the bottom (phone: full width, thumb reach). "Tasot" replaces it with the layer sheet. */}
+      <div
+        data-testid="bottom-hud"
+        className="absolute bottom-0 left-0 right-0 sm:left-3 sm:bottom-3 sm:right-auto sm:w-[420px] z-40 pointer-events-none"
+      >
+        {showLayers ? (
+          <LayerSheet
+            onClose={() => setShowLayers(false)}
+            activeFilter={activeFilter}
+            onFilter={setActiveFilter}
+            venueLink={!!venueFromLink}
+            date={match.date}
+            dateFromLink={match.fromLink}
+            showViolations={showViolations}
+            setShowViolations={setShowViolations}
+            showSigns={showSigns}
+            setShowSigns={setShowSigns}
+            showNewTraps={showNewTraps}
+            setShowNewTraps={setShowNewTraps}
+            dataReady={dbReady}
+            fineYears={dataFacts?.fineYears}
+            showRoadworks={showRoadworks}
+            setShowRoadworks={setShowRoadworks}
+            roadworkStatus={roadworkStatus}
+            roadworkCount={roadworkData?.features.length}
+            showReservations={showReservations}
+            setShowReservations={setShowReservations}
+            reservationStatus={reservationStatus}
+            reservationCount={reservationData?.features.length}
+            onOpenList={() => setShowResList(true)}
+            cityLayers={cityLayers}
+            cityShown={cityShown}
+            onToggleCity={toggleCity}
+            showLiipi={showLiipi}
+            setShowLiipi={setShowLiipi}
+            liipiCount={liipiData?.features.length}
+            showPlough={showPlough}
+            onTogglePlough={togglePlough}
+            ploughStatus={ploughStatus}
+            ploughFailed={ploughFailed}
+            ploughText={ploughText}
+            helStatus={helStatus}
+            helCount={helPriority?.features.length}
+            showOsmNote={showOsm}
+          />
+        ) : (
+          <section
+            data-testid="info-card"
+            aria-label="Pysäköinti"
+            className="nv-sheet pointer-events-auto px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex flex-col gap-2 max-h-[60vh] overflow-y-auto overscroll-contain"
           >
-            <span className="font-bold text-nc-neon-teal">ParkkiS</span>
-            <span>•</span>
-            <span>v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0"}</span>
-            <span className="hidden sm:inline">(git:{typeof __COMMIT_HASH__ !== "undefined" ? __COMMIT_HASH__ : "dev"})</span>
-          </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-base font-bold text-nc-text truncate">
+                  {venueFromLink?.name ?? (selectedAddress ? selectedAddress.name : "Parkkis")}
+                </h1>
+                <p className="text-xs text-nc-text-muted">Napauta viivaa: hinta, aikaraja ja sakot.</p>
+              </div>
+              <button
+                type="button"
+                data-testid="layers-button"
+                aria-label={`Tasot${activeLayerCount ? `, ${activeLayerCount} päällä` : ""}`}
+                onClick={() => {
+                  setShowLayers(true);
+                  setHoverInfo(null);
+                }}
+                className="min-h-[44px] min-w-[44px] px-4 rounded-full bg-nc-neon-teal text-nc-deep font-bold text-sm flex items-center gap-2 shrink-0"
+              >
+                <Layers className="w-4 h-4" />
+                Tasot
+                {activeLayerCount > 0 && (
+                  <span className="min-w-5 h-5 px-1 rounded-full bg-nc-deep text-nc-text text-xs flex items-center justify-center">
+                    {activeLayerCount}
+                  </span>
+                )}
+              </button>
+            </div>
 
-          <div className="flex items-center gap-2">
+            {banner && (
+              <div
+                data-testid={bannerTestId[banner.kind]}
+                role="status"
+                className={`rounded-xl border px-3 py-2 text-sm leading-snug text-nc-text ${BANNER_STYLE[banner.tone]}`}
+              >
+                {banner.text}
+              </div>
+            )}
+
+            <ul aria-label="Selite" className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-nc-text">
+              {legend.map((l) => (
+                <li key={l.label} className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block w-4 h-1.5 rounded-full"
+                    style={l.dashed ? { borderTop: `3px dashed ${l.color}`, height: 0 } : { background: l.color }}
+                  />
+                  {l.label}
+                </li>
+              ))}
+              {!venueOutsideData && (
+                <li className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="inline-block w-4 h-3 rounded-full blur-[1px]"
+                    style={{ background: `linear-gradient(90deg, ${colors.glowMid}, ${colors.glowHigh})` }}
+                  />
+                  Paljon sakkoja
+                </li>
+              )}
+              {!venueOutsideData && (
+                <li className="flex items-center gap-1.5">
+                  <b>2 h</b> aikaraja
+                </li>
+              )}
+            </ul>
+
             <button
               type="button"
-              onClick={() => setShowMetadataModal(true)}
-              className="nv-glass rounded-full min-h-[44px] px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
+              data-testid="details-toggle"
+              aria-expanded={showDetails}
+              onClick={() => setShowDetails((v) => !v)}
+              className="min-h-[44px] -mx-2 px-2 rounded-xl flex items-center justify-between text-sm font-semibold text-nc-text hover:bg-nc-text/5"
             >
-              <Database className="w-3.5 h-3.5 text-nc-neon-teal" />
-              <span>Tietolähteet</span>
+              {venueFromLink ? "Kohteen tiedot ja ohjeet" : "Tietoa kartasta"}
+              {showDetails ? <ChevronDown className="w-5 h-5" /> : <ChevronUp className="w-5 h-5" />}
             </button>
-          
-          <button
-            type="button"
-            onClick={() => setIsFooterCollapsed(!isFooterCollapsed)}
-            className="nv-glass rounded-full min-h-[44px] px-4 py-1.5 text-[11px] font-bold text-nc-text hover:bg-nc-text/10 flex items-center gap-1.5 shadow-lg pointer-events-auto cursor-pointer"
-          >
-            {isFooterCollapsed ? (
-              <>
-                <Info className="w-3.5 h-3.5 text-nc-neon-teal" />
-                <span>Näytä ohje</span>
-              </>
-            ) : (
-              <>
-                <X className="w-3.5 h-3.5 text-nc-neon-red" />
-                <span>Piilota ohje</span>
-              </>
+
+            {showDetails && (
+              <div data-testid="details" className="flex flex-col gap-3 text-sm text-nc-text pb-1">
+                {venueFromLink && (
+                  <VenueInfo
+                    name={venueFromLink.name}
+                    date={match.date}
+                    dateFromLink={match.fromLink}
+                    inHelsinki={venueInHelsinki}
+                    events={busy}
+                    eventsStatus={cityLayers.events.status}
+                    zones={venueZones}
+                    zonesStatus={cityLayers.zones.status}
+                    contractors={contractors.list}
+                    contractorStatus={contractors.status}
+                    forecast={matchForecast}
+                    forecastStatus={forecast.status}
+                    forecastFor={matchAt.label}
+                  />
+                )}
+                <p>
+                  <b>Kyltti voittaa kartan.</b> Työmaat ja kyltit muuttuvat, varmista paikka kadun merkistä.
+                  {dataFacts?.slotsUpdated ? ` Pysäköintipaikat päivitetty ${new Date(dataFacts.slotsUpdated).toLocaleDateString("fi-FI")}.` : ""}
+                </p>
+                <p data-testid="fine-count">
+                  <b>Sakot:</b>{" "}
+                  {dataFacts
+                    ? `${dataFacts.fineCount.toLocaleString("fi-FI")} sakkoa${dataFacts.fineYears ? ` (${dataFacts.fineYears})` : ""}, Helsingin kaupungin avoin sakkoaineisto. Oranssi–punainen hehku: vähintään 5 sakkoa paikan lähellä.`
+                    : "Ladataan…"}
+                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowMetadataModal(true)}
+                    className="rounded-full min-h-[44px] px-4 border border-nc-border text-sm font-semibold text-nc-text hover:bg-nc-text/10 flex items-center gap-2"
+                  >
+                    <Database className="w-4 h-4" />
+                    Tietolähteet
+                  </button>
+                  <span data-testid="app-version-badge" className="text-xs font-mono text-nc-text-muted">
+                    Parkkis v{typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "1.0.0"} ({typeof __COMMIT_HASH__ !== "undefined" ? __COMMIT_HASH__ : "dev"})
+                  </span>
+                </div>
+              </div>
             )}
-          </button>
-          </div>
-        </div>
-
-        {!isFooterCollapsed && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pointer-events-none animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className="nv-bento-card pointer-events-auto">
-              <div className="flex items-center gap-3 mb-2">
-                <MapIcon className="w-4 h-4 text-nc-neon-teal" />
-                <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
-                  Käyttö
-                </span>
-              </div>
-              <p className="text-[14px] font-bold text-nc-text">Napauta paikkaa</p>
-              <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                Napauta parkkiviivaa tai merkkiä. Katso aina myös kadun kyltti.
-              </p>
-            </div>
-
-            <div className="nv-bento-card pointer-events-auto">
-              <div className="flex items-center gap-3 mb-2">
-                <Shield className="w-4 h-4 text-nc-gold" />
-                <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
-                  Sakot kartalla
-                </span>
-              </div>
-              <p className="text-[14px] font-bold text-nc-text" data-testid="fine-count">
-                {dataFacts
-                  ? `${dataFacts.fineCount.toLocaleString("fi-FI")} sakkoa${dataFacts.fineYears ? ` (${dataFacts.fineYears})` : ""}`
-                  : "Ladataan…"}
-              </p>
-              <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                Helsingin kaupungin avoin sakkoaineisto. Kartta näyttää, missä sakkoja on annettu paljon.
-              </p>
-            </div>
-
-            <div className="nv-bento-card pointer-events-auto border-nc-neon-teal/20">
-              <div className="flex items-center gap-3 mb-2">
-                <Sliders className="w-4 h-4 text-nc-neon-teal" />
-                <span className="text-nv-text-xs font-black text-nc-text-dim uppercase tracking-wider">
-                  Muista
-                </span>
-              </div>
-              <p className="text-[14px] font-bold text-nc-text">Kyltti voittaa kartan</p>
-              <p className="text-nv-text-xs text-nc-text-muted mt-1 leading-normal">
-                Työmaa ja kyltit muuttuvat. Varmista paikka kadun merkistä.
-                {dataFacts?.slotsUpdated ? ` Pysäköintipaikat päivitetty ${new Date(dataFacts.slotsUpdated).toLocaleDateString("fi-FI")}.` : ""}
-              </p>
-            </div>
-          </div>
+          </section>
         )}
       </div>
 

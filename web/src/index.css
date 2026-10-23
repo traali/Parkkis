@@ -173,3 +173,64 @@
   width: 44px !important;
   height: 44px !important;
 }
+
+/* Solid, readable surfaces for the card, sheet and buttons (both themes). */
+.nv-sheet {
+  background: color-mix(in srgb, var(--nc-void) 94%, transparent);
+  backdrop-filter: blur(12px);
+  border: 1px solid color-mix(in srgb, var(--nc-text) 14%, transparent);
+  box-shadow: 0 -6px 24px -8px rgba(0, 0, 0, 0.45);
+  color: var(--nc-text);
+  border-radius: 1.25rem 1.25rem 0 0;
+}
+button.nv-sheet,
+div.nv-sheet.rounded-full {
+  border-radius: 9999px;
+}
+.theme-light .nv-sheet {
+  box-shadow: 0 -4px 20px -8px rgba(15, 23, 42, 0.25);
+}
+@media (min-width: 640px) {
+  .nv-sheet {
+    border-radius: 1.25rem;
+  }
+}
+
+/* Map controls sit in one column under the theme button (top-right), never under the card. */
+.maplibregl-ctrl-top-right {
+  top: 56px !important;
+}
+.maplibregl-ctrl-top-right .maplibregl-ctrl {
+  margin: 8px 12px 0 0 !important;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  min-height: 44px !important;
+  min-width: 44px !important;
+  padding: 0 44px 0 0 !important;
+  border-radius: 22px !important;
+  box-sizing: border-box;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact:not([open]) {
+  width: 44px;
+  padding: 0 !important;
+}
+.maplibregl-ctrl-attrib-button {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 22px !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  background-size: 24px 24px !important;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact-show {
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 10px 48px 10px 12px !important;
+  border-radius: 12px !important;
+}
+.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-inner {
+  font-size: 11px;
+  line-height: 1.45;
+}

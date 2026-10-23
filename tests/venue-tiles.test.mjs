@@ -46,7 +46,7 @@ describe('venue fast path tiles', () => {
   });
   it('filter chips and Tietolähteet are at least 44 px tall', () => {
     const app = read('web/src/App.tsx');
-    assert.match(app, /min-h-\[44px\] rounded-2xl text-nv-text-xs/);
+    assert.match(read('web/src/components/LayerSheet.tsx'), /min-h-\[44px\] px-3 rounded-full text-sm/);
     assert.match(app, /rounded-full min-h-\[44px\] px-4 py-1\.5 text-\[11px\][^\n]*\n[^\n]*\n[^\n]*\n[^\n]*Tietolähteet|Tietolähteet/);
   });
 });

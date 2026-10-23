@@ -10,6 +10,7 @@ export const THEME_CONFIGS = {
       special: "#a855f7",
       restricted: "#ef4444",
       other: "#888888",
+      area: "#2dd4bf",
       glowLow: "#00f2ff",
       glowMid: "#ffcf4b",
       glowHigh: "#ff3e3e",
@@ -24,6 +25,7 @@ export const THEME_CONFIGS = {
       special: "#7c3aed",
       restricted: "#dc2626",
       other: "#4b5563",
+      area: "#0d9488",
       glowLow: "#0891b2",
       glowMid: "#d97706",
       glowHigh: "#dc2626",
@@ -38,6 +40,7 @@ export const THEME_CONFIGS = {
       special: "#8b5cf6",
       restricted: "#ef4444",
       other: "#4b5563",
+      area: "#2dd4bf",
       glowLow: "#10b981",
       glowMid: "#f59e0b",
       glowHigh: "#ef4444",
@@ -51,7 +54,7 @@ export const CATEGORIES = [
   { id: "free", label: "Ilmainen" },
   { id: "residential", label: "Asukasvyöhyke" },
   { id: "special", label: "Erityispaikat" },
-  { id: "restricted", label: "Pysäköintikielto" },
+  { id: "restricted", label: "Kielto" },
 ];
 
 export const getCategoryLabel = (category: string, luokka: string = "") => {

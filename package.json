@@ -12,7 +12,7 @@
     "lint": "npx @biomejs/biome lint .",
     "typecheck": "tsc -b web/tsconfig.json && npx tsc --noEmit src/contracts.ts src/mcp-app.ts",
     "check:types": "npm run typecheck",
-    "test": "node --test tests/domain-invariants.test.mjs tests/real-data.test.mjs tests/coverage.test.mjs tests/data-files.test.mjs tests/venue-tiles.test.mjs tests/deploy-safety.test.mjs tests/plough.test.mjs tests/cityLayers.test.mjs tests/liipiLive.test.mjs",
+    "test": "node --test tests/domain-invariants.test.mjs tests/real-data.test.mjs tests/coverage.test.mjs tests/data-files.test.mjs tests/venue-tiles.test.mjs tests/deploy-safety.test.mjs tests/plough.test.mjs tests/cityLayers.test.mjs tests/liipiLive.test.mjs tests/banner.test.mjs",
     "check": "npm run lint && npm run typecheck && npm test",
     "visit": "node scripts/monastery-visitor.mjs",
     "check:neighbors": "node scripts/check-neighbors.mjs",

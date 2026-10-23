@@ -61,7 +61,7 @@ export function coverageNoteText(c: VenueCoverage | null): string {
   if (c.failed && c.espoo === 0 && c.osm === 0)
     return `${base} Tietojen lataus epäonnistui, joten emme tiedä lähialueen pysäköinnistä. Päivitä sivu tai tarkista kyltit.`;
   if (c.espoo > 0)
-    return `${base} Lähellä on ${c.espoo} Espoon kaupungin pysäköintialuetta (sininen). Vapaista paikoista, hinnoista ja rajoituksista ei ole tietoa, tarkista kyltit.`;
+    return `${base} Lähellä on ${c.espoo} Espoon kaupungin pysäköintialuetta (turkoosi). Vapaista paikoista, hinnoista ja rajoituksista ei ole tietoa, tarkista kyltit.`;
   if (c.osm > 0)
     return `${base} Lähellä on ${c.osm} OpenStreetMapiin merkittyä pysäköintipaikkaa (harmaa). Ne ovat vapaaehtoisten merkintöjä, tarkista kyltit.`;
   return `${base} Lähellä ei ole pysäköintitietoja avoimessa datassa, joten katso pysäköinti paikan omista ohjeista ja kylteistä.`;
