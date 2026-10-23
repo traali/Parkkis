@@ -53,3 +53,15 @@ describe('fines are drawn as areas, not spots', () => {
     assert.ok(!/riski|risk/i.test(fn));
   });
 });
+
+describe('fines review fixes', () => {
+  it('SQL drops null and out-of-bounds coordinates; near-check uses real cells', () => {
+    assert.match(F.FINE_CELLS_SQL, /geom IS NOT NULL/);
+    assert.match(F.FINE_CELLS_SQL, /BETWEEN 60\.0 AND 60\.4/);
+    assert.match(F.FINE_CELLS_SQL, /BETWEEN 24\.5 AND 25\.3/);
+    const fc = F.cellsToCollection([{ gx: Math.floor(24.9242 / F.FINE_CELL_LON), gy: Math.floor(60.1878 / F.FINE_CELL_LAT), fines: 3, notices: 0 }]);
+    assert.equal(F.fineCellsNear(fc, 60.1878, 24.9242, F.FINES_NEAR_M), true);
+    assert.equal(F.fineCellsNear(fc, 60.1485, 24.653, F.FINES_NEAR_M), false);
+    assert.equal(F.fineCellsNear(null, 60.1878, 24.9242, F.FINES_NEAR_M), false);
+  });
+});

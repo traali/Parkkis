@@ -172,7 +172,7 @@ export function LayerSheet(p: LayerSheetProps) {
                   </span>
                   <span className="block pt-1">Sijainnit ovat osoitteen tarkkuudella, joten kartalla on ruudut, ei tarkkoja paikkoja. Napauta ruutua: määrä ja yleisin syy.</span>
                   {p.finesOutside && (
-                    <span data-testid="fine-outside-note" className="block pt-1 font-semibold text-nc-text">Tämän kohteen lähellä ei ole sakkotietoja: sijainnillinen avoin sakkoaineisto on vain Helsingistä.</span>
+                    <span data-testid="fine-outside-note" className="block pt-1 font-semibold text-nc-text">Aineistossa ei ole sakkoja 600 m säteellä tästä kohteesta. Sijainnillinen avoin sakkoaineisto on vain Helsingistä.</span>
                   )}
                 </span>
               )}

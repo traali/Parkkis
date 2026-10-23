@@ -21,6 +21,7 @@ import { THEME_CONFIGS, getCentroid, type ThemeType } from "./lib/mapThemes";
 import { MetadataCatalogueModal } from "./components/MetadataCatalogueModal";
 import { ReservationsDrawer } from "./components/ReservationsDrawer";
 import type { HoverInfo } from "./components/ParkingPopup";
+import { fineCellsNear, FINES_NEAR_M } from "./lib/fines";
 
 
 
@@ -426,6 +427,14 @@ export default function App() {
     }, regionalStatus === "error" && !venueTiles);
   }, [venueFromLink, riskData, espooShown, osmShown, regionalStatus, venueTiles]);
   const venueOutsideData = coverage !== null && !coverage.helsinki;
+  // Only claim "no fines nearby" once the fine cells have loaded and none lie near the venue.
+  const finesOutside = useMemo(
+    () =>
+      !!venueFromLink &&
+      !!violationData &&
+      !fineCellsNear(violationData, venueFromLink.latitude, venueFromLink.longitude, FINES_NEAR_M),
+    [venueFromLink, violationData],
+  );
   // OSM points only where there is no city data at all near the venue (see lib/banner.ts).
   const showOsm = showOsmFor(coverage);
 
@@ -669,7 +678,7 @@ export default function App() {
             dataReady={dbReady}
             fineYears={dataFacts?.fineYears}
             finePeriod={dataFacts?.finePeriod}
-            finesOutside={!!venueFromLink && venueOutsideData}
+            finesOutside={finesOutside}
             showRoadworks={showRoadworks}
             setShowRoadworks={setShowRoadworks}
             roadworkStatus={roadworkStatus}

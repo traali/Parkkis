@@ -83,6 +83,24 @@ export function cellsToCollection(rows: FineCellRow[], period = ""): FeatureColl
   return { type: "FeatureCollection", features };
 }
 
+/** Radius for the "no fines near this venue" note. */
+export const FINES_NEAR_M = 600;
+
+/** True if any fine cell centre lies within radiusM of the point (cells are ~100 m, so this is approximate). */
+export function fineCellsNear(fc: FeatureCollection | null | undefined, lat: number, lon: number, radiusM: number): boolean {
+  if (!fc) return false;
+  const mPerLat = 111_320;
+  const mPerLon = 111_320 * Math.cos((lat * Math.PI) / 180);
+  for (const f of fc.features) {
+    if (f.geometry?.type !== "Polygon") continue;
+    const [w, s] = f.geometry.coordinates[0][0];
+    const dx = (w + FINE_CELL_LON / 2 - lon) * mPerLon;
+    const dy = (s + FINE_CELL_LAT / 2 - lat) * mPerLat;
+    if (dx * dx + dy * dy <= radiusM * radiusM) return true;
+  }
+  return false;
+}
+
 /** SQL for the cells; real_violations is the table of records with a real location. */
 export const FINE_CELLS_SQL = `
   SELECT
@@ -92,6 +110,9 @@ export const FINE_CELLS_SQL = `
     count(*) FILTER (WHERE virhemaksun_vaihe = 'Huomautus') AS notices,
     mode(virheen_paasyy_ja_paaluokka) FILTER (WHERE virhemaksun_vaihe = 'Pysäköintivirhemaksu') AS top_reason
   FROM real_violations
+  WHERE geom IS NOT NULL
+    AND ST_Y(geom) BETWEEN 60.0 AND 60.4
+    AND ST_X(geom) BETWEEN 24.5 AND 25.3
   GROUP BY 1, 2
   HAVING count(*) FILTER (WHERE virhemaksun_vaihe = 'Pysäköintivirhemaksu') > 0
 `;
