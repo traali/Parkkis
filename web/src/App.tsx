@@ -21,6 +21,7 @@ import { THEME_CONFIGS, getCentroid, type ThemeType } from "./lib/mapThemes";
 import { MetadataCatalogueModal } from "./components/MetadataCatalogueModal";
 import { ReservationsDrawer } from "./components/ReservationsDrawer";
 import type { HoverInfo } from "./components/ParkingPopup";
+import { allowedNear, allowedNearText, ALLOWED_NEAR_M } from "./lib/allowed";
 import { fineCellsNear, FINES_NEAR_M } from "./lib/fines";
 
 
@@ -39,7 +40,7 @@ const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
 /** Must match interactiveLayerIds in ParkingMapView. */
-const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "violation-cells", "parking-lines", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
+const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "violation-cells", "parking-lines", "allowed-fill", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
 
 /**
  * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
@@ -251,7 +252,8 @@ export default function App() {
         isRoadworkConflict:
           !!roadwork && hoveredFeature.layer.id !== "roadwork-fill",
         stackedSigns: signs.length > 0 ? signs : undefined,
-        layerId: hoveredFeature.layer.id,
+        // The green fill and the line are the same parking space: one popup.
+        layerId: hoveredFeature.layer.id === "allowed-fill" ? "parking-lines" : hoveredFeature.layer.id,
       });
     } else {
       setHoverInfo(null);
@@ -427,6 +429,11 @@ export default function App() {
     }, regionalStatus === "error" && !venueTiles);
   }, [venueFromLink, riskData, espooShown, osmShown, regionalStatus, venueTiles]);
   const venueOutsideData = coverage !== null && !coverage.helsinki;
+  // Allowed parking near the venue, only from the cities' own data (null = still loading).
+  const allowedHere = useMemo(() => {
+    if (!venueFromLink || !riskData || coverage === null) return null;
+    return allowedNear(riskData, espooShown, venueFromLink, ALLOWED_NEAR_M);
+  }, [venueFromLink, riskData, espooShown, coverage]);
   // Only claim "no fines nearby" once the fine cells have loaded and none lie near the venue.
   const finesOutside = useMemo(
     () =>
@@ -451,8 +458,8 @@ export default function App() {
   });
   const colors = THEME_CONFIGS[theme].colors;
   const legend = [
-    { label: "Maksullinen", color: colors.paid },
-    { label: "Ilmainen", color: colors.free },
+    { label: "Sallittu, maksullinen", color: colors.paid },
+    { label: "Sallittu, maksuton", color: colors.free },
     { label: "Erityispaikka", color: colors.special },
     { label: "Kielto", color: colors.restricted },
     { label: "Pysäköintialue", color: colors.area, dashed: true },
@@ -666,6 +673,7 @@ export default function App() {
             onClose={() => setShowLayers(false)}
             activeFilter={activeFilter}
             onFilter={setActiveFilter}
+            allowedColors={{ paid: colors.paid, free: colors.free }}
             venueLink={!!venueFromLink}
             date={match.date}
             dateFromLink={match.fromLink}
@@ -746,6 +754,12 @@ export default function App() {
               </div>
             )}
 
+            {venueFromLink && allowedHere && (
+              <p data-testid="allowed-near" className="text-sm leading-snug text-nc-text">
+                {allowedNearText(allowedHere)}
+              </p>
+            )}
+
             <ul aria-label="Selite" className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-nc-text">
               {legend.map((l) => (
                 <li key={l.label} className="flex items-center gap-1.5">
@@ -767,6 +781,7 @@ export default function App() {
                   Paljon sakkoja
                 </li>
               )}
+              <li data-testid="legend-no-line" className="text-nc-text-muted">Ei viivaa: ei tietoa</li>
               {!venueOutsideData && (
                 <li className="flex items-center gap-1.5">
                   <b>2 h</b> aikaraja
@@ -809,9 +824,9 @@ export default function App() {
                   {dataFacts?.slotsUpdated ? ` Pysäköintipaikat päivitetty ${new Date(dataFacts.slotsUpdated).toLocaleDateString("fi-FI")}.` : ""}
                 </p>
                 <p data-testid="fine-count">
-                  <b>Sakot:</b>{" "}
+                  <b>Sakot alueittain</b> (Tasot → Sakot ja merkit):{" "}
                   {dataFacts
-                    ? `${dataFacts.fineCount.toLocaleString("fi-FI")} sakkoa${dataFacts.fineYears ? ` (${dataFacts.fineYears})` : ""}, Helsingin kaupungin avoin sakkoaineisto. Oranssi–punainen hehku: vähintään 5 sakkoa paikan lähellä.`
+                    ? `${dataFacts.fineCount.toLocaleString("fi-FI")} sakkoa${dataFacts.fineYears ? ` (${dataFacts.fineYears})` : ""}, Helsingin kaupungin avoin pysäköintivirheaineisto. Oranssi–punainen hehku: vähintään 5 sakkoa paikan lähellä.`
                     : "Ladataan…"}
                 </p>
                 <div className="flex items-center justify-between gap-2">

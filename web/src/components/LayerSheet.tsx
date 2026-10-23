@@ -74,6 +74,8 @@ export interface LayerSheetProps {
   onClose: () => void;
   activeFilter: string;
   onFilter: (id: string) => void;
+  /** Theme colours of the allowed-parking lines, for the legend. */
+  allowedColors?: { paid: string; free: string };
   venueLink: boolean;
   date: string;
   dateFromLink: boolean;
@@ -132,7 +134,30 @@ export function LayerSheet(p: LayerSheetProps) {
         </button>
       </div>
       <div className="overflow-y-auto overscroll-contain px-1 pb-3 flex flex-col gap-2">
-        <Group title="Pysäköinti">
+        <Group
+          title="Pysäköinti"
+          note={
+            <span data-testid="allowed-legend" className="block py-1">
+              <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                {p.allowedColors && (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <span aria-hidden="true" className="inline-block w-4 h-2 rounded-full" style={{ background: p.allowedColors.paid }} />
+                      Sallittu, maksullinen
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span aria-hidden="true" className="inline-block w-4 h-2 rounded-full" style={{ background: p.allowedColors.free }} />
+                      Sallittu, maksuton
+                    </span>
+                  </>
+                )}
+              </span>
+              <span className="block pt-1">
+                Vihreä viiva ja alue: kaupunki on merkinnyt pysäköinnin sallituksi (Helsingin pysäköintipaikat, Espoon pysäköintialueet). Napauta: maksu, aikaraja, pysäköintikiekko, voimassaolo ja lähde. Kadulla ilman viivaa ei ole tietoa, eikä se tarkoita, että pysäköinti olisi sallittu.
+              </span>
+            </span>
+          }
+        >
           <div className="flex flex-wrap gap-1.5 px-3 py-1">
             {CATEGORIES.map((c) => (
               <button
@@ -176,7 +201,7 @@ export function LayerSheet(p: LayerSheetProps) {
                   )}
                 </span>
               )}
-              Sakot: Helsingin kaupungin avoin pysäköintivirheaineisto. Uudet merkit: muokattu viimeisen 60 päivän aikana.
+              Sakot alueittain: Helsingin kaupungin avoin pysäköintivirheaineisto. Liikennemerkit: Digiroad, himmeinä kunnes karttaa lähennetään. Uudet merkit: muokattu viimeisen 60 päivän aikana.
             </>
           }
         >

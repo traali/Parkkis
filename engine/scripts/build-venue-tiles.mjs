@@ -28,6 +28,7 @@ await c.run(`CREATE TABLE real_violations AS SELECT * FROM violations WHERE tode
 const slots = await q(`
   SELECT ST_AsGeoJSON(s.geom) AS geometry, ST_X(ST_Centroid(s.geom)) AS cx, ST_Y(ST_Centroid(s.geom)) AS cy,
     s.id, s.luokka_nimi, s.tyyppi, s.paikat_ala, s.kesto, s.voimassaolo, s.lisatieto, s.asukaspysakointitunnus,
+    CAST(s.paivitetty_tietopalveluun AS VARCHAR) AS paivitetty,
     COALESCE(s.asukaspysakointitunnus, '') <> '' AS resident_zone,
     CASE
       WHEN s.tyyppi = 'Pysäköintikielto' THEN 'restricted'

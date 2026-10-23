@@ -1,6 +1,8 @@
 import React from "react";
 import { Navigation, Shield } from "lucide-react";
-import { parseJsonSafe, getCategoryLabel, getSignVisuals, getSignLabel } from "../lib/mapThemes";
+import { parseJsonSafe, getCategoryLabel, getSignVisuals } from "../lib/mapThemes";
+import { signLabel, plateRows, hasSaturdayTimes } from "../lib/signs";
+import { parkingFacts, NO_INFO } from "../lib/allowed";
 import { renderTextWithLinks } from "../lib/helsinkiCaseParser";
 import { navLinks } from "../lib/navigate";
 import { LiipiLive } from "./LiipiLive";
@@ -144,6 +146,8 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
             ["Tyyppi", hoverInfo.properties.class_fi],
             ["Paikkoja (Espoon kaupunki)", hoverInfo.properties.parking_spaces],
             ["Osoite", hoverInfo.properties.street_address_fi],
+            ["Maksu", NO_INFO],
+            ["Aikaraja", NO_INFO],
           ]}
           source="Lähde: Espoon kaupunki, pysäköintialueet (CC BY 4.0). Ei tietoa vapaista paikoista."
         />
@@ -253,7 +257,7 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
         <>
           <div className="flex justify-between items-start mb-2 border-b border-nc-border pb-2">
             <h3 className="font-bold text-nc-text leading-tight">
-              {hoverInfo.properties.tyyppi || "Pysäköintipaikka"}
+              {hoverInfo.stackedSigns ? "Liikennemerkki" : hoverInfo.properties.tyyppi || "Pysäköintipaikka"}
             </h3>
             {hoverInfo.properties.is_new && (
               <span className="bg-nc-neon-teal text-nc-deep font-black px-2 py-0.5 rounded text-[10px] ml-2 animate-pulse">
@@ -356,32 +360,42 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                             </span>
                           </div>
                           <span
-                            className="text-[10px] text-nc-text font-black uppercase text-right leading-none truncate max-w-[160px]"
-                            title={`${getSignLabel(String(sign.tyyppi))}${sign.arvo ? ` (${sign.arvo} km/h)` : ""}`}
+                            data-testid="sign-name"
+                            className="text-xs text-nc-text font-bold text-right leading-tight"
                           >
-                            {getSignLabel(String(sign.tyyppi))}
-                            {sign.arvo ? ` (${sign.arvo} km/h)` : ""}
+                            {signLabel(sign.tyyppi, sign.arvo)}
                           </span>
                         </div>
 
-                        {/* Subtexts */}
-                        <div className="flex flex-col gap-1">
-                          {[1, 2, 3, 4, 5].map((n) => {
-                            const txt = sign[`kilpi_txt${n}`];
-                            return txt ? (
-                              <div
-                                key={n}
-                                className="text-[9px] bg-nc-text/5 border border-nc-border/30 rounded px-2 py-0.5 text-nc-text-muted font-medium italic leading-tight"
-                              >
-                                {txt}
-                              </div>
-                            ) : null;
-                          })}
-                        </div>
+                        {/* Additional plates: Finnish name and the text on the plate */}
+                        {(() => {
+                          const plates = plateRows(sign);
+                          if (!plates.length) return null;
+                          return (
+                            <ul className="flex flex-col gap-1">
+                              {plates.map((pl) => (
+                                <li
+                                  key={pl.slot}
+                                  data-testid="sign-plate"
+                                  className="text-[11px] bg-nc-text/5 border border-nc-border/30 rounded px-2 py-1 text-nc-text-muted leading-tight"
+                                >
+                                  <span className="font-semibold text-nc-text">{pl.label}</span>
+                                  {pl.text ? `: ${pl.text}` : ""}
+                                </li>
+                              ))}
+                              {hasSaturdayTimes(plates) && (
+                                <li className="text-[10px] text-nc-text-dim leading-tight">Suluissa olevat ajat koskevat lauantaita.</li>
+                              )}
+                            </ul>
+                          );
+                        })()}
                       </div>
                     );
                   })}
               </div>
+              <p className="text-[10px] text-nc-text-dim leading-tight">
+                Lähde: Väylävirasto, Digiroad (CC BY 4.0). Kadun merkki ratkaisee.
+              </p>
             </div>
           ) : hoverInfo.properties.licence_identifier ? (
             <div className="space-y-2">
@@ -441,30 +455,17 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                <div className="bg-nc-text/5 rounded p-2">
-                  <span className="block text-xs text-nc-text-dim uppercase">
-                    Voimassa
-                  </span>
-                  <span className="font-bold text-nc-text text-sm">
-                    {hoverInfo.properties.voimassaolo || "–"}
-                    {hoverInfo.properties.kesto ? ` · enint. ${hoverInfo.properties.kesto}` : ""}
-                  </span>
-                  {String(hoverInfo.properties.voimassaolo || "").includes("(") && (
-                    <span className="block text-[9px] text-nc-text-dim leading-tight mt-0.5">
-                      Arkisin, suluissa lauantaisin
-                    </span>
-                  )}
-                </div>
-                <div className="bg-nc-text/5 rounded p-2">
-                  <span className="block text-xs text-nc-text-dim uppercase">
-                    Paikkoja
-                  </span>
-                  <span className="font-bold text-nc-text text-sm">
-                    {hoverInfo.properties.paikat_ala ? String(hoverInfo.properties.paikat_ala) : "Ei tietoa"}
-                  </span>
-                </div>
-              </div>
+              <dl data-testid="parking-facts" className="grid grid-cols-2 gap-2 mt-2">
+                {[...parkingFacts(hoverInfo.properties), { label: "Paikkoja", value: hoverInfo.properties.paikat_ala ? String(hoverInfo.properties.paikat_ala) : NO_INFO }].map((row) => (
+                  <div key={row.label} className="bg-nc-text/5 rounded p-2">
+                    <dt className="block text-xs text-nc-text-dim uppercase">{row.label}</dt>
+                    <dd className={`font-bold text-sm ${row.value === NO_INFO ? "text-nc-text-dim" : "text-nc-text"}`}>{row.value}</dd>
+                    {row.label === "Voimassa" && String(hoverInfo.properties.voimassaolo || "").includes("(") && (
+                      <dd className="block text-[9px] text-nc-text-dim leading-tight mt-0.5">Arkisin, suluissa lauantaisin</dd>
+                    )}
+                  </div>
+                ))}
+              </dl>
 
               {hoverInfo.properties.lisatieto && (
                 <p className="text-[10px] text-nc-text-muted leading-tight mt-2">{String(hoverInfo.properties.lisatieto)}</p>
@@ -479,6 +480,12 @@ export const ParkingPopup: React.FC<ParkingPopupProps> = ({
                     {String(hoverInfo.properties.top_violation_reason || "").replace(/^\d+\s+/, "")}
                   </span>
                 </div>
+              )}
+              {hoverInfo.layerId === "parking-lines" && (
+                <p data-testid="parking-source" className="text-[10px] text-nc-text-dim leading-tight mt-2">
+                  Lähde: Helsingin kaupunki, pysäköintipaikat (CC BY 4.0)
+                  {hoverInfo.properties.paivitetty ? `, päivitetty ${String(hoverInfo.properties.paivitetty).slice(0, 10)}` : ""}. Kadun merkki ratkaisee.
+                </p>
               )}
             </>
           )}
