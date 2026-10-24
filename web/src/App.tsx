@@ -6,7 +6,7 @@ import type {
 import "maplibre-gl/dist/maplibre-gl.css";
 import type * as maplibregl from "maplibre-gl";
 import { ParkingMapView, type Address } from "./components/ParkingMapView";
-import { ChevronDown, ChevronUp, Database, Layers, Moon, Navigation, Search, Sun, X } from "lucide-react";
+import { ChevronDown, ChevronUp, Database, Layers, Moon, Sun } from "lucide-react";
 import { useParkingLayers } from "./hooks/useParkingLayers";
 import { useRegionalParking } from "./hooks/useRegionalParking";
 import { coverageNoteText, venueCoverage } from "./lib/coverage";
@@ -24,76 +24,14 @@ import type { HoverInfo } from "./components/ParkingPopup";
 import { allowedNear, allowedNearText, ALLOWED_NEAR_M } from "./lib/allowed";
 import { fineCellsNear, FINES_NEAR_M } from "./lib/fines";
 
+import { AddressSearch, type SearchResult } from "./components/AddressSearch";
+import { metersBetween, readThemeFromUrl, readVenueFromUrl } from "./lib/venueUrl";
+import { filterReservations } from "./lib/reservations";
 
-
-interface SearchResult {
-  id?: number;
-  name: { fi: string; sv: string };
-  municipality?: { name?: { fi?: string; sv?: string } };
-  location: {
-    coordinates: [number, number];
-  };
-}
-
-/** Finland, generously. Anything outside is a broken link, not a venue. */
-const FINLAND_BOUNDS = { minLat: 59.3, maxLat: 70.2, minLon: 19.0, maxLon: 31.7 };
 /** No mapped Helsinki parking space this close to the venue → say so. */
 const COVERAGE_RADIUS_M = 600;
 /** Must match interactiveLayerIds in ParkingMapView. */
 const TAP_LAYERS = ["city-events-fill", "city-leases-fill", "city-leases-points", "city-coach-points", "city-cycling-lines", "city-access-lines", "city-zones-fill", "violation-cells", "parking-lines", "allowed-fill", "hubi-lines", "sign-points", "roadwork-fill", "reservation-fill", "liipi-points", "espoo-points", "osm-points", "plough-lines", "hel-winter-lines"];
-
-/**
- * Reads Pelipäivä's deep link: /venue/<encoded name>?lat=..&lon=..&embed=true&theme=night-captain
- * (also accepts ?lng= and ?venue=<name>).
- */
-function readVenueFromUrl(): Address | null {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    const lat = Number.parseFloat(params.get("lat") ?? "");
-    const lon = Number.parseFloat(params.get("lon") ?? params.get("lng") ?? "");
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    if (
-      lat < FINLAND_BOUNDS.minLat || lat > FINLAND_BOUNDS.maxLat ||
-      lon < FINLAND_BOUNDS.minLon || lon > FINLAND_BOUNDS.maxLon
-    ) {
-      console.warn("Parkkis: venue coordinates outside Finland, ignored", lat, lon);
-      return null;
-    }
-    const match = window.location.pathname.match(/^\/venue\/(.+?)\/?$/);
-    let name = "";
-    if (match) {
-      try {
-        name = decodeURIComponent(match[1].replace(/\+/g, " "));
-      } catch {
-        name = match[1];
-      }
-    }
-    if (!name) name = params.get("venue") ?? "";
-    return { latitude: lat, longitude: lon, name: name.trim() || "Kohde" };
-  } catch (err) {
-    console.warn("URL params parsing error in Parkkis:", err);
-    return null;
-  }
-}
-
-function readThemeFromUrl(): ThemeType {
-  const t = new URLSearchParams(window.location.search).get("theme");
-  if (t === "light" || t === "forest") return t;
-  return "dark"; // "dark" and Pelipäivä's "night-captain" are the same theme
-}
-
-function metersBetween(
-  a: { longitude: number; latitude: number },
-  b: { longitude: number; latitude: number },
-) {
-  const rad = Math.PI / 180;
-  const dLat = (b.latitude - a.latitude) * rad;
-  const dLon = (b.longitude - a.longitude) * rad;
-  const lat1 = a.latitude * rad;
-  const lat2 = b.latitude * rad;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
-}
 
 const INITIAL_VIEW_STATE = {
   longitude: 24.941,
@@ -140,8 +78,6 @@ export default function App() {
   } = useParkingLayers(venueFromLink);
 
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(venueFromLink);
   const [theme, setTheme] = useState<ThemeType>(() => readThemeFromUrl());
   const [showDetails, setShowDetails] = useState(false);
@@ -177,26 +113,6 @@ export default function App() {
   const geoControlRef = useRef<maplibregl.GeolocateControl>(null);
   const mapRef = useRef<MapRef>(null);
 
-  // Debounced Search Logic
-  useEffect(() => {
-    if (searchQuery.length < 3) return;
-
-    const delayDebounceFn = setTimeout(async () => {
-      try {
-        const response = await fetch(
-          `https://api.hel.fi/servicemap/v2/search/?type=address&page_size=5&q=${encodeURIComponent(searchQuery)}&language=fi`,
-        );
-        if (!response.ok) throw new Error(`Servicemap HTTP ${response.status}`);
-        const data = await response.json();
-        setSearchResults(Array.isArray(data.results) ? data.results : []);
-      } catch (err) {
-        console.error("Search failed:", err);
-      }
-    }, 300);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
-
   const onSelectAddress = (result: SearchResult) => {
     const [lng, lat] = result.location.coordinates;
     setSelectedAddress({
@@ -204,8 +120,6 @@ export default function App() {
       latitude: lat,
       name: result.name.fi || result.name.sv,
     });
-    setSearchQuery("");
-    setSearchResults([]);
 
     if (mapRef.current) {
       mapRef.current.flyTo({
@@ -469,70 +383,9 @@ export default function App() {
     if (coverage) requestAnimationFrame(() => centerVenue(600));
   }, [coverage, centerVenue]);
 
-  const visibleSearchResults = searchQuery.length >= 3 ? searchResults : [];
+  const getFilteredReservations = () =>
+    filterReservations(reservationData, resCategory, resSearchQuery, resSortBy);
 
-  // Dynamic filtered and sorted reservations list
-  const getFilteredReservations = () => {
-    if (!reservationData?.features) return [];
-    
-    return reservationData.features
-      .filter((feat) => {
-        const props = feat.properties || {};
-        const subject = String(props.rental_subject || "").toLowerCase();
-        
-        // Category Filter
-        if (resCategory === "paid" && !subject.includes("pysäköinti") && !subject.includes("pysakoiti")) return false;
-        if (resCategory === "lisapihat" && !subject.includes("lisäpiha") && !subject.includes("lisapiha")) return false;
-        if (resCategory === "other" && (subject.includes("pysäköinti") || subject.includes("pysakoiti") || subject.includes("lisäpiha") || subject.includes("lisapiha"))) return false;
-        
-        // Search Filter
-        if (resSearchQuery) {
-          const query = resSearchQuery.toLowerCase();
-          const desc = String(props.event_description || "").toLowerCase();
-          const loc = String(props.location_description || "").toLowerCase();
-          const comp = String(props.licence_applicant_company || "").toLowerCase();
-          const identifier = String(props.licence_identifier || "").toLowerCase();
-          const type = String(props.licence_type || "").toLowerCase();
-          
-          if (
-            !desc.includes(query) &&
-            !loc.includes(query) &&
-            !comp.includes(query) &&
-            !identifier.includes(query) &&
-            !type.includes(query)
-          ) {
-            return false;
-          }
-        }
-        
-        return true;
-      })
-      .sort((a, b) => {
-        const propsA = a.properties || {};
-        const propsB = b.properties || {};
-        
-        if (resSortBy === "name") {
-          const nameA = String(propsA.rental_subject || "");
-          const nameB = String(propsB.rental_subject || "");
-          return nameA.localeCompare(nameB);
-        }
-        
-        if (resSortBy === "id") {
-          return String(propsA.licence_identifier || "").localeCompare(String(propsB.licence_identifier || ""));
-        }
-
-        if (resSortBy === "end") {
-          const endA = String(propsA.event_enddate || propsA.licence_enddate || "9999-12-31");
-          const endB = String(propsB.event_enddate || propsB.licence_enddate || "9999-12-31");
-          return endA.localeCompare(endB);
-        }
-        
-        // Default "start" (newest first)
-        const startA = String(propsA.event_startdate || propsA.licence_startdate || "1970-01-01");
-        const startB = String(propsB.event_startdate || propsB.licence_startdate || "1970-01-01");
-        return startB.localeCompare(startA); // Descending for newest first
-      });
-  };
 
   const handleReservationClick = (feat: any) => {
     const center = getCentroid(feat.geometry);
@@ -582,51 +435,7 @@ export default function App() {
       </button>
 
       {/* Search only on the home view; a venue link already says where we are. */}
-      {!venueFromLink && (
-        <div data-testid="top-hud" className="absolute top-3 left-3 right-[68px] sm:right-auto sm:w-[420px] z-40 flex flex-col gap-2 pointer-events-none">
-          <div className="nv-sheet rounded-full pl-4 pr-1 flex items-center pointer-events-auto">
-            <Search className="w-5 h-5 text-nc-text-muted shrink-0" />
-            <input
-              type="search"
-              aria-label="Hae osoite"
-              placeholder="Hae osoite"
-              className="bg-transparent border-none text-nc-text text-base w-full min-h-[44px] px-2 focus:outline-none placeholder:text-nc-text-muted"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                aria-label="Tyhjennä haku"
-                onClick={() => setSearchQuery("")}
-                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-nc-text/10 rounded-full"
-              >
-                <X className="w-4 h-4 text-nc-text-muted" />
-              </button>
-            )}
-          </div>
-          {visibleSearchResults.length > 0 && (
-            <div className="nv-sheet rounded-2xl overflow-hidden pointer-events-auto">
-              {visibleSearchResults.map((result: SearchResult) => (
-                <button
-                  type="button"
-                  key={`${result.name.fi}-${result.location.coordinates.join(",")}`}
-                  onClick={() => onSelectAddress(result)}
-                  className="w-full min-h-[44px] text-left px-4 py-2 hover:bg-nc-text/10 border-b border-nc-border last:border-0 flex items-center gap-3"
-                >
-                  <Navigation className="w-4 h-4 text-nc-text-muted" />
-                  <span>
-                    <span className="block text-sm font-bold text-nc-text">{result.name.fi || result.name.sv}</span>
-                    <span className="block text-xs text-nc-text-muted">
-                      {result.municipality?.name?.fi || result.municipality?.name?.sv || ""}
-                    </span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      {!venueFromLink && <AddressSearch onSelect={onSelectAddress} />}
 
       <ParkingMapView
         mapRef={mapRef}
