@@ -135,10 +135,6 @@ async function probeTaso(taso) {
   if (retry.ok && retry.body.includes('{')) {
     return { ok: true, via: 'origin+_cb', status: retry.status, note: `origin ${origin.status} empty/403, cache-bust recovered` }
   }
-  const proxy = taso.proxy ? await getText(taso.proxy, { Accept: 'application/json' }) : null
-  if (proxy?.ok && proxy.body.includes('{')) {
-    return { ok: true, via: 'proxy', status: proxy.status }
-  }
   return { ok: false, via: 'none', status: origin.status, note: origin.error || `origin ${origin.status}` }
 }
 
