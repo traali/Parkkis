@@ -1,51 +1,51 @@
 {
-  "generated_at": "2026-11-05T10:50:56.546Z",
+  "generated_at": "2026-11-06T10:51:49.700Z",
   "datasets": {
     "slots": {
       "rows": 8754,
-      "fetched_at": "2026-11-05T10:46:16.931Z",
+      "fetched_at": "2026-11-06T10:46:52.668Z",
       "source": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs (avoindata:Pysakointipaikat_alue)",
       "licence": "CC BY 4.0, Helsingin kaupunki",
-      "source_updated": "2026-11-04"
+      "source_updated": "2026-11-05"
     },
     "violations": {
       "rows": 165724,
-      "fetched_at": "2026-11-05T10:48:45.905Z",
+      "fetched_at": "2026-11-06T10:50:00.998Z",
       "source": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs (avoindata:Pysakointivirheet)",
       "licence": "CC BY 4.0, Helsingin kaupunki",
       "years": "2023"
     },
     "hubi": {
       "rows": 1830,
-      "fetched_at": "2026-11-05T10:46:25.471Z",
+      "fetched_at": "2026-11-06T10:47:03.014Z",
       "source": "https://pubapi.parkkiopas.fi/public/v1/parking_area/",
       "licence": "Parkkihubi / Helsingin kaupunki (avoin rajapinta)"
     },
     "signs": {
       "rows": 19595,
-      "fetched_at": "2026-11-05T10:49:01.871Z",
+      "fetched_at": "2026-11-06T10:50:17.451Z",
       "source": "https://avoinapi.vaylapilvi.fi/vaylatiedot/digiroad/ows (dr_liikennemerkit)",
       "licence": "CC BY 4.0, Väylävirasto / Digiroad",
       "source_updated": "2026-09-18"
     },
     "liipi": {
       "rows": 784,
-      "fetched_at": "2026-11-05T10:49:04.506Z",
+      "fetched_at": "2026-11-06T10:50:19.589Z",
       "source": "https://parking.fintraffic.fi/api/v1/facilities.geojson",
       "licence": "CC BY 4.0, Fintraffic"
     },
     "espoo": {
       "rows": 495,
-      "fetched_at": "2026-11-05T10:46:18.773Z",
+      "fetched_at": "2026-11-06T10:46:57.075Z",
       "source": "https://kartat.espoo.fi/teklaogcweb/wfs.ashx (GIS:PKSEspooPysakointialueet)",
       "licence": "CC BY 4.0, Espoon kaupunki"
     },
     "osm": {
-      "rows": 48910,
-      "fetched_at": "2026-11-05T10:50:44.008Z",
+      "rows": 48917,
+      "fetched_at": "2026-11-06T10:51:41.000Z",
       "source": "https://overpass-api.de/api/interpreter (amenity=parking, Finland)",
       "licence": "ODbL 1.0, © OpenStreetMap contributors",
-      "source_updated": "2026-11-05T10:48:21Z",
+      "source_updated": "2026-11-06T10:49:31Z",
       "venues_checked": 195,
       "venues_with_parking_within_1km": 193
     }
